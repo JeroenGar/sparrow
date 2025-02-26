@@ -11,7 +11,7 @@ use crate::opt::gls_orchestrator::{GLSOrchestrator, R_SHRINK};
 
 pub const SHRINK_STEP: fsize = R_SHRINK / 10.0; // one tenth of the normal shrink
 
-pub fn post(mut gls: GLSOrchestrator, initial_solution: Solution, time_out: Instant) -> Solution {
+pub fn compress(gls: &mut GLSOrchestrator, initial_solution: &Solution, time_out: Instant) -> Solution {
 
     gls.change_strip_width(initial_solution.layout_snapshots[0].bin.bbox().width(), None);
     gls.rollback(&initial_solution, None);
@@ -32,12 +32,12 @@ pub fn post(mut gls: GLSOrchestrator, initial_solution: Solution, time_out: Inst
         false => {
             gls.write_to_disk(Some(separated.0.clone()), "post_o", false);
             debug!("[POST] no improvement, returning initial solution");
-            initial_solution
+            initial_solution.clone()
         },
     };
 
     match Instant::now() < time_out {
-        true => post(gls, best_solution, time_out),
+        true => compress(gls, &best_solution, time_out),
         false => best_solution,
     }
 }

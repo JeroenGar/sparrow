@@ -1,3 +1,4 @@
+use std::ops::Add;
 use crate::opt::gls_worker::GLSWorker;
 use crate::overlap::tracker::{OTSnapshot, OverlapTracker};
 use crate::sample::eval::SampleEval;
@@ -31,6 +32,7 @@ use rayon::iter::IntoParallelRefMutIterator;
 use rayon::iter::ParallelIterator;
 use std::path::Path;
 use std::time::{Duration, Instant};
+use crate::opt::post_optimizer::compress;
 
 pub const N_ITER_NO_IMPROVEMENT: usize = 50;
 
@@ -108,7 +110,8 @@ impl GLSOrchestrator {
         self.write_to_disk(None, "init", true);
         info!("[GLS] starting optimization with initial width: {:.3} ({:.3}%)",current_width,self.master_prob.usage() * 100.0);
 
-        let end_time = Instant::now() + time_out;
+        let start_time = Instant::now();
+        let end_time = start_time + time_out;
         let mut local_bests : Vec<(Solution, fsize)> = vec![];
 
         while Instant::now() < end_time {
@@ -116,15 +119,31 @@ impl GLSOrchestrator {
             let total_overlap = local_best.1.total_overlap;
 
             if total_overlap == 0.0 {
+                info!("[GLS] layout separation successful");
+                let (separated_sol, separated_width) = match start_time.elapsed() > Duration::from_secs(10) {
+                    false => {
+                        (local_best.0.clone(), current_width)
+                    }
+                    true => {
+                        //squeeze it even harder
+                        let comp_sol = compress(self, &local_best.0, Instant::now().add(Duration::from_secs(20)));
+                        let comp_width = comp_sol.layout_snapshots[0].bin.bbox().width();
+                        info!("[GLS] compressed width: {:.3} -> {:.3}", current_width, comp_width);
+                        self.change_strip_width(comp_width, None);
+                        self.rollback(&comp_sol, None);
+                        (comp_sol, comp_width)
+                    }
+                };
+
                 //layout is successfully separated
-                if current_width < best_width {
-                    info!("[GLS] new best width at : {:.3} ({:.3}%)",current_width,self.master_prob.usage() * 100.0);
-                    best_width = current_width;
-                    best_feasible_solution = local_best.0.clone();
+                if separated_width < best_width {
+                    info!("[GLS] new best width at : {:.3} ({:.3}%)",separated_width,self.master_prob.usage() * 100.0);
+                    best_width = separated_width;
+                    best_feasible_solution = separated_sol;
                     self.write_to_disk(Some(best_feasible_solution.clone()), "c", true);
                 }
-                let next_width = current_width * (1.0 - R_SHRINK);
-                info!("[GLS] shrinking width from {:.3} to {:.3}",current_width, next_width);
+                let next_width = best_width * (1.0 - R_SHRINK);
+                info!("[GLS] changing width from {:.3} to {:.3}",current_width, next_width);
                 self.change_strip_width(next_width, None);
                 current_width = next_width;
                 local_bests.clear();

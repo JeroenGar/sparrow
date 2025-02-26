@@ -17,9 +17,9 @@ use rand::SeedableRng;
 use rand::prelude::SmallRng;
 use std::path::Path;
 use std::time::{Duration, Instant};
-use gls_strip_packing::opt::post_optimizer::post;
+use gls_strip_packing::opt::post_optimizer::compress;
 
-const INPUT_FILE: &str = "libs/jagua-rs/assets/swim.json";
+const INPUT_FILE: &str = "libs/jagua-rs/assets/trousers.json";
 
 const GLS_TIME_LIMIT_S: u64 = 18 * 60;
 
@@ -82,7 +82,7 @@ fn main() {
 
     let solution = gls_opt.solve(Duration::from_secs(GLS_TIME_LIMIT_S));
 
-    let post_solution = post(gls_opt, solution.clone(), Instant::now().add(Duration::from_secs(POST_LIMIT_S)));
+    let post_solution = compress(&mut gls_opt, &solution, Instant::now().add(Duration::from_secs(POST_LIMIT_S)));
 
     info!("[POST] from {:.3}% to {:.3}%", solution.usage * 100.0, post_solution.usage * 100.0);
 

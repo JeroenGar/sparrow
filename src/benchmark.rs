@@ -16,7 +16,7 @@ use rand::prelude::SmallRng;
 use rand::{Rng, SeedableRng};
 use std::path::Path;
 use std::time::{Duration, Instant};
-use gls_strip_packing::opt::post_optimizer::post;
+use gls_strip_packing::opt::post_optimizer::compress;
 use gls_strip_packing::util::io::layout_to_svg::s_layout_to_svg;
 
 const RNG_SEED: Option<usize> = None;
@@ -104,9 +104,9 @@ fn main() {
 
                     let solution = gls_opt.solve(Duration::from_secs(GLS_TIME_LIMIT_S));
 
-                    let post_solution = post(gls_opt, solution.clone(), Instant::now().add(Duration::from_secs(POST_TIME_LIMIT_S)));
+                    let post_solution = compress(&mut gls_opt, &solution, Instant::now().add(Duration::from_secs(POST_TIME_LIMIT_S)));
 
-                    println!("[POST] from {:.3}% to {:.3}% (-{:.3}%)", solution.usage * 100.0, post_solution.usage * 100.0, (solution.usage - post_solution.usage) * 100.0);
+                    println!("[POST] from {:.3}% to {:.3}% ({:.3}%)", solution.usage * 100.0, post_solution.usage * 100.0, (solution.usage - post_solution.usage) * 100.0);
                     *solution_slice = Some(post_solution);
                 })
             }
