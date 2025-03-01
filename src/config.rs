@@ -51,7 +51,7 @@ pub const SEP_CONFIG_EXPLORE: SeparatorConfig = SeparatorConfig {
     strike_limit: 5,
     jump_cooldown: 5,
     log_level: log::Level::Info,
-    n_workers: 2,
+    n_workers: 1,
     large_area_ch_area_cutoff_ratio: 0.5,
     sample_config: SampleConfig {
         n_bin_samples: 50,
@@ -72,7 +72,7 @@ pub const SEPARATOR_CONFIG_COMPRESS: SeparatorConfig = SeparatorConfig {
     strike_limit: 5,
     jump_cooldown: 5,
     log_level: log::Level::Debug,
-    n_workers: 2,
+    n_workers: 1,
     large_area_ch_area_cutoff_ratio: 0.5,
     sample_config: SampleConfig {
         n_bin_samples: 50,
