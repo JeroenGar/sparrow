@@ -38,7 +38,7 @@ pub const CONSTR_SAMPLE_CONFIG: SampleConfig = SampleConfig {
 };
 
 pub const EXPLORE_SOL_DISTR_STDDEV: fsize = 0.25;
-pub const EXPLORE_R_SHRINK: fsize = 0.005;
+pub const EXPLORE_R_SHRINK: fsize = 0.01;
 
 pub const SEP_CONFIG_EXPLORE: SeparatorConfig = SeparatorConfig {
     iter_no_imprv_limit: 100,
