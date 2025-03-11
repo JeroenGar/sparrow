@@ -36,7 +36,7 @@ pub const LBF_SAMPLE_CONFIG: SampleConfig = SampleConfig {
     n_coord_descents: 3,
 };
 
-pub const EXPLORE_SOL_DISTR_STDDEV: f32 = 0.25;
+pub const EXPLORE_SOL_DISTR_STDDEV: f32 = 0.4;
 pub const EXPLORE_R_SHRINK: f32 = 0.005;
 
 pub const SEP_CONFIG_EXPLORE: SeparatorConfig = SeparatorConfig {
