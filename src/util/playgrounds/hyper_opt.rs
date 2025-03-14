@@ -18,8 +18,8 @@ use sparrow::optimizer::{compress, explore, Terminator};
 use sparrow::util::io;
 
 const INSTANCES: [&str; 3] = ["swim", "trousers", "shirts"];
-const N_RUNS_PER_INSTANCE: usize = 2;
-const EXPL_TIME_LIMIT: Duration = Duration::from_secs(10);
+const N_RUNS_PER_INSTANCE: usize = 8;
+const EXPL_TIME_LIMIT: Duration = Duration::from_secs(600);
 
 const SEED: u64 = 0;
 
