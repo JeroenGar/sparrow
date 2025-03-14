@@ -1,3 +1,4 @@
+use std::sync::{LazyLock};
 use crate::optimizer::separator::SeparatorConfig;
 use crate::sample::search::SampleConfig;
 use crate::util::io::svg_util::{SvgDrawOptions, SvgLayoutTheme};
@@ -55,9 +56,15 @@ pub const LARGE_AREA_CH_AREA_CUTOFF_RATIO: f32 = 0.5;
 pub const WEIGHT_MAX_INC_RATIO: f32 = 2.0;
 pub const WEIGHT_MIN_INC_RATIO: f32 = 1.2;
 pub const WEIGHT_OVERLAP_DECAY: f32 = 0.95;
-pub const OVERLAP_PROXY_EPSILON_DIAM_RATIO: f32 = 0.01;
+
+pub static OVERLAP_PROXY_EPSILON_DIAM_RATIO: LazyLock<f32> = LazyLock::new(|| {
+    env!("OVERLAP_PROXY_EPSILON_DIAM_RATIO").parse().expect("Failed to parse OVERLAP_PROXY_EPSILON_DIAM_RATIO as f32")
+});
+
 pub const COMPRESS_R_SHRINKS: [f32; 2] = [0.0005, 0.0001];
 pub const COMPRESS_N_STRIKES: [usize; 2] = [5,5];
+
+
 
 pub const SEPARATOR_CONFIG_COMPRESS: SeparatorConfig = SeparatorConfig {
     iter_no_imprv_limit: 100,

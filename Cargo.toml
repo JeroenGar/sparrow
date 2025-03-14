@@ -24,6 +24,10 @@ path = "src/util/playgrounds/playground_overlap_visualizer.rs"
 name = "paper"
 path = "src/util/playgrounds/playground_paper.rs"
 
+[[bin]]
+name = "hyper_opt"
+path = "src/util/playgrounds/hyper_opt.rs"
+
 [dependencies]
 jagua-rs = { path = "libs/jagua-rs/jagua-rs"}
 rand = { version = "0.9.0", features = [ "small_rng" ] }
