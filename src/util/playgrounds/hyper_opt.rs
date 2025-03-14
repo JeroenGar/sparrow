@@ -66,11 +66,11 @@ fn bench(instance: SPInstance,rng: &mut SmallRng, n_runs_total: usize, explore_t
         ctrlc: Arc::new(AtomicBool::new(false)),
     };
 
-    for i in 0..n_batches {
+    for _ in 0..n_batches {
         //println!("[BENCH] batch {}/{}", i + 1, n_batches);
         let mut iter_solutions = vec![None; n_runs_per_iter];
         rayon::scope(|s| {
-            for (j, sol_slice) in iter_solutions.iter_mut().enumerate() {
+            for (_, sol_slice) in iter_solutions.iter_mut().enumerate() {
                 let output_folder_path = format!("{OUTPUT_DIR}/hyper_opt");
                 let instance = instance.clone();
                 let rng = SmallRng::seed_from_u64(rng.random());
