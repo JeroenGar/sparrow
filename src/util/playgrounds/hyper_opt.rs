@@ -1,7 +1,6 @@
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use std::time::Instant;
 use std::time::Duration;
 use itertools::Itertools;
 use jagua_rs::entities::instances::strip_packing::SPInstance;
@@ -42,7 +41,7 @@ pub fn main(){
         }
     });
 
-    let mut final_solutions = instances.iter()
+    let final_solutions = instances.iter()
         .map(|instance| {
             bench(instance.clone(), &mut rng, N_RUNS_PER_INSTANCE, EXPL_TIME_LIMIT)
         })
@@ -72,7 +71,6 @@ fn bench(instance: SPInstance,rng: &mut SmallRng, n_runs_total: usize, explore_t
         let mut iter_solutions = vec![None; n_runs_per_iter];
         rayon::scope(|s| {
             for (j, sol_slice) in iter_solutions.iter_mut().enumerate() {
-                let bench_idx = i * n_runs_per_iter + j;
                 let output_folder_path = format!("{OUTPUT_DIR}/hyper_opt");
                 let instance = instance.clone();
                 let rng = SmallRng::seed_from_u64(rng.random());
