@@ -8,7 +8,7 @@ use std::cmp::Ordering;
 
 #[inline(always)]
 pub fn poly_overlap_proxy(s1: &SimplePolygon, s2: &SimplePolygon) -> f32 {
-    let epsilon = f32::max(s1.diameter(), s2.diameter()) * *OVERLAP_PROXY_EPSILON_DIAM_RATIO;
+    let epsilon = f32::max(s1.diameter(), s2.diameter()) * OVERLAP_PROXY_EPSILON_DIAM_RATIO;
 
     let deficit = poles_overlap_proxy(&s1.surrogate(), &s2.surrogate(), epsilon);
 

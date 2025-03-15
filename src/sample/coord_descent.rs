@@ -21,8 +21,8 @@ pub fn coordinate_descent(
         pos: init_pos,
         eval: init_eval,
         axis: AXES[rng.random_range(0..4)],
-        steps: (min_dim * CD_STEP_INIT_RATIO, min_dim * CD_STEP_INIT_RATIO),
-        step_limit: min_dim * CD_STEP_LIMIT_RATIO,
+        steps: (min_dim * *CD_STEP_INIT_RATIO, min_dim * *CD_STEP_INIT_RATIO),
+        step_limit: min_dim * *CD_STEP_LIMIT_RATIO,
     };
 
     while let Some([c0, c1]) = cd_state.gen_candidates() {
@@ -75,7 +75,7 @@ impl CDState {
     }
 
     fn adjust_steps_and_axis(&mut self, improved: bool) {
-        let m = if improved { CD_STEP_SUCCESS } else { CD_STEP_FAIL };
+        let m = if improved { *CD_STEP_SUCCESS } else { *CD_STEP_FAIL };
         let (sx, sy) = self.steps;
 
         self.steps = match self.axis {

@@ -1,8 +1,8 @@
-use std::sync::{LazyLock};
 use crate::optimizer::separator::SeparatorConfig;
 use crate::sample::search::SampleConfig;
 use crate::util::io::svg_util::{SvgDrawOptions, SvgLayoutTheme};
 use jagua_rs::util::config::{CDEConfig, SPSurrogateConfig};
+use once_cell::sync::Lazy;
 
 pub const RNG_SEED: Option<usize> = None;
 
@@ -56,15 +56,10 @@ pub const LARGE_AREA_CH_AREA_CUTOFF_RATIO: f32 = 0.5;
 pub const WEIGHT_MAX_INC_RATIO: f32 = 2.0;
 pub const WEIGHT_MIN_INC_RATIO: f32 = 1.2;
 pub const WEIGHT_OVERLAP_DECAY: f32 = 0.95;
-
-pub static OVERLAP_PROXY_EPSILON_DIAM_RATIO: LazyLock<f32> = LazyLock::new(|| {
-    env!("OVERLAP_PROXY_EPSILON_DIAM_RATIO").parse().expect("Failed to parse OVERLAP_PROXY_EPSILON_DIAM_RATIO as f32")
-});
+pub const OVERLAP_PROXY_EPSILON_DIAM_RATIO: f32 = 0.1;
 
 pub const COMPRESS_R_SHRINKS: [f32; 2] = [0.0005, 0.0001];
 pub const COMPRESS_N_STRIKES: [usize; 2] = [5,5];
-
-
 
 pub const SEPARATOR_CONFIG_COMPRESS: SeparatorConfig = SeparatorConfig {
     iter_no_imprv_limit: 100,
@@ -78,14 +73,30 @@ pub const SEPARATOR_CONFIG_COMPRESS: SeparatorConfig = SeparatorConfig {
     },
 };
 
-/// Coordinate descent step multiplier on success
-pub const CD_STEP_SUCCESS: f32 = 1.1;
+pub static CD_STEP_SUCCESS: Lazy<f32> = Lazy::new(|| {
+    env!("CD_STEP_SUCCESS").parse().expect("Failed to parse CD_STEP_SUCCESS as f32")
+});
 
-/// Coordinate descent step multiplier on failure
-pub const CD_STEP_FAIL: f32 = 0.5;
+pub static CD_STEP_FAIL: Lazy<f32> = Lazy::new(|| {
+    env!("CD_STEP_FAIL").parse().expect("Failed to parse CD_STEP_FAIL as f32")
+});
 
-/// Coordinate descent initial step size as a ratio of the item's min dimension
-pub const CD_STEP_INIT_RATIO: f32 = 0.25; //25%
+pub static CD_STEP_INIT_RATIO: Lazy<f32> = Lazy::new(|| {
+    env!("CD_STEP_INIT_RATIO").parse().expect("Failed to parse CD_STEP_INIT_RATIO as f32")
+});
 
-/// Coordinate descent step limit as a ratio of the item's min dimension
-pub const CD_STEP_LIMIT_RATIO: f32 = 0.001; //0.1%
+pub static CD_STEP_LIMIT_RATIO: Lazy<f32> = Lazy::new(|| {
+    env!("CD_STEP_LIMIT_RATIO").parse().expect("Failed to parse CD_STEP_LIMIT_RATIO as f32")
+});
+
+// Coordinate descent step multiplier on success
+//pub const CD_STEP_SUCCESS: f32 = 1.1;
+
+// Coordinate descent step multiplier on failure
+//pub const CD_STEP_FAIL: f32 = 0.5;
+
+// Coordinate descent initial step size as a ratio of the item's min dimension
+//pub const CD_STEP_INIT_RATIO: f32 = 0.25; //25%
+
+// Coordinate descent step limit as a ratio of the item's min dimension
+//pub const CD_STEP_LIMIT_RATIO: f32 = 0.001; //0.1%
