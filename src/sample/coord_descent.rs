@@ -84,9 +84,7 @@ impl CDState {
             //since both axis are involved, adjust both steps but less severely
             CDAxis::ForwardDiag | CDAxis::BackwardDiag => (sx * m.sqrt(), sy * m.sqrt()),
         };
-        if !improved {
-            self.axis.cycle(rng);
-        }
+        self.axis.cycle(rng);
     }
 
     pub fn gen_candidates(&self) -> Option<[Point; 2]> {
