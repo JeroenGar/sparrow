@@ -83,4 +83,4 @@ pub const CD_STEP_FAIL: f32 = 0.5;
 pub const CD_STEP_INIT_RATIO: f32 = 0.25; //25%
 
 /// Coordinate descent step limit as a ratio of the item's min dimension
-pub const CD_STEP_LIMIT_RATIO: f32 = 0.001; //0.1%
+pub const CD_STEP_LIMIT_RATIO: f32 = 0.0001; //0.01%
