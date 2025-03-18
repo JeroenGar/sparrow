@@ -78,8 +78,8 @@ impl CDState {
             CDAxis::Vertical => self.steps.1 *= m,
             CDAxis::ForwardDiag | CDAxis::BackwardDiag => {
                 //since both axis are involved, adjust both steps but less severely
-                self.steps.0 *= m.sqrt();
-                self.steps.1 *= m.sqrt();
+                self.steps.0 *= m;
+                self.steps.1 *= m;
             }
         };
 
