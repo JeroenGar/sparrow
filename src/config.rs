@@ -74,13 +74,13 @@ pub const SEPARATOR_CONFIG_COMPRESS: SeparatorConfig = SeparatorConfig {
 };
 
 /// Coordinate descent step multiplier on success
-pub const CD_STEP_SUCCESS: f32 = 1.1;
+pub const CD_STEP_SUCCESS: f32 = 1.2;
 
 /// Coordinate descent step multiplier on failure
-pub const CD_STEP_FAIL: f32 = 0.5;
+pub const CD_STEP_FAIL: f32 = 0.4;
 
 /// Coordinate descent initial step size as a ratio of the item's min dimension
 pub const CD_STEP_INIT_RATIO: f32 = 0.25; //25%
 
 /// Coordinate descent step limit as a ratio of the item's min dimension
-pub const CD_STEP_LIMIT_RATIO: f32 = 0.001; //0.1%
+pub const CD_STEP_LIMIT_RATIO: f32 = 0.0005; //0.1%
