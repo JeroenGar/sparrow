@@ -101,8 +101,8 @@ impl CDState {
             let c = match self.axis {
                 CDAxis::Horizontal => [Point(p.0 + sx, p.1), Point(p.0 - sx, p.1)],
                 CDAxis::Vertical => [Point(p.0, p.1 + sy), Point(p.0, p.1 - sy)],
-                CDAxis::ForwardDiag => [Point(p.0 + sx, p.1 + sy), Point(p.0 - sx, p.1 - sy)],
-                CDAxis::BackwardDiag => [Point(p.0 - sx, p.1 + sy), Point(p.0 + sx, p.1 - sy)],
+                CDAxis::ForwardDiag => [Point(p.0 + sx.sqrt(), p.1 + sy.sqrt()), Point(p.0 - sx.sqrt(), p.1 - sy.sqrt())],
+                CDAxis::BackwardDiag => [Point(p.0 - sx.sqrt(), p.1 + sy.sqrt()), Point(p.0 + sx.sqrt(), p.1 - sy.sqrt())],
             };
             Some(c)
         }
