@@ -42,7 +42,7 @@ pub const LBF_SAMPLE_CONFIG: SampleConfig = SampleConfig {
 };
 
 pub const EXPLORE_SOL_DISTR_STDDEV: f32 = 0.25;
-pub const EXPLORE_R_SHRINK: f32 = 0.005;
+pub const EXPLORE_R_SHRINK: f32 = 0.001;
 
 pub const SEP_CONFIG_EXPLORE: SeparatorConfig = SeparatorConfig {
     iter_no_imprv_limit: 100,
