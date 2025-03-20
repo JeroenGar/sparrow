@@ -29,7 +29,7 @@ use std::time::Instant;
 use crate::optimizer::Terminator;
 
 pub struct SeparatorConfig {
-    pub iter_no_imprv_limit: usize,
+    pub iter_no_imprv_limit: &'static [usize],
     pub strike_limit: usize,
     pub n_workers: usize,
     pub log_level: Level,
@@ -87,7 +87,7 @@ impl Separator {
             let initial_strike_overlap = self.ot.get_total_overlap();
             debug!("[SEP] [s:{n_strikes},i:{n_iter}]     init_o: {}",FMT.fmt2(initial_strike_overlap));
 
-            while n_iter_no_improvement < self.config.iter_no_imprv_limit {
+            while n_iter_no_improvement < self.config.iter_no_imprv_limit[n_strikes] {
                 let (overlap_before, w_overlap_before) = (
                     self.ot.get_total_overlap(),
                     self.ot.get_total_weighted_overlap(),
