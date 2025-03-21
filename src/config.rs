@@ -45,8 +45,8 @@ pub const EXPLORE_SOL_DISTR_STDDEV: f32 = 0.25;
 pub const EXPLORE_R_SHRINK: f32 = 0.001;
 
 pub const SEP_CONFIG_EXPLORE: SeparatorConfig = SeparatorConfig {
-    iter_no_imprv_limit: 100,
-    strike_limit: 5,
+    iter_no_imprv_limit: 300,
+    strike_limit: 4,
     log_level: log::Level::Info,
     n_workers: 2,
     sample_config: SampleConfig {
@@ -65,8 +65,8 @@ pub const COMPRESS_R_SHRINKS: [f32; 2] = [0.0005, 0.0001];
 pub const COMPRESS_N_STRIKES: [usize; 2] = [5,5];
 
 pub const SEPARATOR_CONFIG_COMPRESS: SeparatorConfig = SeparatorConfig {
-    iter_no_imprv_limit: 100,
-    strike_limit: 5,
+    iter_no_imprv_limit: 300,
+    strike_limit: 4,
     log_level: log::Level::Debug,
     n_workers: 2,
     sample_config: SampleConfig {
