@@ -26,6 +26,7 @@ use rayon::iter::IntoParallelRefMutIterator;
 use rayon::iter::ParallelIterator;
 use std::path::Path;
 use std::time::Instant;
+use rayon::ThreadPool;
 use crate::optimizer::Terminator;
 
 pub struct SeparatorConfig {
@@ -44,7 +45,8 @@ pub struct Separator {
     pub workers: Vec<SeparatorWorker>,
     pub svg_counter: usize,
     pub output_svg_folder: String,
-    pub config: SeparatorConfig
+    pub config: SeparatorConfig,
+    pub pool: ThreadPool,
 }
 
 impl Separator {
@@ -58,6 +60,8 @@ impl Separator {
                 rng: SmallRng::seed_from_u64(rng.random()),
                 sample_config: config.sample_config.clone(),
             }).collect();
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(config.n_workers).build().unwrap();
 
         Self {
             prob,
@@ -67,7 +71,8 @@ impl Separator {
             workers,
             svg_counter,
             output_svg_folder,
-            config
+            config,
+            pool
         }
     }
 
@@ -145,14 +150,15 @@ impl Separator {
     fn modify(&mut self) -> usize {
         let master_sol = self.prob.create_solution(None);
 
-        let n_evals = self.workers.par_iter_mut()
-            .map(|worker| {
+        // Use the local thread pool (instead of global one) to maximize cache locality
+        let n_evals = self.pool.install(|| {
+            self.workers.par_iter_mut().map(|worker| {
                 // Sync the workers with the master
                 worker.load(&master_sol, &self.ot);
                 // Let them modify
                 worker.separate()
-            })
-            .sum();
+            }).sum()
+        });
 
         debug!("[MOD] optimizers w_o's: {:?}",self.workers.iter().map(|opt| opt.ot.get_total_weighted_overlap()).collect_vec());
 

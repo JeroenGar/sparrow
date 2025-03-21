@@ -17,8 +17,8 @@ name = "bench"
 path = "src/bench.rs"
 
 [dependencies]
-jagua-rs = { path = "libs/jagua-rs/jagua-rs"}
-rand = { version = "0.9.0", features = [ "small_rng" ] }
+jagua-rs = { path = "libs/jagua-rs/jagua-rs" }
+rand = { version = "0.9.0", features = ["small_rng"] }
 rand_distr = "0.5.1"
 svg = "0.18.0"
 itertools = "0.14.0"
@@ -39,7 +39,7 @@ jiff = "0.2.4"
 test-case = "3.3.1"
 
 [profile.dev]
-overflow-checks=true
+overflow-checks = true
 
 [profile.debug-release]
 inherits = "release"
@@ -48,10 +48,7 @@ debug = true
 
 [profile.release]
 opt-level = 3
-lto = "thin"
-strip = "debuginfo"
-codegen-units = 1
-panic = "abort"
+lto = "fat"
 
 [profile.test]
 opt-level = 3
