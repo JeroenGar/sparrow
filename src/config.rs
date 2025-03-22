@@ -45,8 +45,8 @@ pub const EXPLORE_SOL_DISTR_STDDEV: f32 = 0.25;
 pub const EXPLORE_R_SHRINK: f32 = 0.005;
 
 pub const SEP_CONFIG_EXPLORE: SeparatorConfig = SeparatorConfig {
-    iter_no_imprv_limit: 100,
-    strike_limit: 5,
+    iter_no_imprv_limit: 250,
+    strike_limit: 4,
     log_level: log::Level::Info,
     n_workers: 2,
     sample_config: SampleConfig {
