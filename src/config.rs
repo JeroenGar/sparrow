@@ -19,7 +19,7 @@ pub const CDE_CONFIG: CDEConfig = CDEConfig {
 
 pub const SIMPLIFICATION_CONFIG: PolySimplConfig = PolySimplConfig::Disabled;
 
-pub const EXPLORE_SHRINK_STEP: f32 = 0.005;
+pub const EXPLORE_SHRINK_STEP: f32 = 0.001;
 pub const EXPLORE_SOL_DISTR_STDDEV: f32 = 0.25;
 pub const EXPLORE_TIME_RATIO: f32 = 0.8;
 
