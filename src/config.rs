@@ -40,7 +40,7 @@ pub const SEP_CFG_EXPLORE: SeparatorConfig = SeparatorConfig {
     sample_config: SampleConfig {
         n_bin_samples: 50,
         n_focussed_samples: 25,
-        n_coord_descents: 3,
+        n_coord_descents: 2,
     }
 };
 
