@@ -13,7 +13,8 @@ pub fn eval_overlap_poly_poly(s1: &SimplePolygon, s2: &SimplePolygon) -> f32 {
 
     debug_assert!(overlap_proxy.is_normal());
 
-    let penalty = (s1.surrogate().convex_hull_area * s2.surrogate().convex_hull_area).sqrt();
+    // take the harmonic mean of the convex hull areas
+    let penalty = 2.0 / (1.0 / s1.surrogate().convex_hull_area + 1.0 / s2.surrogate().convex_hull_area);
 
     (overlap_proxy * penalty).sqrt()
 }
