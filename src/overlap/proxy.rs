@@ -13,12 +13,14 @@ pub fn eval_overlap_poly_poly(s1: &SimplePolygon, s2: &SimplePolygon) -> f32 {
 
     debug_assert!(overlap_proxy.is_normal());
 
-    // take the harmonic mean of the convex hull areas
-    let penalty_s1 = s1.surrogate().convex_hull_area.sqrt();
-    let penalty_s2 = s2.surrogate().convex_hull_area.sqrt();
-    let penalty = 2.0 / (1.0 / penalty_s1 + 1.0 / penalty_s2);
+    overlap_proxy.sqrt() * calc_penalty(s1, s2)
+}
 
-    overlap_proxy.sqrt() * penalty.sqrt()
+pub fn calc_penalty(s1: &SimplePolygon, s2: &SimplePolygon) -> f32 {
+    let p1 = s1.surrogate().convex_hull_area.sqrt();
+    let p2 = s2.surrogate().convex_hull_area.sqrt();
+    //harmonic mean
+    2.0 * (p1 * p2) / (p1 + p2)
 }
 
 /// Evaluates the overlap between a simple polygon and the exterior of the bin.

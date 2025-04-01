@@ -1,5 +1,5 @@
 use crate::config::OVERLAP_PROXY_EPSILON_DIAM_RATIO;
-use crate::overlap::proxy::poles_overlap_area_proxy;
+use crate::overlap::proxy::{calc_penalty, poles_overlap_area_proxy};
 use crate::overlap::simd::circles_soa::CirclesSoA;
 use float_cmp::approx_eq;
 use jagua_rs::geometry::fail_fast::sp_surrogate::SPSurrogate;
@@ -17,12 +17,7 @@ pub fn eval_overlap_poly_poly_simd(s1: &SimplePolygon, s2: &SimplePolygon, poles
 
     debug_assert!(overlap_proxy.is_normal());
 
-    // take the harmonic mean of the convex hull areas
-    let penalty_s1 = s1.surrogate().convex_hull_area.sqrt();
-    let penalty_s2 = s2.surrogate().convex_hull_area.sqrt();
-    let penalty = 2.0 / (1.0 / penalty_s1 + 1.0 / penalty_s2);
-
-    overlap_proxy.sqrt() * penalty.sqrt()
+    overlap_proxy.sqrt() * calc_penalty(s1, s2)
 }
 
 /// Width of the SIMD vector
