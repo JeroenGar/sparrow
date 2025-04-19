@@ -11,7 +11,7 @@ use jagua_rs::collision_detection::hazards::detector::{BasicHazardDetector, Haza
 use jagua_rs::collision_detection::hazards::HazardEntity;
 use jagua_rs::entities::general::Layout;
 use jagua_rs::geometry::geo_traits::Shape;
-use jagua_rs::geometry::primitives::SimplePolygon;
+use jagua_rs::geometry::primitives::SPolygon;
 
 pub fn tracker_matches_layout(ct: &CollisionTracker, l: &Layout) -> bool {
     assert!(l.placed_items.keys().all(|k| ct.pk_idx_map.contains_key(k)));
@@ -33,7 +33,7 @@ pub fn tracker_matches_layout(ct: &CollisionTracker, l: &Layout) -> bool {
                         l.cde().collect_poly_collisions(&pi2.shape, &mut opp_detector);
                         opp_detector.remove(&HazardEntity::from((pk2, pi2)));
                         if opp_detector.contains(&((pk1, pi1).into())) {
-                            dbg!(&pi1.shape.points, &pi2.shape.points);
+                            dbg!(&pi1.shape.vertices, &pi2.shape.vertices);
                             dbg!(
                                 stored_loss,
                                 calc_loss,
@@ -60,7 +60,7 @@ pub fn tracker_matches_layout(ct: &CollisionTracker, l: &Layout) -> bool {
                             warn!(
                                 "pi_1: {:?}",
                                 pi1.shape
-                                    .points
+                                    .vertices
                                     .iter()
                                     .map(|p| format!("({},{})", p.0, p.1))
                                     .collect_vec()
@@ -68,7 +68,7 @@ pub fn tracker_matches_layout(ct: &CollisionTracker, l: &Layout) -> bool {
                             warn!(
                                 "pi_2: {:?}",
                                 pi2.shape
-                                    .points
+                                    .vertices
                                     .iter()
                                     .map(|p| format!("({},{})", p.0, p.1))
                                     .collect_vec()
@@ -89,7 +89,7 @@ pub fn tracker_matches_layout(ct: &CollisionTracker, l: &Layout) -> bool {
                         l.cde().collect_poly_collisions(&pi2.shape, &mut opp_detector);
                         opp_detector.remove(&HazardEntity::from((pk2, pi2)));
                         if !opp_detector.contains(&HazardEntity::from((pk1, pi1))) {
-                            dbg!(&pi1.shape.points, &pi2.shape.points);
+                            dbg!(&pi1.shape.vertices, &pi2.shape.vertices);
                             dbg!(
                                 stored_loss,
                                 calc_loss,
@@ -128,7 +128,7 @@ pub fn tracker_matches_layout(ct: &CollisionTracker, l: &Layout) -> bool {
     true
 }
 
-pub fn custom_pipeline_matches_jaguars(shape: &SimplePolygon, det: &SpecializedHazardDetector) -> bool {
+pub fn custom_pipeline_matches_jaguars(shape: &SPolygon, det: &SpecializedHazardDetector) -> bool {
     //Standard colllision collection, provided by jagua-rs, for comparison
     let cde = det.layout.cde();
     let base_detector = {

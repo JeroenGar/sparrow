@@ -8,7 +8,7 @@ use jagua_rs::collision_detection::hazards::filter::NoHazardFilter;
 use jagua_rs::collision_detection::hazards::HazardEntity;
 use jagua_rs::entities::general::{Instance, Layout, LayoutSnapshot};
 use jagua_rs::geometry::geo_traits::{Shape, Transformable};
-use jagua_rs::geometry::primitives::{Circle, Edge};
+use jagua_rs::geometry::primitives::Edge;
 use jagua_rs::geometry::{DTransformation, Transformation};
 use svg::node::element::{Definitions, Group, Text, Title, Use};
 use svg::Document;
@@ -303,32 +303,6 @@ pub fn layout_to_svg(
         }
     };
 
-    //draw hazard proximity grid (if enabled)
-    let hpg_group = match options.haz_prox_grid {
-        false => None,
-        true => {
-            let mut hpg_group = Group::new().set("id", "haz_prox_grid");
-            let hpg = layout.cde().haz_prox_grid().unwrap();
-            for hp_cell in hpg.grid.cells.iter().flatten() {
-                let center = hp_cell.centroid;
-                let prox = hp_cell.hazard_proximity(None);
-                let color = if prox == 0.0 { "red" } else { "blue" };
-
-                hpg_group = hpg_group
-                    .add(svg_export::point(center, Some(color), Some(stroke_width)))
-                    .add(svg_export::circle(
-                        Circle::new(center, prox),
-                        &[
-                            ("fill", "none"),
-                            ("stroke", color),
-                            ("stroke-width", &*format!("{}", stroke_width / 2.0)),
-                        ],
-                    ));
-            }
-            Some(hpg_group)
-        }
-    };
-
     //highlight colliding items (if enabled)
     let collision_group = match options.highlight_collisions {
         false => None,
@@ -392,7 +366,7 @@ pub fn layout_to_svg(
 
     let vbox_svg = (vbox.x_min, vbox.y_min, vbox.width(), vbox.height());
 
-    let optionals = [Some(highlight_cd_shape_group), Some(surrogate_group), qt_group, hpg_group, collision_group]
+    let optionals = [Some(highlight_cd_shape_group), Some(surrogate_group), qt_group, collision_group]
         .into_iter()
         .flatten()
         .fold(Group::new().set("id", "optionals"), |g, opt| g.add(opt));

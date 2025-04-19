@@ -1,13 +1,13 @@
+use jagua_rs::collision_detection::CDEConfig;
+use jagua_rs::geometry::fail_fast::SPSurrogateConfig;
 use crate::optimizer::separator::SeparatorConfig;
 use crate::sample::search::SampleConfig;
 use crate::util::io::svg_util::{SvgDrawOptions, SvgLayoutTheme};
-use jagua_rs::util::{CDEConfig, SPSurrogateConfig};
 
 pub const RNG_SEED: Option<usize> = None;
 
 pub const CDE_CONFIG: CDEConfig = CDEConfig {
     quadtree_depth: 4,
-    hpg_n_cells: 0,
     item_surrogate_config: SPSurrogateConfig {
         n_pole_limits: [(64, 0.0), (16, 0.8), (8, 0.9)],
         n_ff_poles: 2,
@@ -91,7 +91,6 @@ pub const LARGE_AREA_CH_AREA_CUTOFF_RATIO: f32 = 0.5;
 pub const DRAW_OPTIONS: SvgDrawOptions = SvgDrawOptions {
     theme: SvgLayoutTheme::GRAY_THEME,
     quadtree: false,
-    haz_prox_grid: false,
     surrogate: false,
     highlight_collisions: true,
     draw_cd_shapes: false,

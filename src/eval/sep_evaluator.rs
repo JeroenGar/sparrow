@@ -5,15 +5,14 @@ use jagua_rs::collision_detection::hazards::detector::HazardDetector;
 use jagua_rs::entities::general::Item;
 use jagua_rs::entities::general::Layout;
 use jagua_rs::entities::general::PItemKey;
-use jagua_rs::fsize;
 use jagua_rs::geometry::DTransformation;
-use jagua_rs::geometry::primitives::SimplePolygon;
+use jagua_rs::geometry::primitives::SPolygon;
 
 pub struct SeparationEvaluator<'a> {
     layout: &'a Layout,
     item: &'a Item,
     detection_map: SpecializedHazardDetector<'a>,
-    shape_buff: SimplePolygon,
+    shape_buff: SPolygon,
     n_evals: usize,
 }
 
@@ -46,7 +45,7 @@ impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
         let loss_bound = match upper_bound {
             Some(SampleEval::Collision { loss }) => loss,
             Some(SampleEval::Clear { .. }) => 0.0,
-            _ => fsize::INFINITY,
+            _ => f32::INFINITY,
         };
         // reload the detection map for the new query and update the loss bound
         self.detection_map.reload(loss_bound);

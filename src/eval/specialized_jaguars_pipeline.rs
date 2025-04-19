@@ -18,7 +18,7 @@ use jagua_rs::entities::general::Layout;
 use jagua_rs::entities::general::PItemKey;
 use jagua_rs::geometry::DTransformation;
 use jagua_rs::geometry::geo_traits::{CollidesWith, Shape, TransformableFrom};
-use jagua_rs::geometry::primitives::SimplePolygon;
+use jagua_rs::geometry::primitives::SPolygon;
 use slotmap::SecondaryMap;
 
 /// Functionally the same as [`CDEngine::collect_poly_collisions_in_detector`], but with early termination.
@@ -26,8 +26,8 @@ use slotmap::SecondaryMap;
 pub fn collect_poly_collisions_in_detector_custom(
     cde: &CDEngine,
     dt: &DTransformation,
-    shape_buffer: &mut SimplePolygon,
-    reference_shape: &SimplePolygon,
+    shape_buffer: &mut SPolygon,
+    reference_shape: &SPolygon,
     det: &mut SpecializedHazardDetector,
 ) {
     let t = dt.compose();
@@ -46,8 +46,8 @@ pub fn collect_poly_collisions_in_detector_custom(
 
     // Collect collisions for all edges of the shape.
     // Iterate over them in a bit-reversed order to maximize detecting new hazards early.
-    let custom_edge_iter = BitReversalIterator::new(shape.n_points())
-        .map(|i| shape.get_edge(i));
+    let custom_edge_iter = BitReversalIterator::new(shape.n_vertices())
+        .map(|i| shape.edge(i));
     for edge in custom_edge_iter {
         qt_collect_collisions_custom(&cde.quadtree, &edge, det);
         if det.early_terminate(shape) { return; }
@@ -142,11 +142,11 @@ impl<'a> SpecializedHazardDetector<'a> {
         self.detected_pis.values().chain(self.detected_bin.iter())
     }
 
-    pub fn early_terminate(&mut self, shape: &SimplePolygon) -> bool {
+    pub fn early_terminate(&mut self, shape: &SPolygon) -> bool {
         self.loss(shape) > self.loss_bound
     }
 
-    pub fn loss(&mut self, shape: &SimplePolygon) -> f32 {
+    pub fn loss(&mut self, shape: &SPolygon) -> f32 {
         let (cache_idx, cached_loss) = self.loss_cache;
         if cache_idx < self.idx_counter {
             // additional hazards were detected, update the cache
@@ -160,7 +160,7 @@ impl<'a> SpecializedHazardDetector<'a> {
         self.loss_cache.1
     }
 
-    fn calc_weighted_loss(&self, haz: &HazardEntity, shape: &SimplePolygon) -> f32 {
+    fn calc_weighted_loss(&self, haz: &HazardEntity, shape: &SPolygon) -> f32 {
         match haz {
             HazardEntity::PlacedItem { pk: other_pk, .. } => {
                 let other_shape = &self.layout.placed_items[*other_pk].shape;

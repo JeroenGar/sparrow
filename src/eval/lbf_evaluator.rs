@@ -4,7 +4,7 @@ use jagua_rs::entities::general::Item;
 use jagua_rs::entities::general::Layout;
 use jagua_rs::geometry::DTransformation;
 use jagua_rs::geometry::geo_traits::{Shape, TransformableFrom};
-use jagua_rs::geometry::primitives::SimplePolygon;
+use jagua_rs::geometry::primitives::SPolygon;
 
 pub const X_MULTIPLIER: f32 = 10.0;
 pub const Y_MULTIPLIER: f32 = 1.0;
@@ -15,7 +15,7 @@ pub const Y_MULTIPLIER: f32 = 1.0;
 pub struct LBFEvaluator<'a> {
     layout: &'a Layout,
     item: &'a Item,
-    shape_buff: SimplePolygon,
+    shape_buff: SPolygon,
     n_evals: usize
 }
 

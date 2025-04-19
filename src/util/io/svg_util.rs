@@ -10,9 +10,6 @@ pub struct SvgDrawOptions {
     ///Draw the quadtree on top
     #[serde(default)]
     pub quadtree: bool,
-    ///Draw the hazard proximity grid on top
-    #[serde(default)]
-    pub haz_prox_grid: bool,
     ///Draw the fail fast surrogate on top of each item
     #[serde(default)]
     pub surrogate: bool,
@@ -31,7 +28,6 @@ impl Default for SvgDrawOptions {
         Self {
             theme: SvgLayoutTheme::default(),
             quadtree: false,
-            haz_prox_grid: false,
             surrogate: true,
             highlight_collisions: true,
             draw_cd_shapes: false,

@@ -8,9 +8,9 @@ use rand::prelude::SmallRng;
 use std::cmp::Reverse;
 use std::iter;
 use std::time::Instant;
+use jagua_rs::collision_detection::CDEConfig;
 use jagua_rs::entities::general::Instance;
 use jagua_rs::entities::strip_packing::{SPInstance, SPPlacement, SPProblem};
-use jagua_rs::util::CDEConfig;
 
 pub struct LBFBuilder {
     pub instance: SPInstance,

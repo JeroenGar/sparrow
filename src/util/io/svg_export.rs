@@ -8,9 +8,9 @@ use jagua_rs::entities::general::OriginalShape;
 use jagua_rs::geometry;
 use jagua_rs::geometry::primitives::Edge;
 use jagua_rs::geometry::primitives::Point;
-use jagua_rs::geometry::primitives::SimplePolygon;
+use jagua_rs::geometry::primitives::SPolygon;
 
-pub fn original_shape_data(original: &OriginalShape, internal: &SimplePolygon, draw_internal: bool) -> Data {
+pub fn original_shape_data(original: &OriginalShape, internal: &SPolygon, draw_internal: bool) -> Data {
     match draw_internal {
         true => {
             simple_polygon_data(internal)
@@ -19,10 +19,10 @@ pub fn original_shape_data(original: &OriginalShape, internal: &SimplePolygon, d
     }
 }
 
-pub fn simple_polygon_data(s_poly: &SimplePolygon) -> Data {
-    let mut data = Data::new().move_to::<(f32, f32)>(s_poly.get_point(0).into());
-    for i in 1..s_poly.n_points() {
-        data = data.line_to::<(f32, f32)>(s_poly.get_point(i).into());
+pub fn simple_polygon_data(s_poly: &SPolygon) -> Data {
+    let mut data = Data::new().move_to::<(f32, f32)>(s_poly.vertex(0).into());
+    for i in 1..s_poly.n_vertices() {
+        data = data.line_to::<(f32, f32)>(s_poly.vertex(i).into());
     }
     data.close()
 }
@@ -117,7 +117,7 @@ pub fn edge_data(edge: Edge) -> Data {
         .line_to((edge.end.0, edge.end.1))
 }
 
-pub fn aa_rect_data(rect: geometry::primitives::AARectangle) -> Data {
+pub fn aa_rect_data(rect: geometry::primitives::Rect) -> Data {
     Data::new()
         .move_to((rect.x_min, rect.y_min))
         .line_to((rect.x_max, rect.y_min))
