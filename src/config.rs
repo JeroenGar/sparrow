@@ -43,7 +43,7 @@ pub const SEP_CFG_EXPLORE: SeparatorConfig = SeparatorConfig {
     iter_no_imprv_limit: 200,
     strike_limit: 3,
     log_level: log::Level::Info,
-    n_workers: 3,
+    n_workers: 4,
     sample_config: SampleConfig {
         n_container_samples: 50,
         n_focussed_samples: 25,
@@ -55,7 +55,7 @@ pub const SEP_CFG_COMPRESS: SeparatorConfig = SeparatorConfig {
     iter_no_imprv_limit: 100,
     strike_limit: 5,
     log_level: log::Level::Debug,
-    n_workers: 3,
+    n_workers: 4,
     sample_config: SampleConfig {
         n_container_samples: 50,
         n_focussed_samples: 25,
