@@ -32,7 +32,7 @@ impl SeparatorWorker {
 
     pub fn separate(&mut self) -> SepStats {
         //collect all colliding items and shuffle them
-        let candidates = self.prob.layout.placed_items().keys()
+        let candidates = self.prob.layout.placed_items.keys()
             .filter(|pk| self.ct.get_loss(*pk) > 0.0)
             .collect_vec()
             .tap_mut(|v| v.shuffle(&mut self.rng));
@@ -44,7 +44,7 @@ impl SeparatorWorker {
         for &pk in candidates.iter() {
             //check if the item is still colliding
             if self.ct.get_loss(pk) > 0.0 {
-                let item_id = self.prob.layout.placed_items()[pk].item_id;
+                let item_id = self.prob.layout.placed_items[pk].item_id;
                 let item = self.instance.item(item_id);
 
                 // create an evaluator to evaluate the samples during the search
@@ -68,7 +68,7 @@ impl SeparatorWorker {
     pub fn move_item(&mut self, pk: PItemKey, d_transf: DTransformation) -> PItemKey {
         debug_assert!(tracker_matches_layout(&self.ct, &self.prob.layout));
 
-        let item = self.instance.item(self.prob.layout.placed_items()[pk].item_id);
+        let item = self.instance.item(self.prob.layout.placed_items[pk].item_id);
 
         let (old_l, old_w_l) = (self.ct.get_loss(pk), self.ct.get_weighted_loss(pk));
 

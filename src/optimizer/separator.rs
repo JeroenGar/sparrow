@@ -188,7 +188,7 @@ impl Separator {
     pub fn move_item(&mut self, pk: PItemKey, d_transf: DTransformation) -> PItemKey {
         debug_assert!(tracker_matches_layout(&self.ct, &self.prob.layout));
 
-        let item_id = self.prob.layout.placed_items()[pk].item_id;
+        let item_id = self.prob.layout.placed_items[pk].item_id;
 
         let old_loss = self.ct.get_loss(pk);
         let old_weighted_loss = self.ct.get_weighted_loss(pk);
@@ -218,7 +218,7 @@ impl Separator {
         let delta = new_width - self.prob.strip_width();
 
         //shift all items right of the split position
-        let items_to_shift = self.prob.layout.placed_items().iter()
+        let items_to_shift = self.prob.layout.placed_items.iter()
             .filter(|(_, pi)| pi.shape.centroid().0 > split_position)
             .map(|(k, pi)| (k, pi.d_transf))
             .collect_vec();
