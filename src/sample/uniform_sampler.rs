@@ -1,3 +1,4 @@
+use std::f32::consts::PI;
 use itertools::Itertools;
 use jagua_rs::geometry::geo_enums::RotationRange;
 use jagua_rs::geometry::geo_traits::TransformableFrom;
@@ -6,7 +7,7 @@ use rand::Rng;
 use std::ops::Range;
 use jagua_rs::entities::Item;
 use jagua_rs::geometry::primitives::Rect;
-use jagua_rs::geometry::{DTransformation, Transformation};
+use jagua_rs::geometry::{normalize_rotation, DTransformation, Transformation};
 use ordered_float::{NotNan, OrderedFloat};
 use rand_distr::num_traits::Zero;
 
@@ -25,7 +26,7 @@ struct RotEntry {
 }
 
 impl UniformBBoxSampler {
-    pub fn new(sample_bbox: Rect, item: &Item, cont_bbox: Rect) -> Option<Self> {
+    pub fn new(sample_bbox: Rect, item: &Item, container_bbox: Rect) -> Option<Self> {
         let rotations = match &item.allowed_rotation {
             RotationRange::None => &vec![0.0],
             RotationRange::Discrete(r) => r,
@@ -44,8 +45,8 @@ impl UniformBBoxSampler {
                 let r_shape_bbox = shape_buffer.transform_from(item.shape_cd.as_ref(), &Transformation::from_rotation(r)).bbox;
 
                 //narrow the container range to account for the rotated shape
-                let cont_x_range = (cont_bbox.x_min - r_shape_bbox.x_min)..(cont_bbox.x_max - r_shape_bbox.x_max);
-                let cont_y_range = (cont_bbox.y_min - r_shape_bbox.y_min)..(cont_bbox.y_max - r_shape_bbox.y_max);
+                let cont_x_range = (container_bbox.x_min - r_shape_bbox.x_min)..(container_bbox.x_max - r_shape_bbox.x_max);
+                let cont_y_range = (container_bbox.y_min - r_shape_bbox.y_min)..(container_bbox.y_max - r_shape_bbox.y_max);
 
                 //intersect with the sample bbox
                 let x_range = intersect_range(&cont_x_range, &sample_x_range);
@@ -86,20 +87,20 @@ fn intersect_range(a: &Range<f32>, b: &Range<f32>) -> Range<f32> {
 
 /// Converts a sample transformation to the closest feasible transformation. (for now just mapping rotation to the closest allowed one)
 pub fn convert_sample_to_closest_feasible(dt: DTransformation, item: &Item) -> DTransformation {
-    let feas_rotation = match &item.allowed_rotation {
-        RotationRange::None => NotNan::zero(),
+    let feasible_rotation = match &item.allowed_rotation {
+        RotationRange::None => 0.0,
         RotationRange::Discrete(v) => {
-            // find the closest rotation to the sample
-            let r = v.iter().min_by_key(|&&r| OrderedFloat((r - *dt.rotation).abs())).unwrap();
-            NotNan::new(*r).unwrap()
+            // find the closest rotation in the discrete set
+            v.iter().min_by_key(|&&r| {
+                // make sure to normalize the delta to the range [-PI, PI]
+                let norm_delta = normalize_rotation(dt.rotation() - r);
+                OrderedFloat(norm_delta.abs())
+            }).cloned().unwrap()
         }
         RotationRange::Continuous => {
             // for continuous rotation, we can just use the sample rotation
-            dt.rotation
+            dt.rotation()
         }
     };
-    DTransformation{
-        rotation: feas_rotation,
-        translation: dt.translation,
-    }
+    DTransformation::new(feasible_rotation, dt.translation())
 }
