@@ -94,6 +94,12 @@ pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, term: &Term
 
             sep.rollback(selected_sol, None);
             disrupt_solution(sep);
+
+            if solution_pool.len() >= 20 {
+                solution_pool.drain(15..20);
+                solution_pool.drain(0..5);
+                info!("[EXPL] solution pool is too large, draining it, keeping the middle solutions (n: {})", solution_pool.len());
+            }
         }
     }
 
