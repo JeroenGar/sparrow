@@ -7,7 +7,7 @@ pub trait Terminator {
 
     /// Sets a new timeout duration
     fn new_timeout(&mut self, timeout: Duration);
-    
+
     /// Returns the instant when a timeout was set, if any
     fn timeout_at(&self) -> Option<Instant>;
 }

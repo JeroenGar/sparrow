@@ -6,13 +6,14 @@ use rand::prelude::SmallRng;
     use sparrow::config::{CDE_CONFIG, LBF_SAMPLE_CONFIG, OUTPUT_DIR, SEP_CFG_EXPLORE, SIMPL_TOLERANCE, MIN_ITEM_SEPARATION};
     use sparrow::optimizer::lbf::LBFBuilder;
     use sparrow::optimizer::separator::Separator;
-    use sparrow::optimizer::{compression_phase, exploration_phase};
     use sparrow::util::io;
     use std::path::Path;
     use std::time::Duration;
     use test_case::test_case;
     use anyhow::Result;
     use jagua_rs::io::import::Importer;
+    use sparrow::optimizer::compress::{compression_phase, ShrinkDecayStrategy};
+    use sparrow::optimizer::explore::exploration_phase;
     use sparrow::util::svg_exporter::SvgExporter;
     use sparrow::util::terminator::BasicTerminator;
 
@@ -56,11 +57,11 @@ use rand::prelude::SmallRng;
         let builder = LBFBuilder::new(instance.clone(), rng, LBF_SAMPLE_CONFIG).construct();
         let mut separator = Separator::new(builder.instance, builder.prob, builder.rng,SEP_CFG_EXPLORE);
 
-        let sols = exploration_phase(&instance, &mut separator, &terminator, &mut sol_listener);
+        let sols = exploration_phase(&instance, &mut separator, &mut sol_listener, &terminator, None);
         let final_explore_sol = sols.last().expect("no solutions found during exploration");
 
         terminator.new_timeout(COMPRESS_TIMEOUT);
-        compression_phase(&instance, &mut separator, final_explore_sol, &terminator, &mut sol_listener);
+        compression_phase(&instance, &mut separator, final_explore_sol, &mut sol_listener, &terminator, ShrinkDecayStrategy::TimeBased(terminator.timeout_at().unwrap()));
         Ok(())
     }
 }
