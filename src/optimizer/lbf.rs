@@ -7,7 +7,7 @@ use ordered_float::OrderedFloat;
 use rand::prelude::SmallRng;
 use std::cmp::Reverse;
 use std::iter;
-use std::time::Instant;
+use jagua_rs::Instant;
 use jagua_rs::entities::Instance;
 use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem};
 use crate::util::assertions;

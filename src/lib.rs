@@ -4,7 +4,7 @@
 
 use std::sync::LazyLock;
 use numfmt::{Formatter, Precision, Scales};
-use std::time::Instant;
+use jagua_rs::Instant;
 
 pub mod optimizer;
 pub mod quantify;

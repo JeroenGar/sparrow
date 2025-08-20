@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use jagua_rs::Instant;
 use log::warn;
 use crate::util::terminator::Terminator;
 

@@ -4,7 +4,7 @@ use crate::optimizer::separator::Separator;
 use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
 use rand::prelude::SmallRng;
 use rand::{RngCore, SeedableRng};
-use std::time::{Duration};
+use std::time::Duration;
 use crate::consts::LBF_SAMPLE_CONFIG;
 use crate::optimizer::compress::compression_phase;
 use crate::optimizer::explore::exploration_phase;

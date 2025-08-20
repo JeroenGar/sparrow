@@ -14,7 +14,7 @@ name = "bench"
 path = "src/bench.rs"
 
 [dependencies]
-jagua-rs = { features = ["spp"], git = "https://github.com/JeroenGar/jagua-rs.git", rev = "a7bd8e9a85ceca57dbc61e4188a06f7e1facb461"}
+jagua-rs = { features = ["spp"], git = "https://github.com/JeroenGar/jagua-rs.git", rev = "1fb0824457cea336e65cebdd8b3dfb8c9d88487a"}
 #jagua-rs = { features = ["spp"], path = "../jagua-rs/jagua-rs" }
 rand = { version = "0.9", features = ["small_rng"] }
 rand_distr = "0.5"
@@ -31,12 +31,14 @@ ordered-float = "5.0.0"
 rayon = "1.10.0"
 numfmt = "1.1.1"
 num_cpus = "1.16.0"
-ctrlc = "3.4"
 jiff = "0.2"
 test-case = "3.3"
 clap = { version = "4.5", features = ["derive"] }
 anyhow = "1.0"
 ndarray = "0.16"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ctrlc = "3.4"
 
 [features]
 live_svg = []

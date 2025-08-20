@@ -1,4 +1,4 @@
-use std::time::Instant;
+use jagua_rs::Instant;
 use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
 use log::info;
 use rand::Rng;
