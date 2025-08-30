@@ -11,7 +11,8 @@ use sparrow::util::io;
 use std::env::args;
 use std::fs;
 use std::path::Path;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use jagua_rs::Instant;
 
 use anyhow::Result;
 use jagua_rs::io::import::Importer;

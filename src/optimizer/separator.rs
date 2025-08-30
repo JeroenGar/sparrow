@@ -15,7 +15,7 @@ use rand::{Rng, SeedableRng};
 use rayon::iter::IntoParallelRefMutIterator;
 use rayon::iter::ParallelIterator;
 use rayon::ThreadPool;
-use std::time::Instant;
+use jagua_rs::Instant;
 use crate::util::listener::{ReportType, SolutionListener};
 
 #[derive(Debug, Clone, Copy)]
@@ -34,7 +34,7 @@ pub struct Separator {
     pub ct: CollisionTracker,
     pub workers: Vec<SeparatorWorker>,
     pub config: SeparatorConfig,
-    pub pool: ThreadPool,
+    pub thread_pool: Option<ThreadPool>,
 }
 
 impl Separator {
@@ -48,8 +48,14 @@ impl Separator {
                 rng: SmallRng::seed_from_u64(rng.random()),
                 sample_config: config.sample_config.clone(),
             }).collect();
-        let pool = rayon::ThreadPoolBuilder::new()
-            .num_threads(config.n_workers).build().unwrap();
+
+        let pool = if cfg!(target_arch = "wasm32") {
+            // On wasm32, only the global thread pool is available
+            None
+        } else {
+            // Create a local thread pool to keep using the same threads for the same optimization (helps the OS scheduler)
+            Some(rayon::ThreadPoolBuilder::new().num_threads(config.n_workers).build().unwrap())
+        };
 
         Self {
             prob,
@@ -58,7 +64,7 @@ impl Separator {
             ct,
             workers,
             config,
-            pool,
+            thread_pool: pool,
         }
     }
 
@@ -138,15 +144,19 @@ impl Separator {
     fn move_colliding_items(&mut self) -> SepStats {
         let master_sol = self.prob.save();
 
-        // Use the local thread pool (instead of global one) to maximize cache locality
-        let sep_report = self.pool.install(|| {
+        let mut separate_multi = || -> SepStats {
             self.workers.par_iter_mut().map(|worker| {
                 // Sync the workers with the master
                 worker.load(&master_sol, &self.ct);
                 // Let them modify
                 worker.move_colliding_items()
             }).sum()
-        });
+        };
+
+        let sep_report = match self.thread_pool.as_mut() {
+            Some(pool) => pool.install(|| separate_multi()),
+            None => separate_multi(),
+        };
 
         debug!("[MOD] optimizers w_o's: {:?}",self.workers.iter().map(|opt| opt.ct.get_total_weighted_loss()).collect_vec());
 
