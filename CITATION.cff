@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Gardeyn"
+  given-names: "Jeroen"
+  affiliation: KU Leuven
+title: "sparrow: State-of-the-art nesting for 2D irregular strip packing"
+url: "https://github.com/JeroenGar/sparrow"
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Gardeyn"
+    given-names: "Jeroen"
+  - family-names: "Vanden Berghe"
+    given-names: "Greet"
+  - family-names: "Wauters"
+    given-names: "Tony"
+  title: "An open-source heuristic to reboot 2D nesting research"
+  doi: 10.5281/zenodo.17053914

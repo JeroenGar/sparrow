@@ -1,4 +1,5 @@
-# sparrow 🪶 [![Rust CI](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml/badge.svg?branch=main)](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml) 
+# sparrow 🪶 [![Rust CI](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml/badge.svg?branch=main)](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17053914.svg)](https://doi.org/10.5281/zenodo.17053914)
+
 
 
 
@@ -13,6 +14,9 @@
 ### The state-of-the-art nesting heuristic for 2D irregular strip packing
 `sparrow` can be used to solve 2D irregular strip packing problems, also commonly referred to as nesting problems.
 This optimization algorithm builds on [`jagua-rs`](https://github.com/JeroenGar/jagua-rs): _a collision detection engine for 2D irregular cutting & packing problems_.
+
+This repository accompanies the paper: ["_An open-source heuristic to reboot 2D nesting research_"](https://doi.org/10.5281/zenodo.17053914).
+
 
 ## Nested by `sparrow`
 <p align="center">
@@ -137,7 +141,7 @@ cargo run --profile debug-release -- \
 ```
 
 ## Experiments
-All solutions from the comparative experiments in [TBA] can be found at
+All solutions from the comparative experiments in the paper can be found at
 [data/experiments](data/experiments).
 The accompanying [README](data/experiments/README.md) details how to perform an exact reproduction of any benchmark run.
 
@@ -148,7 +152,7 @@ The accompanying [README](data/experiments/README.md) details how to perform an 
 
 ## Development
 
-This repo is meant to remain a faithful representation of the algorithm described in [TBA].
+This repo is meant to remain a faithful representation of the algorithm described in the paper.
 However, I am open to pull requests containing bug fixes and speed/performance improvements as long as they do not alter the algorithm too significantly.
 
 Feel free to fork the repository if you want to experiment with different heuristics or want to expand the functionality.
