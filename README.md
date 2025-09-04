@@ -1,4 +1,7 @@
-# sparrow 🪶 [![Rust CI](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml/badge.svg?branch=main)](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17053914.svg)](https://doi.org/10.5281/zenodo.17053914)
+# sparrow 🪶 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17053914.svg)](https://doi.org/10.5281/zenodo.17053914)
+![License](https://img.shields.io/crates/l/jagua-rs)
+[![CI](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml/badge.svg?branch=main)](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml) 
 
 
 
