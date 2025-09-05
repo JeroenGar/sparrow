@@ -16,7 +16,7 @@ path = "src/bench.rs"
 [dependencies]
 jagua-rs = { features = ["spp"], git = "https://github.com/JeroenGar/jagua-rs.git", rev = "1fb0824457cea336e65cebdd8b3dfb8c9d88487a"}
 #jagua-rs = { features = ["spp"], path = "../jagua-rs/jagua-rs" }
-rand = { version = "0.9", features = ["small_rng"] }
+rand = "0.9"
 rand_distr = "0.5"
 svg = "0.18"
 itertools = "0.14"
@@ -36,6 +36,7 @@ test-case = "3.3"
 clap = { version = "4.5", features = ["derive"] }
 anyhow = "1.0"
 ndarray = "0.16"
+rand_xoshiro = "0.7.0"
 
 getrandom = { version = "0.3", features = ["wasm_js"] }
 

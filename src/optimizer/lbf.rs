@@ -4,25 +4,25 @@ use crate::sample::search::{search_placement, SampleConfig};
 use itertools::Itertools;
 use log::debug;
 use ordered_float::OrderedFloat;
-use rand::prelude::SmallRng;
 use std::cmp::Reverse;
 use std::iter;
 use jagua_rs::Instant;
 use jagua_rs::entities::Instance;
 use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem};
+use rand_xoshiro::Xoshiro256PlusPlus;
 use crate::util::assertions;
 
 pub struct LBFBuilder {
     pub instance: SPInstance,
     pub prob: SPProblem,
-    pub rng: SmallRng,
+    pub rng: Xoshiro256PlusPlus,
     pub sample_config: SampleConfig,
 }
 
 impl LBFBuilder {
     pub fn new(
         instance: SPInstance,
-        rng: SmallRng,
+        rng: Xoshiro256PlusPlus,
         sample_config: SampleConfig,
     ) -> Self {
         let prob = SPProblem::new(instance.clone());
