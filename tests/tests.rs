@@ -2,8 +2,8 @@
 mod integration_tests {
     use anyhow::Result;
     use jagua_rs::io::import::Importer;
-    use rand::prelude::SmallRng;
     use rand::SeedableRng;
+    use rand_xoshiro::Xoshiro256PlusPlus;
     use sparrow::config::DEFAULT_SPARROW_CONFIG;
     use sparrow::consts::LBF_SAMPLE_CONFIG;
     use sparrow::optimizer::compress::compression_phase;
@@ -39,12 +39,12 @@ mod integration_tests {
         let rng = match RNG_SEED {
             Some(seed) => {
                 println!("[TEST] using provided seed: {}", seed);
-                SmallRng::seed_from_u64(seed as u64)
+                Xoshiro256PlusPlus::seed_from_u64(seed as u64)
             }
             None => {
                 let seed = rand::random();
                 println!("[TEST] no seed provided, using: {}", seed);
-                SmallRng::seed_from_u64(seed)
+                Xoshiro256PlusPlus::seed_from_u64(seed)
             }
         };
 

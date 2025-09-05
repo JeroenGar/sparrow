@@ -9,16 +9,17 @@ use jagua_rs::entities::{Instance, PItemKey};
 use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem, SPSolution};
 use jagua_rs::geometry::DTransformation;
 use log::debug;
-use rand::prelude::{SliceRandom, SmallRng};
+use rand::prelude::SliceRandom;
 use std::iter::Sum;
 use std::ops::AddAssign;
+use rand_xoshiro::Xoshiro256PlusPlus;
 use tap::Tap;
 
 pub struct SeparatorWorker {
     pub instance: SPInstance,
     pub prob: SPProblem,
     pub ct: CollisionTracker,
-    pub rng: SmallRng,
+    pub rng: Xoshiro256PlusPlus,
     pub sample_config: SampleConfig,
 }
 

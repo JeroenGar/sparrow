@@ -2,9 +2,9 @@ use crate::config::*;
 use crate::optimizer::lbf::LBFBuilder;
 use crate::optimizer::separator::Separator;
 use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
-use rand::prelude::SmallRng;
 use rand::{RngCore, SeedableRng};
 use std::time::Duration;
+use rand_xoshiro::Xoshiro256PlusPlus;
 use crate::consts::LBF_SAMPLE_CONFIG;
 use crate::optimizer::compress::compression_phase;
 use crate::optimizer::explore::exploration_phase;
@@ -17,8 +17,8 @@ mod worker;
 pub mod explore;
 pub mod compress;
 
-pub fn optimize(instance: SPInstance, mut rng: SmallRng, sol_listener: &mut impl SolutionListener, terminator: &mut impl Terminator, expl_config: &ExplorationConfig, cmpr_config: &CompressionConfig) -> SPSolution {
-    let mut next_rng = || SmallRng::seed_from_u64(rng.next_u64());
+pub fn optimize(instance: SPInstance, mut rng: Xoshiro256PlusPlus, sol_listener: &mut impl SolutionListener, terminator: &mut impl Terminator, expl_config: &ExplorationConfig, cmpr_config: &CompressionConfig) -> SPSolution {
+    let mut next_rng = || Xoshiro256PlusPlus::seed_from_u64(rng.next_u64());
     let builder = LBFBuilder::new(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG).construct();
 
     terminator.new_timeout(expl_config.time_limit);

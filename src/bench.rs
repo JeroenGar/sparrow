@@ -2,7 +2,6 @@ extern crate core;
 use sparrow::util::terminator::Terminator;
 
 use ordered_float::OrderedFloat;
-use rand::prelude::SmallRng;
 use rand::{Rng, RngCore, SeedableRng};
 use sparrow::config::*;
 use sparrow::optimizer::lbf::LBFBuilder;
@@ -17,6 +16,7 @@ use jagua_rs::Instant;
 use anyhow::Result;
 use jagua_rs::io::import::Importer;
 use jagua_rs::io::svg::s_layout_to_svg;
+use rand_xoshiro::Xoshiro256PlusPlus;
 use sparrow::consts::{DEFAULT_COMPRESS_TIME_RATIO, DEFAULT_EXPLORE_TIME_RATIO, DRAW_OPTIONS, LBF_SAMPLE_CONFIG};
 use sparrow::optimizer::compress::compression_phase;
 use sparrow::optimizer::explore::exploration_phase;
@@ -44,12 +44,12 @@ fn main() -> Result<()> {
     let mut rng = match config.rng_seed {
         Some(seed) => {
             println!("[BENCH] using provided seed: {}", seed);
-            SmallRng::seed_from_u64(seed as u64)
+            Xoshiro256PlusPlus::seed_from_u64(seed as u64)
         }
         None => {
             let seed = rand::random();
             println!("[BENCH] no seed provided, using: {}", seed);
-            SmallRng::seed_from_u64(seed)
+            Xoshiro256PlusPlus::seed_from_u64(seed)
         }
     };
 
@@ -80,11 +80,11 @@ fn main() -> Result<()> {
             for (j, sol_slice) in iter_solutions.iter_mut().enumerate() {
                 let bench_idx = i * n_runs_per_iter + j;
                 let instance = instance.clone();
-                let mut rng = SmallRng::seed_from_u64(rng.random());
+                let mut rng = Xoshiro256PlusPlus::seed_from_u64(rng.random());
                 let mut terminator = BasicTerminator::new();
 
                 s.spawn(move |_| {
-                    let mut next_rng = || SmallRng::seed_from_u64(rng.next_u64());
+                    let mut next_rng = || Xoshiro256PlusPlus::seed_from_u64(rng.next_u64());
                     let builder = LBFBuilder::new(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG).construct();
                     let mut expl_separator = Separator::new(builder.instance, builder.prob, next_rng(), config.expl_cfg.separator_config);
 

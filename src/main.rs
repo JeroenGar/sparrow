@@ -2,7 +2,6 @@ extern crate core;
 
 use clap::Parser as Clap;
 use log::{info, warn, Level};
-use rand::prelude::SmallRng;
 use rand::SeedableRng;
 use sparrow::config::*;
 use sparrow::optimizer::optimize;
@@ -15,6 +14,7 @@ use jagua_rs::io::import::Importer;
 use sparrow::EPOCH;
 
 use anyhow::{bail, Result};
+use rand_xoshiro::Xoshiro256PlusPlus;
 use sparrow::consts::{DEFAULT_COMPRESS_TIME_RATIO, DEFAULT_EXPLORE_TIME_RATIO, DEFAULT_FAIL_DECAY_RATIO_CMPR, DEFAULT_MAX_CONSEQ_FAILS_EXPL, LOG_LEVEL_FILTER_DEBUG, LOG_LEVEL_FILTER_RELEASE};
 use sparrow::util::svg_exporter::SvgExporter;
 use sparrow::util::ctrlc_terminator::CtrlCTerminator;
@@ -64,12 +64,12 @@ fn main() -> Result<()>{
     let rng = match config.rng_seed {
         Some(seed) => {
             info!("[MAIN] using seed: {}", seed);
-            SmallRng::seed_from_u64(seed as u64)
+            Xoshiro256PlusPlus::seed_from_u64(seed as u64)
         },
         None => {
             let seed = rand::random();
             warn!("[MAIN] no seed provided, using: {}", seed);
-            SmallRng::seed_from_u64(seed)
+            Xoshiro256PlusPlus::seed_from_u64(seed)
         }
     };
 
