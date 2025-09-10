@@ -20,7 +20,6 @@ This optimization algorithm builds on [`jagua-rs`](https://github.com/JeroenGar/
 
 This repository accompanies the paper: ["_An open-source heuristic to reboot 2D nesting research_"](https://doi.org/10.5281/zenodo.17053914).
 
-
 ## Nested by `sparrow`
 <p align="center">
     <img src="data/records/final_best_trousers.svg" height=200/>
@@ -78,6 +77,9 @@ and build `sparrow` with the `live_svg` feature enabled:
 cargo run --release --features=live_svg -- \
     -i data/input/swim.json
 ```
+> [!TIP]
+> Visit [sparroWASM](https://jeroengar.github.io/sparroWASM/) to see `sparrow` running in your webbrowser!
+
 ![Demo of the live solution viewer](data/demo.gif)
 
 ## Input
