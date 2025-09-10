@@ -89,7 +89,7 @@ pub const DEFAULT_SPARROW_CONFIG: SparrowConfig = SparrowConfig {
         },
     },
     cde_config: CDEConfig {
-        quadtree_depth: 3,
+        quadtree_depth: 4,
         cd_threshold: 16,
         item_surrogate_config: SPSurrogateConfig {
             n_pole_limits: [(64, 0.0), (16, 0.8), (8, 0.9)],
