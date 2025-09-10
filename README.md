@@ -153,7 +153,8 @@ The accompanying [README](data/experiments/README.md) details how to perform an 
 ## Related Projects
 
 - [`spyrrow`](https://github.com/PaulDL-RS/spyrrow): a Python wrapper of `sparrow`
-- [`sparroWASM`](https://github.com/JeroenGar/sparroWASM): Solve 2D nesting problems in the browser with WebAssembly
+- [`sparroWASM`](https://github.com/JeroenGar/sparroWASM): solve 2D nesting problems in the browser with WebAssembly
+- [`sparrow-3d`](https://github.com/JonasTollenaere/sparrow-3d): a 3D adaptation of `sparrow`
 
 ## Development
 
