@@ -1,5 +1,5 @@
 # sparrow 🪶 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17053914.svg)](https://doi.org/10.5281/zenodo.17053914)
+[![DOI](https://zenodo.org/badge/DOI/10.48550/arXiv.2509.13329.svg)](https://doi.org/10.48550/arXiv.2509.13329)
 ![License](https://img.shields.io/crates/l/jagua-rs)
 [![CI](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml/badge.svg?branch=main)](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml) 
 
@@ -18,7 +18,7 @@
 `sparrow` can be used to solve 2D irregular strip packing problems, also commonly referred to as nesting problems.
 This optimization algorithm builds on [`jagua-rs`](https://github.com/JeroenGar/jagua-rs): _a collision detection engine for 2D irregular cutting & packing problems_.
 
-This repository accompanies the paper: ["_An open-source heuristic to reboot 2D nesting research_"](https://doi.org/10.5281/zenodo.17053914).
+This repository accompanies the paper: ["_An open-source heuristic to reboot 2D nesting research_"](https://doi.org/10.48550/arXiv.2509.13329).
 
 ## Nested by `sparrow`
 <p align="center">
