@@ -38,7 +38,7 @@ impl Eq for SampleEval {}
 
 /// Simple trait for types that can evaluate samples
 pub trait SampleEvaluator {
-    fn eval(&mut self, dt: DTransformation, upper_bound: Option<SampleEval>) -> SampleEval;
+    fn evaluate_sample(&mut self, dt: DTransformation, upper_bound: Option<SampleEval>) -> SampleEval;
 
     fn n_evals(&self) -> usize;
 }

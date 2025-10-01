@@ -26,13 +26,13 @@ pub fn poles_overlap_area_proxy_simd(sp1: &SPSurrogate, sp2: &SPSurrogate, epsil
 
     let mut total_overlap = 0.0;
     for p1 in sp1.poles.iter() {
-        // common values for all chunks
+        //common values for all chunks
         let r1 = p1.radius;
         let x1_n = f32xN::splat(p1.center.x());
         let y1_n = f32xN::splat(p1.center.y());
         let r1_n = f32xN::splat(r1);
 
-        // process complete chunks with SIMD
+        //process complete chunks with SIMD
         let chunks = p2.x.len() / SIMD_WIDTH;
 
         for chunk in 0..chunks {
@@ -60,7 +60,7 @@ pub fn poles_overlap_area_proxy_simd(sp1: &SPSurrogate, sp2: &SPSurrogate, epsil
             total_overlap += (pd_decay * min_r).reduce_sum();
         }
 
-        // process remaining elements with scalar operations
+        //process remaining elements with scalar operations
         let remaining_idx = chunks * SIMD_WIDTH;
         for j in remaining_idx..p2.x.len() {
             let p2 = Circle { 
@@ -68,7 +68,7 @@ pub fn poles_overlap_area_proxy_simd(sp1: &SPSurrogate, sp2: &SPSurrogate, epsil
                 radius: p2.r[j]
             };
 
-            // Penetration depth between the two poles (circles)
+            //penetration depth between the two poles (circles)
             let pd = (p1.radius + p2.radius) - p1.center.distance_to(&p2.center);
 
             let pd_decay = match pd >= epsilon {

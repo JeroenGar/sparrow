@@ -38,9 +38,11 @@ pub fn collect_poly_collisions_in_detector_custom(
     #[cfg(feature = "simd")]
     collector.poles_soa.load(&shape.surrogate().poles);
     
-    // Start off by checking a few poles to detect obvious collisions quickly
+
     {
-        //TODO: clean this up
+        // We start off by checking a few poles in order to detect obvious collisions quickly and quickly raise the loss.
+        // Potentially allows us to fail fast (early terminate) without checking all edges.
+        // We check poles until the area of the poles checked exceeds 50% of the shape.
         let area_threshold = shape.area * 0.5 / PI;
         let mut area_sum = 0.0;
         for pole in shape.surrogate().poles.iter() {
@@ -48,7 +50,6 @@ pub fn collect_poly_collisions_in_detector_custom(
             if collector.early_terminate(shape) { return; }
             area_sum += pole.radius * pole.radius;
             if area_sum > area_threshold {
-                // If the area of the poles exceeds 80% of the shape's area, we can stop early.
                 break;
             }
         }
@@ -57,7 +58,7 @@ pub fn collect_poly_collisions_in_detector_custom(
     // Find the virtual root of the quadtree for the shape's bounding box. So we do not have to start from the root every time.
     let v_quadtree = cde.get_virtual_root(shape.bbox);
 
-    // Collect collisions for all edges.
+    // Collect collisions for each edge of the polygon.
     // Iterate over them in a bit-reversed order to maximize detecting new hazards early.
     let custom_edge_iter = BitReversalIterator::new(shape.n_vertices())
         .map(|i| shape.edge(i));
@@ -66,7 +67,7 @@ pub fn collect_poly_collisions_in_detector_custom(
         if collector.early_terminate(shape) { return; }
     }
 
-    //Check if there are any other collisions due to containment
+    // Check if there are any other collisions due to containment
     for qt_haz in v_quadtree.hazards.iter() {
         match &qt_haz.presence {
             // No need to check these, guaranteed to be detected by edge intersection
@@ -188,7 +189,8 @@ impl<'a> HazardCollector for SpecializedHazardCollector<'a> {
     }
     
     fn remove_by_key(&mut self, hkey: HazKey) {
-        let (_, idx) = self.detected.remove(hkey).expect("key should be present in the collector");
+        let (_, idx) = self.detected.remove(hkey)
+            .expect("key should be present in the collector");
         if idx < self.loss_cache.0 {
             //wipe the cache if a hazard was removed that was in it
             self.loss_cache = (0, 0.0);

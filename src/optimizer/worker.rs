@@ -31,8 +31,9 @@ impl SeparatorWorker {
         self.ct = ct.clone();
     }
 
-    pub fn move_colliding_items(&mut self) -> SepStats {
-        //collect all colliding items and shuffle them
+    /// Algorithm 5 from https://doi.org/10.48550/arXiv.2509.13329
+    pub fn move_items(&mut self) -> SepStats {
+        //collect all colliding items and order them randomly
         let candidates = self.prob.layout.placed_items.keys()
             .filter(|pk| self.ct.get_loss(*pk) > 0.0)
             .collect_vec()
@@ -41,23 +42,23 @@ impl SeparatorWorker {
         let mut total_moves = 0;
         let mut total_evals = 0;
 
-        //give each item a chance to move to a better (eval) position
+        //give each item the opportunity to move to a better (eval) position
         for &pk in candidates.iter() {
             //check if the item is still colliding
             if self.ct.get_loss(pk) > 0.0 {
                 let item_id = self.prob.layout.placed_items[pk].item_id;
                 let item = self.instance.item(item_id);
 
-                // create an evaluator to evaluate the samples during the search
+                //create an evaluator to evaluate the samples during the search
                 let evaluator = SeparationEvaluator::new(&self.prob.layout, item, pk, &self.ct);
 
-                // search for a better position for the item
+                //search for a better position for the item
                 let (best_sample, n_evals) =
                     search::search_placement(&self.prob.layout, item, Some(pk), evaluator, self.sample_config, &mut self.rng);
 
                 let (new_dt, _eval) = best_sample.expect("search_placement should always return a sample");
 
-                // move the item to the new position
+                //move the item to the new position
                 self.move_item(pk, new_dt);
                 total_moves += 1;
                 total_evals += n_evals;

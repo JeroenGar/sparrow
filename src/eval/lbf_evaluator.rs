@@ -31,7 +31,7 @@ impl<'a> LBFEvaluator<'a> {
 }
 
 impl<'a> SampleEvaluator for LBFEvaluator<'a> {
-    fn eval(&mut self, dt: DTransformation, _upper_bound: Option<SampleEval>) -> SampleEval {
+    fn evaluate_sample(&mut self, dt: DTransformation, _upper_bound: Option<SampleEval>) -> SampleEval {
         self.n_evals += 1;
         let cde = self.layout.cde();
         let transf = dt.into();

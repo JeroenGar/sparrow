@@ -108,7 +108,9 @@ impl CollisionTracker {
         debug_assert!(tracker_matches_layout(self, l));
     }
 
-    pub fn increment_weights(&mut self) {
+
+    /// Algorithm 8 from https://doi.org/10.48550/arXiv.2509.13329
+    pub fn update_weights(&mut self) {
         let max_loss = self.pair_collisions.data.iter()
             .chain(self.container_collisions.iter())
             .map(|e| e.loss)
@@ -134,6 +136,7 @@ impl CollisionTracker {
         self.container_collisions[idx].weight
     }
 
+    /// Algorithm 1 from https://doi.org/10.48550/arXiv.2509.13329
     pub fn get_pair_loss(&self, pk1: PItemKey, pk2: PItemKey) -> f32 {
         let (idx1, idx2) = (self.pk_idx_map[pk1], self.pk_idx_map[pk2]);
         self.pair_collisions[(idx1, idx2)].loss

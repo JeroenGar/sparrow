@@ -68,6 +68,7 @@ impl Separator {
         }
     }
 
+    /// Algorithm 9 from https://doi.org/10.48550/arXiv.2509.13329
     pub fn separate(&mut self, term: &impl Terminator, sol_listener: &mut impl SolutionListener) -> (SPSolution, CTSnapshot) {
         let mut min_loss_sol = (self.prob.save(), self.ct.save());
         let mut min_loss = self.ct.get_total_loss();
@@ -89,7 +90,7 @@ impl Separator {
                     self.ct.get_total_loss(),
                     self.ct.get_total_weighted_loss(),
                 );
-                sep_stats += self.move_colliding_items();
+                sep_stats += self.move_items_multi();
                 let (loss, w_loss) = (
                     self.ct.get_total_loss(),
                     self.ct.get_total_weighted_loss(),
@@ -117,7 +118,7 @@ impl Separator {
                     n_iter_no_improvement += 1;
                 }
 
-                self.ct.increment_weights();
+                self.ct.update_weights();
                 n_iter += 1;
             }
 
@@ -141,7 +142,8 @@ impl Separator {
         (min_loss_sol.0, min_loss_sol.1)
     }
 
-    fn move_colliding_items(&mut self) -> SepStats {
+    /// Algorithm 10 from https://doi.org/10.48550/arXiv.2509.13329
+    fn move_items_multi(&mut self) -> SepStats {
         let master_sol = self.prob.save();
 
         let mut separate_multi = || -> SepStats {
@@ -149,7 +151,7 @@ impl Separator {
                 // Sync the workers with the master
                 worker.load(&master_sol, &self.ct);
                 // Let them modify
-                worker.move_colliding_items()
+                worker.move_items()
             }).sum()
         };
 
