@@ -10,6 +10,7 @@ pub mod tracker;
 pub mod simd;
 
 /// Quantifies a collision between two simple polygons.
+/// Algorithm 4 from https://doi.org/10.48550/arXiv.2509.13329
 #[inline(always)]
 pub fn quantify_collision_poly_poly(s1: &SPolygon, s2: &SPolygon) -> f32 {
     let epsilon = f32::max(s1.diameter, s2.diameter) * OVERLAP_PROXY_EPSILON_DIAM_RATIO;

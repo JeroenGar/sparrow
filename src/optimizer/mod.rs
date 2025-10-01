@@ -17,6 +17,7 @@ mod worker;
 pub mod explore;
 pub mod compress;
 
+///Algorithm 11 from https://doi.org/10.48550/arXiv.2509.13329
 pub fn optimize(instance: SPInstance, mut rng: Xoshiro256PlusPlus, sol_listener: &mut impl SolutionListener, terminator: &mut impl Terminator, expl_config: &ExplorationConfig, cmpr_config: &CompressionConfig) -> SPSolution {
     let mut next_rng = || Xoshiro256PlusPlus::seed_from_u64(rng.next_u64());
     let builder = LBFBuilder::new(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG).construct();

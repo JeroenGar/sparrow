@@ -7,6 +7,7 @@ use crate::optimizer::separator::Separator;
 use crate::util::listener::{ReportType, SolutionListener};
 use crate::util::terminator::Terminator;
 
+/// Algorithm 13 from https://doi.org/10.48550/arXiv.2509.13329
 pub fn compression_phase(
     instance: &SPInstance, 
     sep: &mut Separator, 

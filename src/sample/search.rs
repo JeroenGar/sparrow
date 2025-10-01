@@ -16,6 +16,7 @@ pub struct SampleConfig {
     pub n_coord_descents: usize,
 }
 
+/// Algorithm 6 and Figure 7 from https://doi.org/10.48550/arXiv.2509.13329
 pub fn search_placement(l: &Layout, item: &Item, ref_pk: Option<PItemKey>, mut evaluator: impl SampleEvaluator, sample_config: SampleConfig, rng: &mut impl Rng) -> (Option<(DTransformation, SampleEval)>, usize) {
     let item_min_dim = f32::min(item.shape_cd.bbox.width(), item.shape_cd.bbox.height());
 
@@ -25,7 +26,7 @@ pub fn search_placement(l: &Layout, item: &Item, ref_pk: Option<PItemKey>, mut e
         Some(ref_pk) => {
             //report the current placement (and eval)
             let dt = l.placed_items[ref_pk].d_transf;
-            let eval = evaluator.eval(dt, Some(best_samples.upper_bound()));
+            let eval = evaluator.evaluate_sample(dt, Some(best_samples.upper_bound()));
 
             debug!("[S] Starting from: {:?}", (dt, eval));
             best_samples.report(dt, eval);
@@ -40,7 +41,7 @@ pub fn search_placement(l: &Layout, item: &Item, ref_pk: Option<PItemKey>, mut e
     if let Some(focussed_sampler) = focussed_sampler {
         for _ in 0..sample_config.n_focussed_samples {
             let dt = focussed_sampler.sample(rng);
-            let eval = evaluator.eval(dt, Some(best_samples.upper_bound()));
+            let eval = evaluator.evaluate_sample(dt, Some(best_samples.upper_bound()));
             best_samples.report(dt, eval);
         }
     }
@@ -50,7 +51,7 @@ pub fn search_placement(l: &Layout, item: &Item, ref_pk: Option<PItemKey>, mut e
     if let Some(container_sampler) = container_sampler {
         for _ in 0..sample_config.n_container_samples {
             let dt = container_sampler.sample(rng).into();
-            let eval = evaluator.eval(dt, Some(best_samples.upper_bound()));
+            let eval = evaluator.evaluate_sample(dt, Some(best_samples.upper_bound()));
             best_samples.report(dt, eval);
         }
     }

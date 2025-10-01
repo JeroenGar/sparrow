@@ -37,20 +37,21 @@ impl<'a> SeparationEvaluator<'a> {
 
 impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
     /// Evaluates a transformation. An upper bound can be provided to early terminate the process.
-    fn eval(&mut self, dt: DTransformation, upper_bound: Option<SampleEval>) -> SampleEval {
+    /// Algorithm 7 from https://doi.org/10.48550/arXiv.2509.13329
+    fn evaluate_sample(&mut self, dt: DTransformation, upper_bound: Option<SampleEval>) -> SampleEval {
         self.n_evals += 1;
         let cde = self.layout.cde();
 
-        // evals with higher loss than this will always be rejected
+        //samples which evaluate higher than this will certainly be rejected
         let loss_bound = match upper_bound {
             Some(SampleEval::Collision { loss }) => loss,
             Some(SampleEval::Clear { .. }) => 0.0,
             _ => f32::INFINITY,
         };
-        // Reload the detection map for the new query and update the loss bound
+        //reload the hazard collector to prepare for a new query
         self.collector.reload(loss_bound);
 
-        // Query the CDE, all colliding hazards will be stored in the detection map
+        //query the CDE, all colliding hazards will be stored in the detection map
         collect_poly_collisions_in_detector_custom(cde, &dt, &mut self.shape_buff, self.item.shape_cd.as_ref(), &mut self.collector);
 
         if self.collector.early_terminate(&self.shape_buff) {
