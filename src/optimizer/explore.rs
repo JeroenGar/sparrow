@@ -5,7 +5,7 @@ use jagua_rs::collision_detection::hazards::HazardEntity;
 use jagua_rs::entities::{Instance, Layout, PItemKey};
 use jagua_rs::geometry::geo_traits::CollidesWith;
 use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
-use log::{debug, info};
+use log::{debug, info, warn};
 use ordered_float::OrderedFloat;
 use rand::prelude::{Distribution, IteratorRandom};
 use rand_distr::Normal;
@@ -84,6 +84,11 @@ pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listene
 }
 
 fn disrupt_solution(sep: &mut Separator, config: &ExplorationConfig) {
+    if sep.prob.layout.placed_items.len() < 2 {
+        warn!("[DSRP] cannot disrupt solution with less than 2 items");
+        return;
+    }
+
     // The general idea is to disrupt a solution by swapping two 'large' items in the layout.
     // 'Large' items are those whose convex hull area falls within a certain top percentile
     // of the total convex hull area of all items in the layout.
