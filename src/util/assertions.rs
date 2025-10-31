@@ -73,12 +73,7 @@ pub fn tracker_matches_layout(ct: &CollisionTracker, l: &Layout) -> bool {
                                     .map(|p| format!("({},{})", p.0, p.1))
                                     .collect_vec()
                             );
-
-                            {
-                                let mut svg_draw_options = SvgDrawOptions::default();
-                                svg_draw_options.quadtree = true;
-                                panic!("tracker error");
-                            }
+                            panic!("tracker error");
                         }
                     }
                 }
