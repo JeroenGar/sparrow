@@ -29,13 +29,17 @@ This repository accompanies the paper: ["_An open-source heuristic to reboot 2D 
     <img src="data/records/final_best_mao.svg" height=200/>
 </p>
 <p align="center">
-    <img src="data/records/final_best_swim.svg" height=250/>
-    <img src="data/records/final_best_marques.svg" height=250/>
-    <img src="data/records/final_best_dagli.svg" height=250/>
+    <img src="data/records/final_best_swim.svg" height=270/>
+    <img src="data/records/final_best_marques.svg" height=270/>
+    <img src="data/records/final_best_dagli.svg" height=270/>
 </p>
 <p align="center">
-    <img src="data/records/final_best_albano.svg" height=220/>
-    <img src="data/records/final_best_shirts.svg" height=220/>
+    <img src="data/records/final_best_albano.svg" height=200/>
+    <img src="data/records/final_best_shirts.svg" height=200/>
+</p>
+<p align="center">
+    <img src="data/records/final_best_gardeyn1.svg" height=220/>
+    <img src="data/records/final_best_gardeyn8.svg" height=220/>
 </p>
 
 ## Requirements
