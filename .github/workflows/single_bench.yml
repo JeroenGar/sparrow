@@ -21,7 +21,7 @@ on:
         description: 'Instance (ignored if custom JSON URL is provided)'
         required: true
         type: choice
-        options: [ swim, trousers, shirts, mao, dagli, albano, marques, blaz1, fu, shapes0, shapes1, jakobs1, jakobs2, swim_cr,
+        options: [ swim, trousers, shirts, mao, dagli, albano, marques, blaz1, fu, shapes0, shapes1, jakobs1, jakobs2, swim_c,
           gardeyn0, gardeyn1, gardeyn2, gardeyn3, gardeyn4, gardeyn5, gardeyn6, gardeyn7, gardeyn8, gardeyn9,
           gardeyn0_c, gardeyn1_c, gardeyn2_c, gardeyn3_c, gardeyn4_c, gardeyn5_c, gardeyn6_c, gardeyn7_c, gardeyn8_c, gardeyn9_c
         ]
