@@ -1,7 +1,7 @@
-## Experiments
-🚧 *[UNDER CONSTRUCTION]* 🚧
+## Experiments & Reproducibility
+This `README` contains all required information to reproduce the computational experiments presented in [*"An open-source heuristic to reboot 2D nesting research*"](https://doi.org/10.48550/arXiv.2509.13329).
 
-#### Solution files of the experiments
+#### Solution files
 
 The best solutions ever produced by `sparrow` for each of the instances are stored in [records](../records) folder.
 
