@@ -8,7 +8,7 @@ The best solutions ever produced by `sparrow` for each of the instances are stor
 The final solutions and logs for all experiments that comprise the performance comparison in the paper are stored in the [benchmark_runs](benchmark_runs) folder.
 
 #### Reproduction of comparative experiments
-The experiments were all executed via GitHub Actions, on a self-hosted runner equipped with an AMD Ryzen 9 7950X CPU.
+The experiments were all executed via GitHub Actions, on a self-hosted runner equipped with an AMD Ryzen 9 7950X CPU and 64GB DDR5 at 5600MT/s.
 This system was running Ubuntu 20.04 LTS under WSL2 on Windows 11.
 The exact commands to run a benchmark are defined in [single_bench.yml](../../.github/workflows/single_bench.yml).
 
