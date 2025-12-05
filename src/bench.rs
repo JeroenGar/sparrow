@@ -59,15 +59,15 @@ fn main() -> Result<()> {
     let n_runs_per_iter = (num_cpus::get_physical() / config.expl_cfg.separator_config.n_workers).min(n_runs_total);
     let n_batches = (n_runs_total as f32 / n_runs_per_iter as f32).ceil() as usize;
 
-    let ext_intance = io::read_spp_instance_json(Path::new(&input_file_path))?;
+    let ext_instance = io::read_spp_instance_json(Path::new(&input_file_path))?;
 
     println!(
         "[BENCH] starting bench for {} ({}x{} runs across {} cores, {:?} timelimit)",
-        ext_intance.name, n_batches, n_runs_per_iter, num_cpus::get_physical(), time_limit
+        ext_instance.name, n_batches, n_runs_per_iter, num_cpus::get_physical(), time_limit
     );
 
     let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.min_item_separation, config.narrow_concavity_cutoff_ratio);
-    let instance = jagua_rs::probs::spp::io::import(&importer, &ext_intance)?;
+    let instance = jagua_rs::probs::spp::io::import(&importer, &ext_instance)?;
 
     let mut final_solutions = vec![];
 
@@ -133,7 +133,7 @@ fn main() -> Result<()> {
 
     io::write_svg(
         &s_layout_to_svg(&best_final_solution.layout_snapshot, &instance, DRAW_OPTIONS, "final_best"),
-        Path::new(format!("{OUTPUT_DIR}/final_best_{}.svg", ext_intance.name).as_str()),
+        Path::new(format!("{OUTPUT_DIR}/final_best_{}.svg", ext_instance.name).as_str()),
         log::Level::Info,
     )?;
 
