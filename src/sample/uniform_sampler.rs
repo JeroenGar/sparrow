@@ -46,7 +46,7 @@ impl UniformBBoxSampler {
         // for each possible rotation, calculate the sample ranges (x and y)
         // where the item resides fully inside the container and is within the sample bounding box
         let rot_entries = rotations.iter()
-            .map(|&r| {
+            .filter_map(|&r| {
                 let r_shape_bbox = shape_buffer.transform_from(item.shape_cd.as_ref(), &Transformation::from_rotation(r)).bbox;
 
                 //narrow the container range to account for the rotated shape
@@ -63,7 +63,7 @@ impl UniformBBoxSampler {
                 } else {
                     Some(RotEntry { r, x_range, y_range })
                 }
-            }).flatten().collect_vec();
+            }).collect_vec();
 
         match rot_entries.is_empty() {
             true => None,

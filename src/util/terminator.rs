@@ -18,6 +18,12 @@ pub struct BasicTerminator {
     pub timeout: Option<Instant>,
 }
 
+impl Default for BasicTerminator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BasicTerminator {
     pub fn new() -> Self {
         Self { timeout: None }
@@ -26,7 +32,7 @@ impl BasicTerminator {
 
 impl Terminator for BasicTerminator {
     fn kill(&self) -> bool {
-        self.timeout.map_or(false, |timeout| Instant::now() > timeout)
+        self.timeout.is_some_and(|timeout| Instant::now() > timeout)
     }
 
     fn new_timeout(&mut self, timeout: Duration){
