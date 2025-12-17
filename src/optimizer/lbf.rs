@@ -45,11 +45,10 @@ impl LBFBuilder {
                 let diameter = item_shape.diameter;
                 Reverse(OrderedFloat(convex_hull_area * diameter))
             })
-            .map(|id| {
+            .flat_map(|id| {
                 let missing_qty = self.prob.item_demand_qtys[id];
-                iter::repeat(id).take(missing_qty)
+                iter::repeat_n(id, missing_qty)
             })
-            .flatten()
             .collect_vec();
 
         debug!("[CONSTR] placing items in order: {:?}",sorted_item_indices);

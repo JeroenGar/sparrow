@@ -11,6 +11,12 @@ pub struct CtrlCTerminator {
     pub ctrlc: Arc<AtomicBool>,
 }
 
+impl Default for CtrlCTerminator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CtrlCTerminator {
     /// Sets up the handler for Ctrl-C (only call once)
     pub fn new() -> Self {
@@ -31,7 +37,7 @@ impl CtrlCTerminator {
 
 impl Terminator for CtrlCTerminator {
     fn kill(&self) -> bool {
-        self.timeout.map_or(false, |timeout| Instant::now() > timeout)
+        self.timeout.is_some_and(|timeout| Instant::now() > timeout)
             || self.ctrlc.load(Ordering::SeqCst)
     }
 

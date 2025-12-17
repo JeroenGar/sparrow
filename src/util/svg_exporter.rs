@@ -18,15 +18,14 @@ pub struct SvgExporter {
 impl SvgExporter {
     pub fn new(final_path: Option<String>, intermediate_dir: Option<String>, live_path: Option<String>) -> Self {
         // Clean all svg files from the intermediate directory if it is provided
-        if let Some(intermediate_dir) = &intermediate_dir {
-            if let Ok(files_in_dir) = std::fs::read_dir(&Path::new(intermediate_dir)) {
+        if let Some(intermediate_dir) = &intermediate_dir
+            && let Ok(files_in_dir) = std::fs::read_dir(Path::new(intermediate_dir)) {
                 for file in files_in_dir.flatten() {
                     if file.path().extension().unwrap_or_default() == "svg" {
                         std::fs::remove_file(file.path()).unwrap();
                     }
                 }
             }
-        }
         
         SvgExporter {
             svg_counter: 0,
@@ -48,7 +47,7 @@ impl SolutionListener for SvgExporter{
         };
         let file_name = format!("{}_{:.3}_{}", self.svg_counter, solution.strip_width(), suffix);
         if let Some(live_path) = &self.live_path {
-            let svg = s_layout_to_svg(&solution.layout_snapshot, instance, DRAW_OPTIONS, &file_name.as_str());
+            let svg = s_layout_to_svg(&solution.layout_snapshot, instance, DRAW_OPTIONS, file_name.as_str());
             io::write_svg(&svg, Path::new(live_path), Level::Trace).expect("failed to write live svg");
         }
         if let Some(intermediate_dir) = &self.intermediate_dir && report_type != ReportType::ExplImproving {

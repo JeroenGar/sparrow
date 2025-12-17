@@ -74,7 +74,7 @@ pub const DEFAULT_SPARROW_CONFIG: SparrowConfig = SparrowConfig {
     },
     cmpr_cfg: CompressionConfig {
         shrink_range: (0.0005, 0.00001),
-        time_limit: Duration::from_secs(1 * 60),
+        time_limit: Duration::from_secs(60),
         shrink_decay: ShrinkDecayStrategy::TimeBased,
         separator_config: SeparatorConfig {
             iter_no_imprv_limit: 100,

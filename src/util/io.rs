@@ -76,7 +76,7 @@ pub fn init_logger(level_filter: LevelFilter, log_file_path: &Path) -> Result<()
     log!(
         Level::Info,
         "[EPOCH]: {}",
-        jiff::Timestamp::now().to_string()
+        jiff::Timestamp::now()
     );
     Ok(())
 }
@@ -90,7 +90,7 @@ pub fn write_svg(document: &Document, path: &Path, log_lvl: Level) -> Result<()>
     svg::save(path, document)?;
     log!(log_lvl,
         "[IO] svg exported to file://{}",
-        fs::canonicalize(&path)
+        fs::canonicalize(path)
             .expect("could not canonicalize path")
             .to_str()
             .unwrap()
@@ -103,7 +103,7 @@ pub fn write_json(json: &impl Serialize, path: &Path, log_lvl: Level) -> Result<
     serde_json::to_writer_pretty(file, json)?;
     log!(log_lvl,
         "[IO] json exported to file://{}",
-        fs::canonicalize(&path)
+        fs::canonicalize(path)
             .expect("could not canonicalize path")
             .to_str()
             .unwrap()

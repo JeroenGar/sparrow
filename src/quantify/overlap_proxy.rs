@@ -5,7 +5,7 @@ use jagua_rs::geometry::geo_traits::DistanceTo;
 /// Calculates a proxy for the overlap area between two simple polygons (using poles).
 /// Algorithm 3 from https://doi.org/10.48550/arXiv.2509.13329
 #[inline(always)]
-pub fn overlap_area_proxy<'a>(sp1: &SPSurrogate, sp2: &SPSurrogate, epsilon: f32) -> f32 {
+pub fn overlap_area_proxy(sp1: &SPSurrogate, sp2: &SPSurrogate, epsilon: f32) -> f32 {
     let mut total_overlap = 0.0;
     for p1 in &sp1.poles {
         for p2 in &sp2.poles {

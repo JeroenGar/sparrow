@@ -54,7 +54,7 @@ pub fn compression_phase(
 fn attempt_to_compress(sep: &mut Separator, init: &SPSolution, r_shrink: f32, term: &impl Terminator, sol_listener: &mut impl SolutionListener) -> Option<SPSolution> {
     //restore to the initial solution and width
     sep.change_strip_width(init.strip_width(), None);
-    sep.rollback(&init, None);
+    sep.rollback(init, None);
 
     //shrink the container at a random position
     let new_width = init.strip_width() * (1.0 - r_shrink);

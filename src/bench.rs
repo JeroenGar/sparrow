@@ -31,7 +31,7 @@ fn main() -> Result<()> {
     //the input file is the first argument
     let input_file_path = args().nth(1).expect("first argument must be the input file");
     let time_limit: Duration = args().nth(2).expect("second argument must be the time limit [s]")
-        .parse::<u64>().map(|s| Duration::from_secs(s))
+        .parse::<u64>().map(Duration::from_secs)
         .expect("second argument must be the time limit [s]");
     let n_runs_total = args().nth(3).expect("third argument must be the number of runs")
         .parse().expect("third argument must be the number of runs");
@@ -107,10 +107,10 @@ fn main() -> Result<()> {
                     );
 
                     io::write_svg(
-                        &s_layout_to_svg(&cmpr_sol.layout_snapshot, &instance, DRAW_OPTIONS, &*format!("final_bench_{}", bench_idx)),
+                        &s_layout_to_svg(&cmpr_sol.layout_snapshot, &instance, DRAW_OPTIONS, &format!("final_bench_{}", bench_idx)),
                         Path::new(&format!("{OUTPUT_DIR}/final_bench_{}.svg", bench_idx)),
                         log::Level::Info,
-                    ).expect(&*format!("could not write svg output of bench {}", bench_idx));
+                    ).unwrap_or_else(|_| panic!("could not write svg output of bench {}", bench_idx));
 
                     *sol_slice = Some(cmpr_sol);
                 })
@@ -169,7 +169,7 @@ pub fn calculate_percentile(v: &[f32], pct: f32) -> f32 {
     // Validate input
     assert!(!v.is_empty(), "Cannot compute percentile of an empty slice");
     assert!(
-        pct >= 0.0 && pct <= 1.0,
+        (0.0..=1.0).contains(&pct),
         "Percent must be between 0.0 and 1.0"
     );
 
@@ -210,7 +210,7 @@ pub fn calculate_stddev(v: &[f32]) -> f32 {
 
 pub fn get_git_commit_hash() -> String {
     let output = std::process::Command::new("git")
-        .args(&["rev-parse", "HEAD"])
+        .args(["rev-parse", "HEAD"])
         .output()
         .expect("Failed to execute git command");
 

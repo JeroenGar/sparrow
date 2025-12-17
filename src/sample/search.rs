@@ -50,7 +50,7 @@ pub fn search_placement(l: &Layout, item: &Item, ref_pk: Option<PItemKey>, mut e
 
     if let Some(container_sampler) = container_sampler {
         for _ in 0..sample_config.n_container_samples {
-            let dt = container_sampler.sample(rng).into();
+            let dt = container_sampler.sample(rng);
             let eval = evaluator.evaluate_sample(dt, Some(best_samples.upper_bound()));
             best_samples.report(dt, eval);
         }
@@ -59,7 +59,7 @@ pub fn search_placement(l: &Layout, item: &Item, ref_pk: Option<PItemKey>, mut e
     //Prerefine the best samples
     for start in best_samples.samples.clone() {
         let descended = refine_coord_desc(
-            start.clone(),
+            start,
             &mut evaluator,
             prerefine_cd_config(item),
             rng,

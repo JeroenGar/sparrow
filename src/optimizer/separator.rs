@@ -46,7 +46,7 @@ impl Separator {
                 prob: prob.clone(),
                 ct: ct.clone(),
                 rng: Xoshiro256PlusPlus::seed_from_u64(rng.random()),
-                sample_config: config.sample_config.clone(),
+                sample_config: config.sample_config,
             }).collect();
 
         let pool = if cfg!(target_arch = "wasm32") {
@@ -156,7 +156,7 @@ impl Separator {
         };
 
         let sep_report = match self.thread_pool.as_mut() {
-            Some(pool) => pool.install(|| separate_multi()),
+            Some(pool) => pool.install(&mut separate_multi),
             None => separate_multi(),
         };
 
@@ -247,7 +247,7 @@ impl Separator {
                 prob: self.prob.clone(),
                 ct: self.ct.clone(),
                 rng: Xoshiro256PlusPlus::seed_from_u64(self.rng.random()),
-                sample_config: self.config.sample_config.clone(),
+                sample_config: self.config.sample_config,
             };
         });
         debug!("[SEP] changed strip width to {:.3}", new_width);
