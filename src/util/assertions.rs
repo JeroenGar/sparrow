@@ -43,36 +43,48 @@ pub fn tracker_matches_layout(ct: &CollisionTracker, l: &Layout) -> bool {
                                 HazardEntity::from((pk2, pi2))
                             );
                             panic!("tracker error");
-                        } else {
+                        }  else if stored_loss == 0.0 {
                             //detecting collisions is not symmetrical (in edge cases)
-                            warn!("inconsistent loss");
-                            warn!(
-                                "collisions: pi_1 {:?} -> {:?}",
-                                HazardEntity::from((pk1, pi1)),
-                                collector.iter().collect_vec()
-                            );
-                            warn!(
-                                "opposite collisions: pi_2 {:?} -> {:?}",
-                                HazardEntity::from((pk2, pi2)),
-                                opp_collector.iter().collect_vec()
-                            );
-
-                            warn!(
-                                "pi_1: {:?}",
-                                pi1.shape
-                                    .vertices
-                                    .iter()
-                                    .map(|p| format!("({},{})", p.0, p.1))
-                                    .collect_vec()
-                            );
-                            warn!(
-                                "pi_2: {:?}",
-                                pi2.shape
-                                    .vertices
-                                    .iter()
-                                    .map(|p| format!("({},{})", p.0, p.1))
-                                    .collect_vec()
-                            );
+                            warn!("non-symmetrical collision!");
+                            // dbg!(stored_loss, calc_loss, calc_loss_r);
+                            // warn!(
+                            //         "collisions: pi_1 {:?} -> {:?}",
+                            //         HazardEntity::from((pk1, pi1)),
+                            //         collector.iter().collect_vec()
+                            //     );
+                            // warn!(
+                            //         "opposite collisions: pi_2 {:?} -> {:?}",
+                            //         HazardEntity::from((pk2, pi2)),
+                            //         opp_collector.iter().collect_vec()
+                            //     );
+                            //
+                            // warn!(
+                            //         "pi_1: {:?}",
+                            //         pi1.shape
+                            //             .vertices
+                            //             .iter()
+                            //             .map(|p| format!("({},{})", p.0, p.1))
+                            //             .collect_vec()
+                            //     );
+                            // warn!(
+                            //         "pi_2: {:?}",
+                            //         pi2.shape
+                            //             .vertices
+                            //             .iter()
+                            //             .map(|p| format!("({},{})", p.0, p.1))
+                            //             .collect_vec()
+                            //     );
+                        }
+                        else {
+                            dbg!(&pi1.shape.vertices, &pi2.shape.vertices);
+                            dbg!(
+                                    stored_loss,
+                                    calc_loss,
+                                    calc_loss_r,
+                                    opp_collector.iter().collect_vec(),
+                                    HazardEntity::from((pk1, pi1)),
+                                    HazardEntity::from((pk2, pi2))
+                                );
                             panic!("tracker error");
                         }
                     }
