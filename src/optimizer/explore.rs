@@ -137,20 +137,24 @@ fn disrupt_solution(sep: &mut Separator, config: &ExplorationConfig) {
         .filter(|(_, pi)| pi.shape.surrogate().convex_hull_area >= ch_area_cutoff);
 
     //Choose a first item with a large enough convex hull
-    let (pk1, pi1) = large_items.clone().choose(&mut sep.rng).expect("[DSRP] failed to choose first item");
+    let (pk1, pi1) = large_items.clone()
+        .filter(|(pk, _)| sep.ct.get_loss(*pk) > 0.0) // Prefer items that are involved in collisions
+        .choose(&mut sep.rng)
+        .or_else(|| large_items.clone().choose(&mut sep.rng)) //Fallback: choose any large item
+        .expect("[DSRP] failed to choose first item");
 
     //Choose a second item with a large enough convex hull and different enough from the first.
     //If no such item is found, choose a random one.
     let (pk2, pi2) = large_items.clone()
-        .filter(|(_, pi)|
-            // Ensure the second item is different from the first
+        .filter(|(pk, _)| *pk != pk1) // Ensure the second item is not the same as the first
+        .filter(|(_, pi)| { // Ensure the second item is sufficiently different in shape
             !approx_eq!(f32, pi.shape.area,pi1.shape.area, epsilon = pi1.shape.area * 0.01) &&
                 !approx_eq!(f32, pi.shape.diameter, pi1.shape.diameter, epsilon = pi1.shape.diameter * 0.01)
-        )
+        })
         .choose(&mut sep.rng)
-        .or_else(|| {
+        .or_else(|| { // Fallback: pick any item
             sep.prob.layout.placed_items.iter()
-                .filter(|(pk, _)| *pk != pk1) // Ensure the second item is not the same as the first
+                .filter(|(pk, _)| *pk != pk1)
                 .choose(&mut sep.rng)
         }) // As a fallback, choose any item
         .expect("[EXPL] failed to choose second item for disruption");
