@@ -1,72 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <title>Live Solution Viewer</title>
-        <style>
-            html, body {
-                height: 100%;
-                width: 100%;
-                margin: 0;
-                padding: 0;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                overflow: hidden;
-            }
+<head>
+    <meta charset="utf-8">
+    <title>Live Solution Viewer</title>
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
 
-            .container {
-                position: relative;
-                width: 100%;
-                height: 100%;
-            }
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
 
-            #solutionSVG {
-                width: 100%;
-                height: 100%;
-                object-fit: contain;
-                position: absolute;
-                top: 0;
-                left: 0;
-            }
+        #solutionSVG {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+        }
 
-            .placeholder {
-                width: 100%;
-                height: 100%;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                font-size: 24px;
-                color: #888;
-                position: absolute;
-                font-family: monospace;
-                text-align: center;
-                top: 0;
-                left: 0;
-            }
-        </style>
-        <script>
-            function updateSVG() {
+        .placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: #888;
+            position: absolute;
+            font-family: monospace;
+            text-align: center;
+            top: 0;
+            left: 0;
+        }
+    </style>
+    <script>
+        function updateSVG() {
+            const url = ".live_solution.svg?t=" + new Date().getTime();
+            const tempImg = new Image();
+
+            tempImg.onload = function() {
                 const img = document.getElementById("solutionSVG");
-                img.src = ".live_solution.svg?t=" + new Date().getTime(); // append a timestamp to bypass cache and force a reload
+                img.src = url;
+                img.style.display = "block";
+                document.querySelector(".placeholder").style.display = "none";
+            };
 
-                // if the image doesn't exist, hide the image
-                img.onerror = function() {
-                    img.style.display = "none";
-                };
-                // if the image actually exists and loads, show it and hide the placeholder
-                img.onload = function() {
-                    img.style.display = "block";
-                    document.querySelector(".placeholder").style.display = "none";
-                };
-            }
-            setInterval(updateSVG, 100);
-        </script>
-    </head>
-    <body>
-        <div class="container">
-            <span class="placeholder">live SVG solutions will appear here once the optimization starts</span>
-            <img id="solutionSVG" />
-        </div>
-    </body>
+            tempImg.src = url;
+        }
+        setInterval(updateSVG, 100);
+    </script>
+</head>
+<body>
+<div class="container">
+    <span class="placeholder">live SVG solutions will appear here once the optimization starts</span>
+    <img id="solutionSVG" />
+</div>
+</body>
 </html>
