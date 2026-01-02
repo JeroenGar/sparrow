@@ -1,10 +1,6 @@
 # sparrow 🪶 
 [![DOI](https://zenodo.org/badge/DOI/10.48550/arXiv.2509.13329.svg)](https://doi.org/10.48550/arXiv.2509.13329)
-![License](https://img.shields.io/crates/l/jagua-rs)
 [![CI](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml/badge.svg?branch=main)](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml) 
-
-
-
 
 <p>
     <img src="data/sparrow.jpeg" align="right" alt="logo" height=80>
@@ -170,7 +166,7 @@ Feel free to fork the repository if you want to experiment with different heuris
 
 ## License
 
-This project is licensed under Mozilla Public License 2.0 - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgements
 
