@@ -6,7 +6,7 @@ use rand::SeedableRng;
 use sparrow::config::*;
 use sparrow::optimizer::optimize;
 use sparrow::util::io;
-use sparrow::util::io::{MainCli, SPOutput};
+use sparrow::util::io::{MainCli, ExtSPOutput};
 use std::fs;
 use std::path::Path;
 use std::time::Duration;
@@ -75,10 +75,14 @@ fn main() -> Result<()>{
 
     info!("[MAIN] system time: {}", jiff::Timestamp::now());
 
-    let ext_instance = io::read_spp_instance_json(Path::new(&input_file_path))?;
+    let (ext_instance, ext_solution) = io::read_spp_input(Path::new(&input_file_path))?;
 
     let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.min_item_separation, config.narrow_concavity_cutoff_ratio);
-    let instance = jagua_rs::probs::spp::io::import(&importer, &ext_instance)?;
+    let instance = jagua_rs::probs::spp::io::import_instance(&importer, &ext_instance)?;
+
+    let initial_solution = ext_solution.map(|e|
+        jagua_rs::probs::spp::io::import_solution(&instance, &e)
+    );
 
     info!("[MAIN] loaded instance {} with #{} items", ext_instance.name, instance.total_item_qty());
     
@@ -104,10 +108,18 @@ fn main() -> Result<()>{
     
     let mut ctrlc_terminator = CtrlCTerminator::new();
 
-    let solution = optimize(instance.clone(), rng, &mut svg_exporter, &mut ctrlc_terminator, &config.expl_cfg, &config.cmpr_cfg);
+    let solution = optimize(
+        instance.clone(),
+        rng,
+        &mut svg_exporter,
+        &mut ctrlc_terminator,
+        &config.expl_cfg,
+        &config.cmpr_cfg,
+        initial_solution.as_ref()
+    );
 
     let json_path = format!("{OUTPUT_DIR}/final_{}.json", ext_instance.name);
-    let json_output = SPOutput {
+    let json_output = ExtSPOutput {
         instance: ext_instance,
         solution: jagua_rs::probs::spp::io::export(&instance, &solution, *EPOCH)
     };

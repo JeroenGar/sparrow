@@ -59,7 +59,7 @@ fn main() -> Result<()> {
     let n_runs_per_iter = (num_cpus::get_physical() / config.expl_cfg.separator_config.n_workers).min(n_runs_total);
     let n_batches = (n_runs_total as f32 / n_runs_per_iter as f32).ceil() as usize;
 
-    let ext_instance = io::read_spp_instance_json(Path::new(&input_file_path))?;
+    let (ext_instance, _) = io::read_spp_input(Path::new(&input_file_path))?;
 
     println!(
         "[BENCH] starting bench for {} ({}x{} runs across {} cores, {:?} timelimit)",
@@ -67,7 +67,7 @@ fn main() -> Result<()> {
     );
 
     let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.min_item_separation, config.narrow_concavity_cutoff_ratio);
-    let instance = jagua_rs::probs::spp::io::import(&importer, &ext_instance)?;
+    let instance = jagua_rs::probs::spp::io::import_instance(&importer, &ext_instance)?;
 
     let mut final_solutions = vec![];
 

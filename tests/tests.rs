@@ -29,10 +29,10 @@ mod integration_tests {
     fn simulate_optimization(path: &str) -> Result<()> {
         let config = DEFAULT_SPARROW_CONFIG;
         let input_file_path = format!("{INSTANCE_BASE_PATH}/{path}");
-        let json_instance = io::read_spp_instance_json(Path::new(&input_file_path))?;
+        let (json_instance, _) = io::read_spp_input(Path::new(&input_file_path))?;
 
         let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.min_item_separation, config.narrow_concavity_cutoff_ratio);
-        let instance = jagua_rs::probs::spp::io::import(&importer, &json_instance)?;
+        let instance = jagua_rs::probs::spp::io::import_instance(&importer, &json_instance)?;
 
         println!("[TEST] loaded instance: {}", json_instance.name);
 
