@@ -46,7 +46,7 @@ This repository accompanies the paper: ["_An open-source heuristic to reboot 2D 
 **General usage:**
 ```bash
 cargo run --release  -- \
-    -i [path to input JSON] \
+    -i [path to input JSON, or a solution JSON] \
     -t [timelimit in seconds (default is 600s)]
 ```
 The optimization process contains two distinct phases: exploration & compression.
@@ -55,7 +55,7 @@ Pressing 'Ctrl + C' immediately moves the algorithm to the next phase, or termin
 
 **All CLI options:**
 ```bash
--i, --input <INPUT>              Path to the input JSON file
+-i, --input <INPUT>              Path to the input JSON file, or a solution JSON file for warm starting
 -t, --global-time <GLOBAL_TIME>  Set a global time limit (in seconds)
 -e, --exploration <EXPLORATION>  Set the exploration phase time limit (in seconds)
 -c, --compression <COMPRESSION>  Set the compression phase time limit (in seconds)

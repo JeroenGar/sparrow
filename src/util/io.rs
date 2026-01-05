@@ -13,7 +13,7 @@ use crate::EPOCH;
 #[derive(Parser)]
 pub struct MainCli {
     /// Path to input file (mandatory)
-    #[arg(short = 'i', long, help = "Path to the input JSON file")]
+    #[arg(short = 'i', long, help = "Path to the input JSON file, or a solution JSON file for warm starting")]
     pub input: String,
 
     /// Global time limit in seconds (mutually exclusive with -e and -c)
@@ -37,7 +37,7 @@ pub struct MainCli {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct SPOutput {
+pub struct ExtSPOutput {
     #[serde(flatten)]
     pub instance: ExtSPInstance,
     pub solution: ExtSPSolution,
@@ -111,8 +111,18 @@ pub fn write_json(json: &impl Serialize, path: &Path, log_lvl: Level) -> Result<
     Ok(())
 }
 
-pub fn read_spp_instance_json(path: &Path) -> Result<ExtSPInstance> {
-    let file = File::open(path).context("could not open instance file")?;
-    serde_json::from_reader(BufReader::new(file))
-        .context("not a valid strip packing instance (ExtSPInstance)")
+pub fn read_spp_input(path: &Path) -> Result<(ExtSPInstance, Option<ExtSPSolution>)> {
+    let input_str = fs::read_to_string(path).context("could not read input file")?;
+    //try parsing a full output (instance + solution)
+    match serde_json::from_str::<ExtSPOutput>(&input_str) {
+        Ok(ext_output) => {
+            Ok((ext_output.instance, Some(ext_output.solution)))
+        }
+        Err(_) => {
+            //try parsing just the instance
+            let ext_instance = serde_json::from_str::<ExtSPInstance>(&input_str)
+                .context("could not parse instance from input file")?;
+            Ok((ext_instance, None))
+        }
+    }
 }
