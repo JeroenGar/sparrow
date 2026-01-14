@@ -111,16 +111,24 @@ impl CollisionTracker {
 
     /// Algorithm 8 from https://doi.org/10.48550/arXiv.2509.13329
     pub fn update_weights(&mut self) {
+        // Find the maximum loss across all entries
         let max_loss = self.pair_collisions.data.iter()
             .chain(self.container_collisions.iter())
             .map(|e| e.loss)
             .fold(0.0, |a, b| a.max(b));
 
+        // Go over all entries (pairs) and modify their weights.
         for e in self.pair_collisions.data.iter_mut()
             .chain(self.container_collisions.iter_mut()) {
             let multiplier = match e.loss == 0.0 {
-                true => GLS_WEIGHT_DECAY, // no collision
-                false => GLS_WEIGHT_MIN_INC_RATIO + (GLS_WEIGHT_MAX_INC_RATIO - GLS_WEIGHT_MIN_INC_RATIO) * (e.loss / max_loss),
+                true => {
+                    // No collision at the moment, slowly decay the weight back to 1.0
+                    GLS_WEIGHT_DECAY
+                },
+                false => {
+                    // Collision detected, increase the weight based on 'how bad' the collision is relative to the worst collision
+                    GLS_WEIGHT_MIN_INC_RATIO + (GLS_WEIGHT_MAX_INC_RATIO - GLS_WEIGHT_MIN_INC_RATIO) * (e.loss / max_loss)
+                },
             };
             e.weight = (e.weight * multiplier).max(1.0);
         }
@@ -137,6 +145,7 @@ impl CollisionTracker {
     }
 
     /// Algorithm 1 from https://doi.org/10.48550/arXiv.2509.13329
+    /// Evaluations between item pairs are stored in this data-structure for quick and easy retrieval.
     pub fn get_pair_loss(&self, pk1: PItemKey, pk2: PItemKey) -> f32 {
         let (idx1, idx2) = (self.pk_idx_map[pk1], self.pk_idx_map[pk2]);
         self.pair_collisions[(idx1, idx2)].loss
