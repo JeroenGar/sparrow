@@ -42,25 +42,29 @@ impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
         self.n_evals += 1;
         let cde = self.layout.cde();
 
-        //samples which evaluate higher than this will certainly be rejected
+        // Calculate an upper bound of quantification, above which samples are guaranteed to be rejected (because they are dominated by previous ones).
         let loss_bound = match upper_bound {
             Some(SampleEval::Collision { loss }) => loss,
             Some(SampleEval::Clear { .. }) => 0.0,
             _ => f32::INFINITY,
         };
-        //reload the hazard collector to prepare for a new query
+        
+        // Reload the hazard collector to prepare for a new query
         self.collector.reload(loss_bound);
 
-        //query the CDE, all colliding hazards will be stored in the detection map
+        // Perform the collision detection and the collision quantification. The 'collector' will be populated with the results.
         collect_poly_collisions_in_detector_custom(cde, &dt, &mut self.shape_buff, self.item.shape_cd.as_ref(), &mut self.collector);
-
+        
         if self.collector.early_terminate(&self.shape_buff) {
-            //the detection map is in early termination state, this means potentially not all collisions were detected,
-            //but its loss was above the loss bound anyway
+            // The total quantification of the collisions exceeded the upper bound and the process was terminated early.
+            // Note that we might have exited before detecting/quantifying all collisions.
+            // However, since we can asure that this sample will always be rejected, we don't need to spend any more time on it and just return `Invalid`.
             SampleEval::Invalid
         } else if self.collector.is_empty() {
+            // No collisions detected, return clear
             SampleEval::Clear { loss: 0.0 }
         } else {
+            // Some collisions detected but withing the upper bound, return collision with total loss
             SampleEval::Collision {
                 loss: self.collector.loss(&self.shape_buff),
             }

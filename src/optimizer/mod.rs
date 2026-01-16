@@ -29,6 +29,8 @@ pub fn optimize(
     initial_solution: Option<&SPSolution>
 ) -> SPSolution {
     let mut next_rng = || Xoshiro256PlusPlus::seed_from_u64(rng.next_u64());
+    
+    // First build an initial solution if none is provided
     let start_prob = match initial_solution {
         None => {
             let builder = LBFBuilder::new(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG).construct();
@@ -42,6 +44,7 @@ pub fn optimize(
         }
     };
 
+    // Begin by executing the exploration phase
     terminator.new_timeout(expl_config.time_limit);
     let mut expl_separator = Separator::new(instance.clone(), start_prob, next_rng(), expl_config.separator_config);
     let solutions = exploration_phase(
@@ -53,6 +56,7 @@ pub fn optimize(
     );
     let final_explore_sol = solutions.last().unwrap().clone();
 
+    // Start the compression phase from the final solution from the exploration phase
     terminator.new_timeout(cmpr_config.time_limit);
     let mut cmpr_separator = Separator::new(expl_separator.instance, expl_separator.prob, next_rng(), cmpr_config.separator_config);
     let cmpr_sol = compression_phase(
@@ -66,5 +70,6 @@ pub fn optimize(
 
     sol_listener.report(ReportType::Final, &cmpr_sol, &instance);
 
+    // Return the final compressed solution
     cmpr_sol
 }

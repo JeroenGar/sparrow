@@ -79,6 +79,7 @@ impl Separator {
         let mut sep_stats = SepStats { total_moves: 0, total_evals: 0 };
         let start = Instant::now();
 
+        // As long as the strike limit is not reached, and the solution is not yet separated.
         'outer: while n_strikes < self.config.strike_limit && !term.kill() {
             let mut n_iter_no_improvement = 0;
 
@@ -86,45 +87,43 @@ impl Separator {
             debug!("[SEP] [s:{n_strikes},i:{n_iter}]     init_l: {}",FMT().fmt2(initial_strike_loss));
 
             while n_iter_no_improvement < self.config.iter_no_imprv_limit {
-                let (loss_before, w_loss_before) = (
-                    self.ct.get_total_loss(),
-                    self.ct.get_total_weighted_loss(),
-                );
+                let (loss_before, w_loss_before) = (self.ct.get_total_loss(), self.ct.get_total_weighted_loss(),);
                 sep_stats += self.move_items_multi();
-                let (loss, w_loss) = (
-                    self.ct.get_total_loss(),
-                    self.ct.get_total_weighted_loss(),
-                );
+                let (loss, w_loss) = (self.ct.get_total_loss(), self.ct.get_total_weighted_loss(),);
 
                 debug!("[SEP] [s:{n_strikes},i:{n_iter}] ( ) l: {} -> {}, wl: {} -> {}, (min l: {})", FMT().fmt2(loss_before), FMT().fmt2(loss), FMT().fmt2(w_loss_before), FMT().fmt2(w_loss), FMT().fmt2(min_loss));
                 debug_assert!(w_loss <= w_loss_before * 1.001, "weighted loss should not increase: {} -> {}", FMT().fmt2(w_loss), FMT().fmt2(w_loss_before));
 
                 if loss == 0.0 {
-                    //layout is successfully separated
+                    //All collisions are resolved
                     log!(self.config.log_level,"[SEP] [s:{n_strikes},i:{n_iter}] (S)  min_l: {}",FMT().fmt2(loss));
                     min_loss_sol = (self.prob.save(), self.ct.save());
                     break 'outer;
                 } else if loss < min_loss {
-                    //layout is not separated, but absolute loss is better than before
+                    //Not all collisions are resolved, but we found a new 'best' solution
                     log!(self.config.log_level,"[SEP] [s:{n_strikes},i:{n_iter}] (*) min_l: {}",FMT().fmt2(loss));
                     sol_listener.report(ReportType::ExplImproving, &self.prob.save(), &self.instance);
                     if loss < min_loss * 0.98 {
-                        //only reset the iter_no_improvement counter if the loss improved significantly
+                        //Reset the `iter_no_improvement` counter if the best solution is a substantial improvement
                         n_iter_no_improvement = 0;
                     }
                     min_loss_sol = (self.prob.save(), self.ct.save());
                     min_loss = loss;
                 } else {
+                    // No improvement this iteration
                     n_iter_no_improvement += 1;
                 }
 
+                // Update the GLS weights
                 self.ct.update_weights();
                 n_iter += 1;
             }
 
             if initial_strike_loss * 0.98 <= min_loss {
+                // No substantial improvement during this attempt, add a strike
                 n_strikes += 1;
             } else {
+                // Substantial improvement, reset strike counter
                 n_strikes = 0;
             }
             self.rollback(&min_loss_sol.0, Some(&min_loss_sol.1));
@@ -139,6 +138,7 @@ impl Separator {
             FMT().fmt2(secs),
         );
 
+        // Return the best solution found: a feasible one if separation was successful, otherwise the 'least' infeasible one
         (min_loss_sol.0, min_loss_sol.1)
     }
 
@@ -146,15 +146,17 @@ impl Separator {
     fn move_items_multi(&mut self) -> SepStats {
         let master_sol = self.prob.save();
 
+        // Define the parallel execution closure
         let mut separate_multi = || -> SepStats {
             self.workers.par_iter_mut().map(|worker| {
                 // Sync the workers with the master
                 worker.load(&master_sol, &self.ct);
-                // Let them modify
+                // Let all of them run `move_items` with unique random orderings in which the items are moved
                 worker.move_items()
             }).sum()
         };
 
+        // Execute the parallel separation either using the local thread pool or the global one
         let sep_report = match self.thread_pool.as_mut() {
             Some(pool) => pool.install(&mut separate_multi),
             None => separate_multi(),
@@ -162,15 +164,15 @@ impl Separator {
 
         debug!("[MOD] optimizers w_o's: {:?}",self.workers.iter().map(|opt| opt.ct.get_total_weighted_loss()).collect_vec());
 
-        // Check which worker has the lowest total weighted loss
-        let best_opt = self.workers.iter_mut()
+        // Check what run yielded the best solution (lowest collision quantification)
+        let (best_sol, best_ct) = self.workers.iter_mut()
             .min_by_key(|opt| OrderedFloat(opt.ct.get_total_weighted_loss()))
             .map(|opt| (opt.prob.save(), &opt.ct))
             .unwrap();
 
-        // Sync the master with the best optimizer
-        self.prob.restore(&best_opt.0);
-        self.ct = best_opt.1.clone();
+        // Load this 'best' solution into the master, effectively throwing away all other work.
+        self.prob.restore(&best_sol);
+        self.ct = best_ct.clone();
 
         sep_report
     }

@@ -18,69 +18,72 @@ use crate::util::listener::{ReportType, SolutionListener};
 use crate::util::terminator::Terminator;
 
 /// Algorithm 12 from https://doi.org/10.48550/arXiv.2509.13329
-pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listener: &mut impl SolutionListener,  term: &impl Terminator, config: &ExplorationConfig) -> Vec<SPSolution> {
+pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listener: &mut impl SolutionListener, term: &impl Terminator, config: &ExplorationConfig) -> Vec<SPSolution> {
     let mut current_width = sep.prob.strip_width();
     let mut best_width = current_width;
 
-    let mut feasible_solutions = vec![sep.prob.save()];
+    let mut feasible_sols = vec![sep.prob.save()];
 
-    sol_listener.report(ReportType::ExplFeas, &feasible_solutions[0], instance);
+    sol_listener.report(ReportType::ExplFeas, &feasible_sols[0], instance);
     info!("[EXPL] starting optimization with initial width: {:.3} ({:.3}%)",current_width,sep.prob.density() * 100.0);
 
-    let mut solution_pool: Vec<(SPSolution, f32)> = vec![];
+    let mut infeas_sol_pool: Vec<(SPSolution, f32)> = vec![];
 
     while !term.kill() {
+        // Attempt to separate the current layout
         let local_best = sep.separate(term, sol_listener);
         let total_loss = local_best.1.get_total_loss();
 
         if total_loss == 0.0 {
-            //layout is successfully separated
+            // If successfully separated
             if current_width < best_width {
                 info!("[EXPL] feasible solution found! (width: {:.3}, dens: {:.3}%)",current_width,sep.prob.density() * 100.0);
                 best_width = current_width;
-                feasible_solutions.push(local_best.0.clone());
+                feasible_sols.push(local_best.0.clone());
                 sol_listener.report(ReportType::ExplFeas, &local_best.0, instance);
             }
+            // Shrink the strip width and clear the infeasible solution pool
             let next_width = current_width * (1.0 - config.shrink_step);
             info!("[EXPL] shrinking strip by {}%: {:.3} -> {:.3}", config.shrink_step * 100.0, current_width, next_width);
             sep.change_strip_width(next_width, None);
             current_width = next_width;
-            solution_pool.clear();
+            infeas_sol_pool.clear();
         } else {
             info!("[EXPL] unable to reach feasibility (width: {:.3}, dens: {:.3}%, min loss: {:.3})", current_width, sep.prob.density() * 100.0, FMT().fmt2(total_loss));
             sol_listener.report(ReportType::ExplInfeas, &local_best.0, instance);
 
-            //layout was not successfully separated, add to local bests
-            match solution_pool.binary_search_by(|(_, o)| o.partial_cmp(&total_loss).unwrap()) {
-                Ok(idx) | Err(idx) => solution_pool.insert(idx, (local_best.0.clone(), total_loss)),
+            // Separation was not successful add it to the pool of infeasible solutions
+            match infeas_sol_pool.binary_search_by(|(_, o)| o.partial_cmp(&total_loss).unwrap()) {
+                Ok(idx) | Err(idx) => infeas_sol_pool.insert(idx, (local_best.0.clone(), total_loss)),
             }
 
-            if solution_pool.len() >= config.max_conseq_failed_attempts.unwrap_or(usize::MAX) {
-                info!("[EXPL] max consecutive failed attempts ({}), terminating", solution_pool.len());
+            if infeas_sol_pool.len() >= config.max_conseq_failed_attempts.unwrap_or(usize::MAX) {
+                info!("[EXPL] max consecutive failed attempts ({}), terminating", infeas_sol_pool.len());
                 break;
             }
 
-            //restore to a random solution from the tabu list, better solutions have more chance to be selected
+            // Restore to a random solution from the pool, with better solutions having more chance to be selected
             let selected_sol = {
-                //sample a value in range [0.0, 1.0[ from a normal distribution
-                let distr = Normal::new(0.0, config.solution_pool_distribution_stddev).unwrap();
-                let sample = distr.sample(&mut sep.rng).abs().min(0.999);
-                //map it to the range of the solution pool
-                let selected_idx = (sample * solution_pool.len() as f32) as usize;
+                // Sample a value in range [0.0, 1.0[ from a normal distribution
+                let distribution = Normal::new(0.0, config.solution_pool_distribution_stddev).unwrap();
+                let sample = distribution.sample(&mut sep.rng).abs().min(0.999);
+                // Map it to an index in the infeasible solution pool (better solutions are at the start of the pool)
+                let selected_idx = (sample * infeas_sol_pool.len() as f32) as usize;
 
-                let (selected_sol, loss) = &solution_pool[selected_idx];
-                info!("[EXPL] starting solution {}/{} selected from solution pool (l: {}) to disrupt", selected_idx, solution_pool.len(), FMT().fmt2(*loss));
+                let (selected_sol, loss) = &infeas_sol_pool[selected_idx];
+                info!("[EXPL] starting solution {}/{} selected from solution pool (l: {}) to disrupt", selected_idx, infeas_sol_pool.len(), FMT().fmt2(*loss));
                 selected_sol
             };
 
+            // Rollback to this solution and disrupt it.
             sep.rollback(selected_sol, None);
             disrupt_solution(sep, config);
         }
     }
 
-    info!("[EXPL] finished, best feasible solution: width: {:.3} ({:.3}%)",best_width,feasible_solutions.last().unwrap().density(instance) * 100.0);
+    info!("[EXPL] finished, best feasible solution: width: {:.3} ({:.3}%)",best_width,feasible_sols.last().unwrap().density(instance) * 100.0);
 
-    feasible_solutions
+    feasible_sols
 }
 
 fn disrupt_solution(sep: &mut Separator, config: &ExplorationConfig) {

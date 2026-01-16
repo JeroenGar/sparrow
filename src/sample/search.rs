@@ -22,22 +22,25 @@ pub fn search_placement(l: &Layout, item: &Item, ref_pk: Option<PItemKey>, mut e
 
     let mut best_samples = BestSamples::new(sample_config.n_coord_descents, item_min_dim * UNIQUE_SAMPLE_THRESHOLD);
 
+    //Create the two uniform samplers, one focussed around the reference placement, one for the whole container
     let focussed_sampler = match ref_pk {
         Some(ref_pk) => {
-            //report the current placement (and eval)
+            //Add the current placement (and evaluation) as a candidate
             let dt = l.placed_items[ref_pk].d_transf;
             let eval = evaluator.evaluate_sample(dt, Some(best_samples.upper_bound()));
 
             debug!("[S] Starting from: {:?}", (dt, eval));
             best_samples.report(dt, eval);
 
-            //create a sampler around the current placement
+            //Create a uniform sampler focussed around the current placement
             let pi_bbox = l.placed_items[ref_pk].shape.bbox;
             UniformBBoxSampler::new(pi_bbox, item, l.container.outer_cd.bbox)
         }
         None => None,
     };
+    let container_sampler = UniformBBoxSampler::new(l.container.outer_cd.bbox, item, l.container.outer_cd.bbox);
 
+    //Perform the focussed sampling
     if let Some(focussed_sampler) = focussed_sampler {
         for _ in 0..sample_config.n_focussed_samples {
             let dt = focussed_sampler.sample(rng);
@@ -46,8 +49,7 @@ pub fn search_placement(l: &Layout, item: &Item, ref_pk: Option<PItemKey>, mut e
         }
     }
 
-    let container_sampler = UniformBBoxSampler::new(l.container.outer_cd.bbox, item, l.container.outer_cd.bbox);
-
+    //Perform the container-wide sampling
     if let Some(container_sampler) = container_sampler {
         for _ in 0..sample_config.n_container_samples {
             let dt = container_sampler.sample(rng);
@@ -55,27 +57,19 @@ pub fn search_placement(l: &Layout, item: &Item, ref_pk: Option<PItemKey>, mut e
             best_samples.report(dt, eval);
         }
     }
-    
-    //Prerefine the best samples
+
+    //Refine some of the best random samples to a local minimum in two steps:
+
+    //1. Do a first refinement of all 'best samples' using coordinate descent
     for start in best_samples.samples.clone() {
-        let descended = refine_coord_desc(
-            start,
-            &mut evaluator,
-            prerefine_cd_config(item),
-            rng,
-        );
+        let descended = refine_coord_desc(start, &mut evaluator, prerefine_cd_config(item), rng);
         best_samples.report(descended.0, descended.1);
     }
 
 
-    //Do a final refine on the best one
+    //2. Take the best one and do an even finer coordinate descent refinement
     let final_sample = best_samples.best().map(|s|
-        refine_coord_desc(
-            s, 
-            &mut evaluator, 
-            final_refine_cd_config(item), 
-            rng,
-        )
+        refine_coord_desc(s, &mut evaluator, final_refine_cd_config(item), rng)
     );
 
     debug!("[S] {} samples evaluated, final: {:?}",evaluator.n_evals(),final_sample);

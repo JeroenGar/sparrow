@@ -25,9 +25,10 @@ pub fn quantify_collision_poly_poly(s1: &SPolygon, s2: &SPolygon) -> f32 {
 }
 
 pub fn calc_shape_penalty(s1: &SPolygon, s2: &SPolygon) -> f32 {
+    // The shape-based penalty between two shapes is defined as the geometric mean of the square roots of their convex hull areas.
     let p1 = f32::sqrt(s1.surrogate().convex_hull_area);
     let p2 = f32::sqrt(s2.surrogate().convex_hull_area);
-    (p1 * p2).sqrt() //geometric mean
+    (p1 * p2).sqrt()
 }
 
 /// Quantifies a collision between a simple polygon and the exterior of the container.
@@ -37,7 +38,6 @@ pub fn quantify_collision_poly_container(s: &SPolygon, c_bbox: Rect) -> f32 {
     let overlap = match Rect::intersection(s_bbox, c_bbox) {
         Some(r) => {
             //intersection exist, calculate the area of the intersection (+ a small value to ensure it is never zero)
-            
             (s_bbox.area() - r.area()) + 0.0001 * s_bbox.area()
         }
         None => {

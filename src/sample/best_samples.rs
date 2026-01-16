@@ -4,8 +4,9 @@ use jagua_rs::geometry::DTransformation;
 use std::f32::consts::PI;
 use std::fmt::Debug;
 
-/// Datastructure to store the N best samples, automatically keeps them sorted and evicts the worst.
+/// Data structure to store the N best samples, automatically keeps them sorted and evicts the worst.
 /// It makes sure that no two included samples are too similar.
+/// Also provides an upper bound in loss value for acceptance of new samples.
 #[derive(Debug, Clone)]
 pub struct BestSamples {
     pub size: usize,

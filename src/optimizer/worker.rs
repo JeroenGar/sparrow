@@ -33,7 +33,7 @@ impl SeparatorWorker {
 
     /// Algorithm 5 from https://doi.org/10.48550/arXiv.2509.13329
     pub fn move_items(&mut self) -> SepStats {
-        //collect all colliding items and order them randomly
+        // Collect all colliding items in a random order
         let candidates = self.prob.layout.placed_items.keys()
             .filter(|pk| self.ct.get_loss(*pk) > 0.0)
             .collect_vec()
@@ -42,23 +42,23 @@ impl SeparatorWorker {
         let mut total_moves = 0;
         let mut total_evals = 0;
 
-        //give each item the opportunity to move to a better (eval) position
+        // Give each colliding item the opportunity to move to a better (eval) position
         for &pk in candidates.iter() {
-            //check if the item is still colliding
+            // First check if the item is still colliding
             if self.ct.get_loss(pk) > 0.0 {
                 let item_id = self.prob.layout.placed_items[pk].item_id;
                 let item = self.instance.item(item_id);
 
-                //create an evaluator to evaluate the samples during the search
+                // Create an 'evaluator' to perform collision detection and collision quantification of the samples during the search
                 let evaluator = SeparationEvaluator::new(&self.prob.layout, item, pk, &self.ct);
 
-                //search for a better position for the item
+                // Perform the search for a better position for the item
                 let (best_sample, n_evals) =
                     search::search_placement(&self.prob.layout, item, Some(pk), evaluator, self.sample_config, &mut self.rng);
 
                 let (new_dt, _eval) = best_sample.expect("search_placement should always return a sample");
 
-                //move the item to the new position
+                // Move the item to the new position
                 self.move_item(pk, new_dt);
                 total_moves += 1;
                 total_evals += n_evals;
@@ -77,11 +77,12 @@ impl SeparatorWorker {
         debug_assert!(old_l > 0.0, "Item with key {:?} should be colliding, but has no loss: {}", pk, FMT().fmt2(old_l));
         debug_assert!(old_w_l > 0.0, "Item with key {:?} should be colliding, but has no weighted loss: {}", pk, FMT().fmt2(old_w_l));
 
-        //modify the problem, by removing the item and placing it in the new position
+        // First removing the item and subsequently place it in its new position
         let old_placement = self.prob.remove_item(pk);
         let new_placement = SPPlacement { d_transf, item_id: item.id };
         let new_pk = self.prob.place_item(new_placement);
-        //update the collision tracker to reflect the changes
+
+        // Update the collision tracker to reflect the changes
         self.ct.register_item_move(&self.prob.layout, pk, new_pk);
 
         let (new_l, new_w_l) = (self.ct.get_loss(new_pk), self.ct.get_weighted_loss(new_pk));
