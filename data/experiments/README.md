@@ -21,11 +21,15 @@ For every entry in [benchmark_runs](benchmark_runs) the log file contains all th
 ...
 ```
 
-Steps to reproduce this benchmark run:
+Steps to reproduce the benchmark run above:
 - Ensure the Rust toolchain (nightly) matches the one that was the most recent at the day of the experiment.
-    - For example: `rustup override set nightly-2025-03-28`
-- Ensure the repo is checked out at the same commit
-    - For example: `git checkout 4d70ca7f468957a046a74bbb614b896f0ad463e3`).
-- In [config.rs](../../src/config.rs), set the seed to the one that was randomly chosen for this particular benchmark run:
-    - For example: `pub const RNG_SEED: Option<usize> = Some(12552852848582794543);`
-- `sparrow` is built and executed exactly the same as the [single_bench.yml](../../.github/workflows/single_bench.yml) action defines.
+    - `rustup override set nightly-2025-03-28`
+- Ensure the repo is checked out at the same commit:
+    - `git checkout 4d70ca7f468957a046a74bbb614b896f0ad463e3`).
+- Ensure, the seed in [config.rs](../../src/config.rs) is set to the randomly chosen one:
+    - `pub const RNG_SEED: Option<usize> = Some(12552852848582794543);`
+- Ensure `sparrow` is built and executed exactly as [single_bench.yml](../../.github/workflows/single_bench.yml) defines.
+    - ```
+      export RUSTFLAGS='-C target-cpu=native'
+      cargo run --profile release --features=only_final_svg,simd --bin bench -- data/input/swim.json 1200 100
+      ```
