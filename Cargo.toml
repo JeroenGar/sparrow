@@ -38,7 +38,7 @@ anyhow = "1.0"
 ndarray = "0.17"
 rand_xoshiro = "0.7"
 
-getrandom = { version = "0.3", features = ["wasm_js"] }
+getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ctrlc = "3.4"
