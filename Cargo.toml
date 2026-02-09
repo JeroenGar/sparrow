@@ -16,7 +16,7 @@ path = "src/bench.rs"
 [dependencies]
 jagua-rs = { features = ["spp"], git = "https://github.com/JeroenGar/jagua-rs.git", rev = "76aab0fa70688ee50d1809f5376f71c758ea0b7c"}
 #jagua-rs = { features = ["spp"], path = "../jagua-rs/jagua-rs" }
-rand = "0.9"
+rand = "0.10"
 rand_distr = "0.5"
 svg = "0.18"
 itertools = "0.14"
