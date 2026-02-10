@@ -2,7 +2,7 @@ use crate::consts::{CD_STEP_FAIL, CD_STEP_SUCCESS};
 use crate::eval::sample_eval::{SampleEval, SampleEvaluator};
 use jagua_rs::geometry::DTransformation;
 use log::trace;
-use rand::Rng;
+use rand::{Rng, RngExt};
 use std::cmp::Ordering;
 use std::fmt::Debug;
 

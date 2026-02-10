@@ -1,4 +1,9 @@
-use std::cmp::Reverse;
+use crate::config::ExplorationConfig;
+use crate::optimizer::separator::{Separator, SeparatorConfig};
+use crate::sample::uniform_sampler::convert_sample_to_closest_feasible;
+use crate::util::listener::{ReportType, SolutionListener};
+use crate::util::terminator::Terminator;
+use crate::FMT;
 use float_cmp::approx_eq;
 use itertools::Itertools;
 use jagua_rs::collision_detection::hazards::HazardEntity;
@@ -10,12 +15,7 @@ use ordered_float::OrderedFloat;
 use rand::prelude::{Distribution, IteratorRandom};
 use rand_distr::Normal;
 use slotmap::SecondaryMap;
-use crate::config::ExplorationConfig;
-use crate::FMT;
-use crate::optimizer::separator::{Separator, SeparatorConfig};
-use crate::sample::uniform_sampler::convert_sample_to_closest_feasible;
-use crate::util::listener::{ReportType, SolutionListener};
-use crate::util::terminator::Terminator;
+use std::cmp::Reverse;
 
 /// Algorithm 12 from https://doi.org/10.48550/arXiv.2509.13329
 pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listener: &mut impl SolutionListener, term: &impl Terminator, config: &ExplorationConfig) -> Vec<SPSolution> {

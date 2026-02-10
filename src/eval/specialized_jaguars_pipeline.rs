@@ -1,4 +1,3 @@
-use std::f32::consts::PI;
 use crate::quantify::quantify_collision_poly_container;
 #[cfg(not(feature = "simd"))]
 use crate::quantify::quantify_collision_poly_poly;
@@ -10,16 +9,17 @@ use crate::quantify::tracker::CollisionTracker;
 use crate::util::assertions;
 use crate::util::bit_reversal_iterator::BitReversalIterator;
 use float_cmp::approx_eq;
-use jagua_rs::collision_detection::CDEngine;
 use jagua_rs::collision_detection::hazards::collector::HazardCollector;
 use jagua_rs::collision_detection::hazards::{HazKey, HazardEntity};
 use jagua_rs::collision_detection::quadtree::QTHazPresence;
+use jagua_rs::collision_detection::CDEngine;
 use jagua_rs::entities::Layout;
 use jagua_rs::entities::PItemKey;
-use jagua_rs::geometry::DTransformation;
-use jagua_rs::geometry::geo_traits::{TransformableFrom};
+use jagua_rs::geometry::geo_traits::TransformableFrom;
 use jagua_rs::geometry::primitives::SPolygon;
+use jagua_rs::geometry::DTransformation;
 use slotmap::SecondaryMap;
+use std::f32::consts::PI;
 
 /// Functionally identical to [`CDEngine::collect_poly_collisions`], but with early return.
 /// Collision collection will stop as soon as the loss exceeds the `loss_bound` of the detector.

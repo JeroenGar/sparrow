@@ -1,5 +1,5 @@
-use std::time::Duration;
 use jagua_rs::Instant;
+use std::time::Duration;
 
 /// Generic trait for any struct that can determine if the optimization process should terminate.
 pub trait Terminator {

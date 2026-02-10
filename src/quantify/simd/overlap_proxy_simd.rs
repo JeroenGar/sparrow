@@ -1,12 +1,12 @@
 use crate::quantify::overlap_proxy::overlap_area_proxy;
 use crate::quantify::simd::circles_soa::CirclesSoA;
 use float_cmp::approx_eq;
-use std::simd::Simd;
-use std::simd::Select;
 use jagua_rs::geometry::fail_fast::SPSurrogate;
 use jagua_rs::geometry::geo_traits::DistanceTo;
 use jagua_rs::geometry::primitives::{Circle, Point};
 use std::f32::consts::PI;
+use std::simd::Select;
+use std::simd::Simd;
 
 /// Width of the SIMD vector
 const SIMD_WIDTH: usize = 4;

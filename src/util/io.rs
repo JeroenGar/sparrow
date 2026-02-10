@@ -1,14 +1,14 @@
+use crate::EPOCH;
+use anyhow::{Context, Result};
+use clap::Parser;
+use jagua_rs::probs::spp::io::ext_repr::{ExtSPInstance, ExtSPSolution};
 use log::{log, Level, LevelFilter};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use serde::{Deserialize, Serialize};
 use svg::Document;
-use anyhow::{Context, Result};
-use clap::Parser;
-use jagua_rs::probs::spp::io::ext_repr::{ExtSPInstance, ExtSPSolution};
-use crate::EPOCH;
 
 #[derive(Parser)]
 pub struct MainCli {

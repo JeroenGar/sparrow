@@ -1,10 +1,10 @@
-use std::path::Path;
+use crate::consts::DRAW_OPTIONS;
+use crate::util::io;
+use crate::util::listener::{ReportType, SolutionListener};
 use jagua_rs::io::svg::s_layout_to_svg;
 use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
 use log::Level;
-use crate::consts::DRAW_OPTIONS;
-use crate::util::io;
-use crate::util::listener::{SolutionListener, ReportType};
+use std::path::Path;
 pub struct SvgExporter {
     svg_counter: usize,
     /// Path to write the final SVG file to, if provided
