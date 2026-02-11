@@ -1,9 +1,9 @@
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use crate::util::terminator::Terminator;
 use jagua_rs::Instant;
 use log::warn;
-use crate::util::terminator::Terminator;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct CtrlCTerminator {

@@ -6,13 +6,13 @@ use crate::util::assertions::tracker_matches_layout;
 use crate::FMT;
 use itertools::Itertools;
 use jagua_rs::entities::{Instance, PItemKey};
-use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem, SPSolution};
 use jagua_rs::geometry::DTransformation;
+use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem, SPSolution};
 use log::debug;
 use rand::prelude::SliceRandom;
+use rand_xoshiro::Xoshiro256PlusPlus;
 use std::iter::Sum;
 use std::ops::AddAssign;
-use rand_xoshiro::Xoshiro256PlusPlus;
 use tap::Tap;
 
 pub struct SeparatorWorker {

@@ -1,11 +1,11 @@
-use jagua_rs::Instant;
-use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
-use log::info;
-use rand::Rng;
 use crate::config::{CompressionConfig, ShrinkDecayStrategy};
 use crate::optimizer::separator::Separator;
 use crate::util::listener::{ReportType, SolutionListener};
 use crate::util::terminator::Terminator;
+use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
+use jagua_rs::Instant;
+use log::info;
+use rand::{Rng, RngExt};
 
 /// Algorithm 13 from https://doi.org/10.48550/arXiv.2509.13329
 pub fn compression_phase(

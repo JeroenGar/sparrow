@@ -1,8 +1,9 @@
 extern crate core;
 use sparrow::util::terminator::Terminator;
 
+use jagua_rs::Instant;
 use ordered_float::OrderedFloat;
-use rand::{Rng, RngCore, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 use sparrow::config::*;
 use sparrow::optimizer::lbf::LBFBuilder;
 use sparrow::optimizer::separator::Separator;
@@ -11,7 +12,6 @@ use std::env::args;
 use std::fs;
 use std::path::Path;
 use std::time::Duration;
-use jagua_rs::Instant;
 
 use anyhow::Result;
 use jagua_rs::io::import::Importer;

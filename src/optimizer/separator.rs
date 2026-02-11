@@ -3,20 +3,20 @@ use crate::optimizer::Terminator;
 use crate::quantify::tracker::{CTSnapshot, CollisionTracker};
 use crate::sample::search::SampleConfig;
 use crate::util::assertions::tracker_matches_layout;
-use crate::{FMT};
+use crate::util::listener::{ReportType, SolutionListener};
+use crate::FMT;
 use itertools::Itertools;
 use jagua_rs::entities::PItemKey;
-use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem, SPSolution};
 use jagua_rs::geometry::DTransformation;
+use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem, SPSolution};
+use jagua_rs::Instant;
 use log::{debug, log, Level};
 use ordered_float::OrderedFloat;
-use rand::{Rng, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
+use rand_xoshiro::Xoshiro256PlusPlus;
 use rayon::iter::IntoParallelRefMutIterator;
 use rayon::iter::ParallelIterator;
 use rayon::ThreadPool;
-use jagua_rs::Instant;
-use rand_xoshiro::Xoshiro256PlusPlus;
-use crate::util::listener::{ReportType, SolutionListener};
 
 #[derive(Debug, Clone, Copy)]
 pub struct SeparatorConfig {

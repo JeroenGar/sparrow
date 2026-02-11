@@ -1,5 +1,5 @@
-use jagua_rs::io::svg::{SvgDrawOptions, SvgLayoutTheme};
 use crate::sample::search::SampleConfig;
+use jagua_rs::io::svg::{SvgDrawOptions, SvgLayoutTheme};
 
 pub const GLS_WEIGHT_MAX_INC_RATIO: f32 = 2.0;
 pub const GLS_WEIGHT_MIN_INC_RATIO: f32 = 1.2;

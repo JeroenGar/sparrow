@@ -1,7 +1,7 @@
-use jagua_rs::geometry::geo_traits::DistanceTo;
-use jagua_rs::geometry::primitives::{Rect, SPolygon};
 use crate::consts::OVERLAP_PROXY_EPSILON_DIAM_RATIO;
 use crate::quantify::overlap_proxy::overlap_area_proxy;
+use jagua_rs::geometry::geo_traits::DistanceTo;
+use jagua_rs::geometry::primitives::{Rect, SPolygon};
 
 pub mod overlap_proxy;
 mod pair_matrix;

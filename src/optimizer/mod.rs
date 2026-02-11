@@ -1,16 +1,16 @@
 use crate::config::*;
-use crate::optimizer::lbf::LBFBuilder;
-use crate::optimizer::separator::Separator;
-use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
-use rand::{RngCore, SeedableRng};
-use std::time::Duration;
-use log::info;
-use rand_xoshiro::Xoshiro256PlusPlus;
 use crate::consts::LBF_SAMPLE_CONFIG;
 use crate::optimizer::compress::compression_phase;
 use crate::optimizer::explore::exploration_phase;
+use crate::optimizer::lbf::LBFBuilder;
+use crate::optimizer::separator::Separator;
 use crate::util::listener::{ReportType, SolutionListener};
 use crate::util::terminator::Terminator;
+use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
+use log::info;
+use rand::{Rng, SeedableRng};
+use rand_xoshiro::Xoshiro256PlusPlus;
+use std::time::Duration;
 
 pub mod lbf;
 pub mod separator;

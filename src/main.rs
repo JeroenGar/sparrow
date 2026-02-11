@@ -1,23 +1,23 @@
 extern crate core;
 
 use clap::Parser as Clap;
+use jagua_rs::io::import::Importer;
 use log::{info, warn, Level};
 use rand::SeedableRng;
 use sparrow::config::*;
 use sparrow::optimizer::optimize;
 use sparrow::util::io;
-use sparrow::util::io::{MainCli, ExtSPOutput};
+use sparrow::util::io::{ExtSPOutput, MainCli};
+use sparrow::EPOCH;
 use std::fs;
 use std::path::Path;
 use std::time::Duration;
-use jagua_rs::io::import::Importer;
-use sparrow::EPOCH;
 
 use anyhow::{bail, Result};
 use rand_xoshiro::Xoshiro256PlusPlus;
 use sparrow::consts::{DEFAULT_COMPRESS_TIME_RATIO, DEFAULT_EXPLORE_TIME_RATIO, DEFAULT_FAIL_DECAY_RATIO_CMPR, DEFAULT_MAX_CONSEQ_FAILS_EXPL, LOG_LEVEL_FILTER_DEBUG, LOG_LEVEL_FILTER_RELEASE};
-use sparrow::util::svg_exporter::SvgExporter;
 use sparrow::util::ctrlc_terminator::CtrlCTerminator;
+use sparrow::util::svg_exporter::SvgExporter;
 
 pub const OUTPUT_DIR: &str = "output";
 

@@ -2,9 +2,9 @@
 #![allow(const_item_mutation)]
 #![allow(unused_imports)]
 
-use std::sync::LazyLock;
-use numfmt::{Formatter, Precision, Scales};
 use jagua_rs::Instant;
+use numfmt::{Formatter, Precision, Scales};
+use std::sync::LazyLock;
 
 pub mod optimizer;
 pub mod quantify;

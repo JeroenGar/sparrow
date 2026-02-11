@@ -1,15 +1,16 @@
-use std::f32::consts::PI;
 use itertools::Itertools;
+use jagua_rs::entities::Item;
 use jagua_rs::geometry::geo_enums::RotationRange;
 use jagua_rs::geometry::geo_traits::TransformableFrom;
-use rand::prelude::IndexedRandom;
-use rand::Rng;
-use std::ops::Range;
-use jagua_rs::entities::Item;
 use jagua_rs::geometry::primitives::Rect;
 use jagua_rs::geometry::{normalize_rotation, DTransformation, Transformation};
 use ndarray::Array;
-use ordered_float::{OrderedFloat};
+use ordered_float::OrderedFloat;
+use rand::prelude::IndexedRandom;
+use rand::RngExt;
+use rand_xoshiro::rand_core::Rng;
+use std::f32::consts::PI;
+use std::ops::Range;
 
 const ROT_N_SAMPLES: usize = 16; // number of rotations to sample for continuous rotation
 

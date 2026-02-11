@@ -1,16 +1,16 @@
 use crate::eval::lbf_evaluator::LBFEvaluator;
 use crate::eval::sample_eval::SampleEval;
 use crate::sample::search::{search_placement, SampleConfig};
+use crate::util::assertions;
 use itertools::Itertools;
-use log::debug;
-use ordered_float::OrderedFloat;
-use std::cmp::Reverse;
-use std::iter;
-use jagua_rs::Instant;
 use jagua_rs::entities::Instance;
 use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem};
+use jagua_rs::Instant;
+use log::debug;
+use ordered_float::OrderedFloat;
 use rand_xoshiro::Xoshiro256PlusPlus;
-use crate::util::assertions;
+use std::cmp::Reverse;
+use std::iter;
 
 pub struct LBFBuilder {
     pub instance: SPInstance,
