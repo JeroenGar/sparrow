@@ -10,9 +10,9 @@ use jagua_rs::geometry::DTransformation;
 use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem, SPSolution};
 use log::debug;
 use rand::prelude::SliceRandom;
-use rand_xoshiro::Xoshiro256PlusPlus;
 use std::iter::Sum;
 use std::ops::AddAssign;
+use rand::rngs::Xoshiro256PlusPlus;
 use tap::Tap;
 
 pub struct SeparatorWorker {

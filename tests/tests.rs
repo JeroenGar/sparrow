@@ -2,8 +2,6 @@
 mod integration_tests {
     use anyhow::Result;
     use jagua_rs::io::import::Importer;
-    use rand::SeedableRng;
-    use rand_xoshiro::Xoshiro256PlusPlus;
     use sparrow::config::DEFAULT_SPARROW_CONFIG;
     use sparrow::consts::LBF_SAMPLE_CONFIG;
     use sparrow::optimizer::compress::compression_phase;
@@ -15,6 +13,8 @@ mod integration_tests {
     use sparrow::util::terminator::Terminator;
     use std::path::Path;
     use std::time::Duration;
+    use rand::rngs::Xoshiro256PlusPlus;
+    use rand::SeedableRng;
     use test_case::test_case;
     use sparrow::util::listener::DummySolListener;
 

@@ -8,9 +8,9 @@ use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem};
 use jagua_rs::Instant;
 use log::debug;
 use ordered_float::OrderedFloat;
-use rand_xoshiro::Xoshiro256PlusPlus;
 use std::cmp::Reverse;
 use std::iter;
+use rand::rngs::Xoshiro256PlusPlus;
 
 pub struct LBFBuilder {
     pub instance: SPInstance,
