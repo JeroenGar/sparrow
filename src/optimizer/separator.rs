@@ -13,7 +13,7 @@ use jagua_rs::Instant;
 use log::{debug, log, Level};
 use ordered_float::OrderedFloat;
 use rand::{Rng, RngExt, SeedableRng};
-use rand_xoshiro::Xoshiro256PlusPlus;
+use rand::rngs::Xoshiro256PlusPlus;
 use rayon::iter::IntoParallelRefMutIterator;
 use rayon::iter::ParallelIterator;
 use rayon::ThreadPool;

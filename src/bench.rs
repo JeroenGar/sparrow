@@ -16,7 +16,7 @@ use std::time::Duration;
 use anyhow::Result;
 use jagua_rs::io::import::Importer;
 use jagua_rs::io::svg::s_layout_to_svg;
-use rand_xoshiro::Xoshiro256PlusPlus;
+use rand::rngs::Xoshiro256PlusPlus;
 use sparrow::consts::{DEFAULT_COMPRESS_TIME_RATIO, DEFAULT_EXPLORE_TIME_RATIO, DRAW_OPTIONS, LBF_SAMPLE_CONFIG};
 use sparrow::optimizer::compress::compression_phase;
 use sparrow::optimizer::explore::exploration_phase;

@@ -7,8 +7,7 @@ use jagua_rs::geometry::{normalize_rotation, DTransformation, Transformation};
 use ndarray::Array;
 use ordered_float::OrderedFloat;
 use rand::prelude::IndexedRandom;
-use rand::RngExt;
-use rand_xoshiro::rand_core::Rng;
+use rand::{Rng, RngExt};
 use std::f32::consts::PI;
 use std::ops::Range;
 

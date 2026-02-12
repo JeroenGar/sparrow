@@ -9,8 +9,8 @@ use crate::util::terminator::Terminator;
 use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
 use log::info;
 use rand::{Rng, SeedableRng};
-use rand_xoshiro::Xoshiro256PlusPlus;
 use std::time::Duration;
+use rand::rngs::Xoshiro256PlusPlus;
 
 pub mod lbf;
 pub mod separator;
