@@ -73,23 +73,23 @@ pub const DEFAULT_SPARROW_CONFIG: SparrowConfig = SparrowConfig {
         large_item_ch_area_cutoff_percentile: 0.75
     },
     cmpr_cfg: CompressionConfig {
-        shrink_range: (0.0005, 0.00001),
+        shrink_range: (0.000005, 0.000001),
         time_limit: Duration::from_secs(60),
         shrink_decay: ShrinkDecayStrategy::TimeBased,
         separator_config: SeparatorConfig {
-            iter_no_imprv_limit: 100,
-            strike_limit: 5,
+            iter_no_imprv_limit: 20,
+            strike_limit: 1,
             log_level: log::Level::Debug,
             n_workers: 3,
             sample_config: SampleConfig {
-                n_container_samples: 50,
-                n_focussed_samples: 25,
+                n_container_samples: 25,
+                n_focussed_samples: 50,
                 n_coord_descents: 3,
             },
         },
     },
     cde_config: CDEConfig {
-        quadtree_depth: 4,
+        quadtree_depth: 3,
         cd_threshold: 16,
         item_surrogate_config: SPSurrogateConfig {
             n_pole_limits: [(64, 0.0), (16, 0.8), (8, 0.9)],
