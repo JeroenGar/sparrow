@@ -53,7 +53,7 @@ jobs:
     name: bench ${{ inputs.instance }} (${{ inputs.n_runs }} x ${{ inputs.run_time_s }}s)
     runs-on: ${{ inputs.cpu_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - name: Prepare input JSON
         run: |
