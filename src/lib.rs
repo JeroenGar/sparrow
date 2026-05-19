@@ -1,18 +1,25 @@
 #![cfg_attr(feature = "simd", feature(portable_simd))]
-#![allow(const_item_mutation)]
-#![allow(unused_imports)]
+#![warn(
+    clippy::pedantic,
+    clippy::correctness,
+    clippy::suspicious,
+    clippy::complexity,
+    clippy::perf,
+    clippy::style
+)]
+#![allow(clippy::missing_panics_doc, clippy::missing_errors_doc)]
 
 use jagua_rs::Instant;
 use numfmt::{Formatter, Precision, Scales};
 use std::sync::LazyLock;
 
+pub mod config;
+pub mod consts;
+pub mod eval;
 pub mod optimizer;
 pub mod quantify;
 pub mod sample;
 pub mod util;
-pub mod config;
-pub mod eval;
-pub mod consts;
 
 pub static EPOCH: LazyLock<Instant> = LazyLock::new(Instant::now);
 
@@ -21,7 +28,6 @@ static FMT: fn() -> Formatter = || -> Formatter {
         .scales(Scales::short())
         .precision(Precision::Significance(3))
 };
-
 
 #[cfg(feature = "live_svg")]
 pub const EXPORT_LIVE_SVG: bool = true;

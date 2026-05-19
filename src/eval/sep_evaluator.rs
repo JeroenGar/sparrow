@@ -1,12 +1,14 @@
 use crate::eval::sample_eval::{SampleEval, SampleEvaluator};
-use crate::eval::specialized_jaguars_pipeline::{collect_poly_collisions_in_detector_custom, SpecializedHazardCollector};
+use crate::eval::specialized_jaguars_pipeline::{
+    SpecializedHazardCollector, collect_poly_collisions_in_detector_custom,
+};
 use crate::quantify::tracker::CollisionTracker;
 use jagua_rs::collision_detection::hazards::collector::HazardCollector;
 use jagua_rs::entities::Item;
 use jagua_rs::entities::Layout;
 use jagua_rs::entities::PItemKey;
-use jagua_rs::geometry::primitives::SPolygon;
 use jagua_rs::geometry::DTransformation;
+use jagua_rs::geometry::primitives::SPolygon;
 
 pub struct SeparationEvaluator<'a> {
     layout: &'a Layout,
@@ -17,6 +19,7 @@ pub struct SeparationEvaluator<'a> {
 }
 
 impl<'a> SeparationEvaluator<'a> {
+    #[must_use]
     pub fn new(
         layout: &'a Layout,
         item: &'a Item,
@@ -35,10 +38,14 @@ impl<'a> SeparationEvaluator<'a> {
     }
 }
 
-impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
+impl SampleEvaluator for SeparationEvaluator<'_> {
     /// Evaluates a transformation. An upper bound can be provided to early terminate the process.
-    /// Algorithm 7 from https://doi.org/10.48550/arXiv.2509.13329
-    fn evaluate_sample(&mut self, dt: DTransformation, upper_bound: Option<SampleEval>) -> SampleEval {
+    /// Algorithm 7 from <https://doi.org/10.48550/arXiv.2509.13329>
+    fn evaluate_sample(
+        &mut self,
+        dt: DTransformation,
+        upper_bound: Option<SampleEval>,
+    ) -> SampleEval {
         self.n_evals += 1;
         let cde = self.layout.cde();
 
@@ -48,13 +55,19 @@ impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
             Some(SampleEval::Clear { .. }) => 0.0,
             _ => f32::INFINITY,
         };
-        
+
         // Reload the hazard collector to prepare for a new query
         self.collector.reload(loss_bound);
 
         // Perform the collision detection and the collision quantification. The 'collector' will be populated with the results.
-        collect_poly_collisions_in_detector_custom(cde, &dt, &mut self.shape_buff, self.item.shape_cd.as_ref(), &mut self.collector);
-        
+        collect_poly_collisions_in_detector_custom(
+            cde,
+            &dt,
+            &mut self.shape_buff,
+            self.item.shape_cd.as_ref(),
+            &mut self.collector,
+        );
+
         if self.collector.early_terminate(&self.shape_buff) {
             // The total quantification of the collisions exceeded the upper bound and the process was terminated early.
             // Note that we might have exited before detecting/quantifying all collisions.
@@ -75,4 +88,3 @@ impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
         self.n_evals
     }
 }
-

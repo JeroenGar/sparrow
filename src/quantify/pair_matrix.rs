@@ -14,7 +14,13 @@ impl PairMatrix {
         let len = size * (size + 1) / 2;
         Self {
             size,
-            data: vec![CTEntry { weight: 1.0, loss: 0.0 }; len],
+            data: vec![
+                CTEntry {
+                    weight: 1.0,
+                    loss: 0.0
+                };
+                len
+            ],
         }
     }
 }

@@ -16,7 +16,7 @@ pub enum ReportType {
     /// Report contains a feasible solution from the comparison phase.
     CmprFeas,
     /// Report contains the final solution
-    Final
+    Final,
 }
 
 /// A dummy implementation of the `SolutionListener` trait that does nothing.

@@ -27,7 +27,7 @@ impl CirclesSoA {
         //load the circles into the SoA format
         izip!(self.x.iter_mut(), self.y.iter_mut(), self.r.iter_mut())
             .zip(circles.iter())
-            .for_each(|((x,y,r),ref_c)| {
+            .for_each(|((x, y, r), ref_c)| {
                 *x = ref_c.center.0;
                 *y = ref_c.center.1;
                 *r = ref_c.radius;

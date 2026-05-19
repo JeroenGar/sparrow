@@ -1,4 +1,4 @@
-use crate::config::*;
+use crate::config::{CompressionConfig, ExplorationConfig};
 use crate::consts::LBF_SAMPLE_CONFIG;
 use crate::optimizer::compress::compression_phase;
 use crate::optimizer::explore::exploration_phase;
@@ -8,17 +8,17 @@ use crate::util::listener::{ReportType, SolutionListener};
 use crate::util::terminator::Terminator;
 use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
 use log::info;
-use rand::{Rng, SeedableRng};
-use std::time::Duration;
 use rand::rngs::Xoshiro256PlusPlus;
+use rand::{Rng, SeedableRng};
 
+pub mod compress;
+pub mod explore;
 pub mod lbf;
 pub mod separator;
 mod worker;
-pub mod explore;
-pub mod compress;
 
-///Algorithm 11 from https://doi.org/10.48550/arXiv.2509.13329
+///Algorithm 11 from <https://doi.org/10.48550/arXiv.2509.13329>
+#[allow(clippy::needless_pass_by_value)]
 pub fn optimize(
     instance: SPInstance,
     mut rng: Xoshiro256PlusPlus,
@@ -26,14 +26,15 @@ pub fn optimize(
     terminator: &mut impl Terminator,
     expl_config: &ExplorationConfig,
     cmpr_config: &CompressionConfig,
-    initial_solution: Option<&SPSolution>
+    initial_solution: Option<&SPSolution>,
 ) -> SPSolution {
     let mut next_rng = || Xoshiro256PlusPlus::seed_from_u64(rng.next_u64());
-    
+
     // First build an initial solution if none is provided
     let start_prob = match initial_solution {
         None => {
-            let builder = LBFBuilder::new(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG).construct();
+            let builder =
+                LBFBuilder::new(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG).construct();
             builder.prob
         }
         Some(init_sol) => {
@@ -46,7 +47,12 @@ pub fn optimize(
 
     // Begin by executing the exploration phase
     terminator.new_timeout(expl_config.time_limit);
-    let mut expl_separator = Separator::new(instance.clone(), start_prob, next_rng(), expl_config.separator_config);
+    let mut expl_separator = Separator::new(
+        instance.clone(),
+        start_prob,
+        next_rng(),
+        expl_config.separator_config,
+    );
     let solutions = exploration_phase(
         &instance,
         &mut expl_separator,
@@ -58,7 +64,12 @@ pub fn optimize(
 
     // Start the compression phase from the final solution from the exploration phase
     terminator.new_timeout(cmpr_config.time_limit);
-    let mut cmpr_separator = Separator::new(expl_separator.instance, expl_separator.prob, next_rng(), cmpr_config.separator_config);
+    let mut cmpr_separator = Separator::new(
+        expl_separator.instance,
+        expl_separator.prob,
+        next_rng(),
+        cmpr_config.separator_config,
+    );
     let cmpr_sol = compression_phase(
         &instance,
         &mut cmpr_separator,

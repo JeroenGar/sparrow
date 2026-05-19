@@ -17,7 +17,9 @@ use anyhow::Result;
 use jagua_rs::io::import::Importer;
 use jagua_rs::io::svg::s_layout_to_svg;
 use rand::rngs::Xoshiro256PlusPlus;
-use sparrow::consts::{DEFAULT_COMPRESS_TIME_RATIO, DEFAULT_EXPLORE_TIME_RATIO, DRAW_OPTIONS, LBF_SAMPLE_CONFIG};
+use sparrow::consts::{
+    DEFAULT_COMPRESS_TIME_RATIO, DEFAULT_EXPLORE_TIME_RATIO, DRAW_OPTIONS, LBF_SAMPLE_CONFIG,
+};
 use sparrow::optimizer::compress::compression_phase;
 use sparrow::optimizer::explore::exploration_phase;
 use sparrow::util::listener::DummySolListener;
@@ -29,12 +31,20 @@ fn main() -> Result<()> {
     let mut config = DEFAULT_SPARROW_CONFIG;
 
     //the input file is the first argument
-    let input_file_path = args().nth(1).expect("first argument must be the input file");
-    let time_limit: Duration = args().nth(2).expect("second argument must be the time limit [s]")
-        .parse::<u64>().map(Duration::from_secs)
+    let input_file_path = args()
+        .nth(1)
+        .expect("first argument must be the input file");
+    let time_limit: Duration = args()
+        .nth(2)
+        .expect("second argument must be the time limit [s]")
+        .parse::<u64>()
+        .map(Duration::from_secs)
         .expect("second argument must be the time limit [s]");
-    let n_runs_total = args().nth(3).expect("third argument must be the number of runs")
-        .parse().expect("third argument must be the number of runs");
+    let n_runs_total = args()
+        .nth(3)
+        .expect("third argument must be the number of runs")
+        .parse()
+        .expect("third argument must be the number of runs");
 
     fs::create_dir_all(OUTPUT_DIR).expect("could not create output directory");
 
@@ -56,21 +66,30 @@ fn main() -> Result<()> {
     config.expl_cfg.time_limit = time_limit.mul_f32(DEFAULT_EXPLORE_TIME_RATIO);
     config.cmpr_cfg.time_limit = time_limit.mul_f32(DEFAULT_COMPRESS_TIME_RATIO);
 
-    let n_runs_per_iter = (num_cpus::get_physical() / config.expl_cfg.separator_config.n_workers).min(n_runs_total);
+    let n_runs_per_iter =
+        (num_cpus::get_physical() / config.expl_cfg.separator_config.n_workers).min(n_runs_total);
     let n_batches = (n_runs_total as f32 / n_runs_per_iter as f32).ceil() as usize;
 
     let (ext_instance, _) = io::read_spp_input(Path::new(&input_file_path))?;
 
     println!(
         "[BENCH] starting bench for {} ({}x{} runs across {} cores, {:?} timelimit)",
-        ext_instance.name, n_batches, n_runs_per_iter, num_cpus::get_physical(), time_limit
+        ext_instance.name,
+        n_batches,
+        n_runs_per_iter,
+        num_cpus::get_physical(),
+        time_limit
     );
 
-    let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.min_item_separation, config.narrow_concavity_cutoff_ratio);
+    let importer = Importer::new(
+        config.cde_config,
+        config.poly_simpl_tolerance,
+        config.min_item_separation,
+        config.narrow_concavity_cutoff_ratio,
+    );
     let instance = jagua_rs::probs::spp::io::import_instance(&importer, &ext_instance)?;
 
     let mut final_solutions = vec![];
-
 
     for i in 0..n_batches {
         println!("[BENCH] batch {}/{}", i + 1, n_batches);
@@ -129,10 +148,18 @@ fn main() -> Result<()> {
         })
         .unzip();
 
-    let best_final_solution = final_solutions.iter().max_by_key(|s| OrderedFloat(s.density(&instance))).unwrap();
+    let best_final_solution = final_solutions
+        .iter()
+        .max_by_key(|s| OrderedFloat(s.density(&instance)))
+        .unwrap();
 
     io::write_svg(
-        &s_layout_to_svg(&best_final_solution.layout_snapshot, &instance, DRAW_OPTIONS, "final_best"),
+        &s_layout_to_svg(
+            &best_final_solution.layout_snapshot,
+            &instance,
+            DRAW_OPTIONS,
+            "final_best",
+        ),
         Path::new(format!("{OUTPUT_DIR}/final_best_{}.svg", ext_instance.name).as_str()),
         log::Level::Info,
     )?;
@@ -143,19 +170,43 @@ fn main() -> Result<()> {
     println!("usages:\n{:?}", &final_usages);
 
     println!("---- WIDTH STATS ----");
-    println!("worst:  {:.3}", final_widths.iter().max_by_key(|&x| OrderedFloat(*x)).unwrap());
+    println!(
+        "worst:  {:.3}",
+        final_widths
+            .iter()
+            .max_by_key(|&x| OrderedFloat(*x))
+            .unwrap()
+    );
     println!("25%:    {:.3}", calculate_percentile(&final_widths, 0.75));
     println!("med:    {:.3}", calculate_median(&final_widths));
     println!("75%:    {:.3}", calculate_percentile(&final_widths, 0.25));
-    println!("best:   {:.3}", final_widths.iter().min_by_key(|&x| OrderedFloat(*x)).unwrap());
+    println!(
+        "best:   {:.3}",
+        final_widths
+            .iter()
+            .min_by_key(|&x| OrderedFloat(*x))
+            .unwrap()
+    );
     println!("avg:    {:.3}", calculate_average(&final_widths));
     println!("stddev: {:.3}", calculate_stddev(&final_widths));
     println!("---- USAGE STATS ----");
-    println!("worst:  {:.3}", final_usages.iter().min_by_key(|&x| OrderedFloat(*x)).unwrap());
+    println!(
+        "worst:  {:.3}",
+        final_usages
+            .iter()
+            .min_by_key(|&x| OrderedFloat(*x))
+            .unwrap()
+    );
     println!("25%:    {:.3}", calculate_percentile(&final_usages, 0.25));
     println!("median: {:.3}", calculate_median(&final_usages));
     println!("75%:    {:.3}", calculate_percentile(&final_usages, 0.75));
-    println!("best:   {:.3}", final_usages.iter().max_by_key(|&x| OrderedFloat(*x)).unwrap());
+    println!(
+        "best:   {:.3}",
+        final_usages
+            .iter()
+            .max_by_key(|&x| OrderedFloat(*x))
+            .unwrap()
+    );
     println!("avg:    {:.3}", calculate_average(&final_usages));
     println!("stddev: {:.3}", calculate_stddev(&final_usages));
     println!("======================");
@@ -163,7 +214,6 @@ fn main() -> Result<()> {
 
     Ok(())
 }
-
 
 pub fn calculate_percentile(v: &[f32], pct: f32) -> f32 {
     // Validate input

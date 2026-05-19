@@ -6,7 +6,6 @@ pub const GLS_WEIGHT_MIN_INC_RATIO: f32 = 1.2;
 pub const GLS_WEIGHT_DECAY: f32 = 0.95;
 pub const OVERLAP_PROXY_EPSILON_DIAM_RATIO: f32 = 0.01;
 
-
 /// Coordinate descent step multiplier on success
 pub const CD_STEP_SUCCESS: f32 = 1.1;
 
