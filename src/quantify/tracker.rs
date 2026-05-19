@@ -5,7 +5,6 @@ use crate::util::assertions::tracker_matches_layout;
 use jagua_rs::collision_detection::hazards::HazardEntity;
 use jagua_rs::collision_detection::hazards::collector::{BasicHazardCollector, HazardCollector};
 use jagua_rs::entities::{Layout, PItemKey};
-use ordered_float::Float;
 use slotmap::SecondaryMap;
 
 /// Tracker of both collisions between pair of items and collisions with the container.

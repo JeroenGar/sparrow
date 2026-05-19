@@ -7,7 +7,6 @@ use jagua_rs::collision_detection::hazards::HazardEntity;
 use jagua_rs::collision_detection::hazards::collector::{BasicHazardCollector, HazardCollector};
 use jagua_rs::entities::Layout;
 use jagua_rs::geometry::primitives::SPolygon;
-use jagua_rs::io::svg::SvgDrawOptions;
 use jagua_rs::probs::spp::entities::SPProblem;
 use jagua_rs::util::assertions;
 use log::warn;

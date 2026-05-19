@@ -10,7 +10,6 @@ use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
 use log::info;
 use rand::rngs::Xoshiro256PlusPlus;
 use rand::{Rng, SeedableRng};
-use std::time::Duration;
 
 pub mod compress;
 pub mod explore;

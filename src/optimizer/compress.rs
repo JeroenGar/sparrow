@@ -5,7 +5,7 @@ use crate::util::terminator::Terminator;
 use jagua_rs::Instant;
 use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
 use log::info;
-use rand::{Rng, RngExt};
+use rand::RngExt;
 
 /// Algorithm 13 from <https://doi.org/10.48550/arXiv.2509.13329>
 pub fn compression_phase(

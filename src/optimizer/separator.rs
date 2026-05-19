@@ -13,7 +13,7 @@ use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem, SPSolut
 use log::{Level, debug, log};
 use ordered_float::OrderedFloat;
 use rand::rngs::Xoshiro256PlusPlus;
-use rand::{Rng, RngExt, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use rayon::ThreadPool;
 use rayon::iter::IntoParallelRefMutIterator;
 use rayon::iter::ParallelIterator;

@@ -1,6 +1,6 @@
 use crate::FMT;
 use crate::config::ExplorationConfig;
-use crate::optimizer::separator::{Separator, SeparatorConfig};
+use crate::optimizer::separator::Separator;
 use crate::sample::uniform_sampler::convert_sample_to_closest_feasible;
 use crate::util::listener::{ReportType, SolutionListener};
 use crate::util::terminator::Terminator;

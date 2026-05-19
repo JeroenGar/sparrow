@@ -6,7 +6,6 @@ use log::{Level, LevelFilter, log};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
-use std::io::BufReader;
 use std::path::Path;
 use svg::Document;
 
