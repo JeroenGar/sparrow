@@ -33,7 +33,7 @@ pub struct ExplorationConfig {
     pub max_conseq_failed_attempts: Option<usize>,
     pub solution_pool_distribution_stddev: f32,
     pub separator_config: SeparatorConfig,
-    pub large_item_ch_area_cutoff_percentile: f32
+    pub large_item_ch_area_cutoff_percentile: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -56,7 +56,7 @@ pub const DEFAULT_SPARROW_CONFIG: SparrowConfig = SparrowConfig {
     rng_seed: None,
     expl_cfg: ExplorationConfig {
         shrink_step: 0.001,
-        time_limit: Duration::from_secs(9 * 60),
+        time_limit: Duration::from_mins(9),
         max_conseq_failed_attempts: None,
         solution_pool_distribution_stddev: 0.25,
         separator_config: SeparatorConfig {
@@ -70,11 +70,11 @@ pub const DEFAULT_SPARROW_CONFIG: SparrowConfig = SparrowConfig {
                 n_coord_descents: 3,
             },
         },
-        large_item_ch_area_cutoff_percentile: 0.75
+        large_item_ch_area_cutoff_percentile: 0.75,
     },
     cmpr_cfg: CompressionConfig {
         shrink_range: (0.0005, 0.00001),
-        time_limit: Duration::from_secs(60),
+        time_limit: Duration::from_mins(1),
         shrink_decay: ShrinkDecayStrategy::TimeBased,
         separator_config: SeparatorConfig {
             iter_no_imprv_limit: 100,

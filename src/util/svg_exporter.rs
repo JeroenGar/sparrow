@@ -16,17 +16,23 @@ pub struct SvgExporter {
 }
 
 impl SvgExporter {
-    pub fn new(final_path: Option<String>, intermediate_dir: Option<String>, live_path: Option<String>) -> Self {
+    #[must_use]
+    pub fn new(
+        final_path: Option<String>,
+        intermediate_dir: Option<String>,
+        live_path: Option<String>,
+    ) -> Self {
         // Clean all svg files from the intermediate directory if it is provided
         if let Some(intermediate_dir) = &intermediate_dir
-            && let Ok(files_in_dir) = std::fs::read_dir(Path::new(intermediate_dir)) {
-                for file in files_in_dir.flatten() {
-                    if file.path().extension().unwrap_or_default() == "svg" {
-                        std::fs::remove_file(file.path()).unwrap();
-                    }
+            && let Ok(files_in_dir) = std::fs::read_dir(Path::new(intermediate_dir))
+        {
+            for file in files_in_dir.flatten() {
+                if file.path().extension().unwrap_or_default() == "svg" {
+                    std::fs::remove_file(file.path()).unwrap();
                 }
             }
-        
+        }
+
         SvgExporter {
             svg_counter: 0,
             final_path,
@@ -36,30 +42,57 @@ impl SvgExporter {
     }
 }
 
-impl SolutionListener for SvgExporter{
+impl SolutionListener for SvgExporter {
     fn report(&mut self, report_type: ReportType, solution: &SPSolution, instance: &SPInstance) {
         let suffix = match report_type {
             ReportType::CmprFeas => "cmpr",
             ReportType::ExplInfeas => "expl_nf",
             ReportType::ExplFeas => "expl_f",
             ReportType::Final => "final",
-            ReportType::ExplImproving => "expl_i"
+            ReportType::ExplImproving => "expl_i",
         };
-        let file_name = format!("{}_{:.3}_{}", self.svg_counter, solution.strip_width(), suffix);
+        let file_name = format!(
+            "{}_{:.3}_{}",
+            self.svg_counter,
+            solution.strip_width(),
+            suffix
+        );
         if let Some(live_path) = &self.live_path {
-            let svg = s_layout_to_svg(&solution.layout_snapshot, instance, DRAW_OPTIONS, file_name.as_str());
-            io::write_svg(&svg, Path::new(live_path), Level::Trace).expect("failed to write live svg");
+            let svg = s_layout_to_svg(
+                &solution.layout_snapshot,
+                instance,
+                DRAW_OPTIONS,
+                file_name.as_str(),
+            );
+            io::write_svg(&svg, Path::new(live_path), Level::Trace)
+                .expect("failed to write live svg");
         }
-        if let Some(intermediate_dir) = &self.intermediate_dir && report_type != ReportType::ExplImproving {
-            let svg = s_layout_to_svg(&solution.layout_snapshot, instance, DRAW_OPTIONS, file_name.as_str());
+        if let Some(intermediate_dir) = &self.intermediate_dir
+            && report_type != ReportType::ExplImproving
+        {
+            let svg = s_layout_to_svg(
+                &solution.layout_snapshot,
+                instance,
+                DRAW_OPTIONS,
+                file_name.as_str(),
+            );
             let file_path = &*format!("{intermediate_dir}/{file_name}.svg");
-            io::write_svg(&svg, Path::new(file_path), Level::Trace).expect("failed to write intermediate svg");
+            io::write_svg(&svg, Path::new(file_path), Level::Trace)
+                .expect("failed to write intermediate svg");
             self.svg_counter += 1;
         }
-        if let Some(final_path) = &self.final_path && report_type == ReportType::Final {
+        if let Some(final_path) = &self.final_path
+            && report_type == ReportType::Final
+        {
             let stem = Path::new(final_path).file_stem().unwrap();
-            let svg = s_layout_to_svg(&solution.layout_snapshot, instance, DRAW_OPTIONS, stem.to_str().unwrap());
-            io::write_svg(&svg, Path::new(final_path), Level::Info).expect("failed to write final svg");
+            let svg = s_layout_to_svg(
+                &solution.layout_snapshot,
+                instance,
+                DRAW_OPTIONS,
+                stem.to_str().unwrap(),
+            );
+            io::write_svg(&svg, Path::new(final_path), Level::Info)
+                .expect("failed to write final svg");
         }
     }
 }

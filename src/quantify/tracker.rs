@@ -2,8 +2,8 @@ use crate::consts::{GLS_WEIGHT_DECAY, GLS_WEIGHT_MAX_INC_RATIO, GLS_WEIGHT_MIN_I
 use crate::quantify::pair_matrix::PairMatrix;
 use crate::quantify::{quantify_collision_poly_container, quantify_collision_poly_poly};
 use crate::util::assertions::tracker_matches_layout;
-use jagua_rs::collision_detection::hazards::collector::{BasicHazardCollector, HazardCollector};
 use jagua_rs::collision_detection::hazards::HazardEntity;
+use jagua_rs::collision_detection::hazards::collector::{BasicHazardCollector, HazardCollector};
 use jagua_rs::entities::{Layout, PItemKey};
 use ordered_float::Float;
 use slotmap::SecondaryMap;
@@ -21,22 +21,32 @@ pub struct CollisionTracker {
 pub type CTSnapshot = CollisionTracker;
 
 impl CollisionTracker {
+    #[must_use]
     pub fn new(l: &Layout) -> Self {
         let size = l.placed_items.len();
 
         // Create the tracker
         let mut ot = Self {
             size,
-            pk_idx_map: l.placed_items.keys().enumerate()
+            pk_idx_map: l
+                .placed_items
+                .keys()
+                .enumerate()
                 .map(|(i, pk)| (pk, i))
                 .collect(),
             pair_collisions: PairMatrix::new(size),
-            container_collisions: vec![CTEntry { weight: 1.0, loss: 0.0 }; size],
+            container_collisions: vec![
+                CTEntry {
+                    weight: 1.0,
+                    loss: 0.0
+                };
+                size
+            ],
         };
 
         // Recompute the loss for all items
         l.placed_items.keys().for_each(|pk| {
-            ot.recompute_loss_for_item(pk, l)
+            ot.recompute_loss_for_item(pk, l);
         });
 
         debug_assert!(tracker_matches_layout(&ot, l));
@@ -62,7 +72,7 @@ impl CollisionTracker {
         collector.remove_by_entity(&HazardEntity::from((pk, pi)));
 
         // For each colliding hazard, quantify the collision and store it in the tracker
-        for (_, haz) in collector.iter() {
+        for (_, haz) in &collector {
             match haz {
                 HazardEntity::PlacedItem { pk: other_pk, .. } => {
                     let shape_other = &l.placed_items[*other_pk].shape;
@@ -85,15 +95,19 @@ impl CollisionTracker {
     pub fn restore_but_keep_weights(&mut self, cts: &CTSnapshot, layout: &Layout) {
         //Copy the loss and keys, but keep the weights
         self.pk_idx_map = cts.pk_idx_map.clone();
-        self.pair_collisions.data.iter_mut()
+        self.pair_collisions
+            .data
+            .iter_mut()
             .zip(cts.pair_collisions.data.iter())
             .for_each(|(a, b)| a.loss = b.loss);
-        self.container_collisions.iter_mut()
+        self.container_collisions
+            .iter_mut()
             .zip(cts.container_collisions.iter())
             .for_each(|(a, b)| a.loss = b.loss);
         debug_assert!(tracker_matches_layout(self, layout));
     }
 
+    #[must_use]
     pub fn save(&self) -> CTSnapshot {
         self.clone()
     }
@@ -108,54 +122,63 @@ impl CollisionTracker {
         debug_assert!(tracker_matches_layout(self, l));
     }
 
-
-    /// Algorithm 8 from https://doi.org/10.48550/arXiv.2509.13329
+    /// Algorithm 8 from <https://doi.org/10.48550/arXiv.2509.13329>
     pub fn update_weights(&mut self) {
         // Find the maximum loss across all entries
-        let max_loss = self.pair_collisions.data.iter()
+        let max_loss = self
+            .pair_collisions
+            .data
+            .iter()
             .chain(self.container_collisions.iter())
             .map(|e| e.loss)
-            .fold(0.0, |a, b| a.max(b));
+            .fold(0.0, ordered_float::Float::max);
 
         // Go over all entries (pairs) and modify their weights.
-        for e in self.pair_collisions.data.iter_mut()
-            .chain(self.container_collisions.iter_mut()) {
-            let multiplier = match e.loss == 0.0 {
-                true => {
-                    // No collision at the moment, slowly decay the weight back to 1.0
-                    GLS_WEIGHT_DECAY
-                },
-                false => {
-                    // Collision detected, increase the weight based on 'how bad' the collision is relative to the worst collision
-                    GLS_WEIGHT_MIN_INC_RATIO + (GLS_WEIGHT_MAX_INC_RATIO - GLS_WEIGHT_MIN_INC_RATIO) * (e.loss / max_loss)
-                },
+        for e in self
+            .pair_collisions
+            .data
+            .iter_mut()
+            .chain(self.container_collisions.iter_mut())
+        {
+            let multiplier = if e.loss == 0.0 {
+                // No collision at the moment, slowly decay the weight back to 1.0
+                GLS_WEIGHT_DECAY
+            } else {
+                // Collision detected, increase the weight based on 'how bad' the collision is relative to the worst collision
+                GLS_WEIGHT_MIN_INC_RATIO
+                    + (GLS_WEIGHT_MAX_INC_RATIO - GLS_WEIGHT_MIN_INC_RATIO) * (e.loss / max_loss)
             };
             e.weight = (e.weight * multiplier).max(1.0);
         }
     }
 
+    #[must_use]
     pub fn get_pair_weight(&self, pk1: PItemKey, pk2: PItemKey) -> f32 {
         let (idx1, idx2) = (self.pk_idx_map[pk1], self.pk_idx_map[pk2]);
         self.pair_collisions[(idx1, idx2)].weight
     }
 
+    #[must_use]
     pub fn get_container_weight(&self, pk: PItemKey) -> f32 {
         let idx = self.pk_idx_map[pk];
         self.container_collisions[idx].weight
     }
 
-    /// Algorithm 1 from https://doi.org/10.48550/arXiv.2509.13329
+    /// Algorithm 1 from <https://doi.org/10.48550/arXiv.2509.13329>
     /// Evaluations between item pairs are stored in this data-structure for quick and easy retrieval.
+    #[must_use]
     pub fn get_pair_loss(&self, pk1: PItemKey, pk2: PItemKey) -> f32 {
         let (idx1, idx2) = (self.pk_idx_map[pk1], self.pk_idx_map[pk2]);
         self.pair_collisions[(idx1, idx2)].loss
     }
 
+    #[must_use]
     pub fn get_container_loss(&self, pk: PItemKey) -> f32 {
         let idx = self.pk_idx_map[pk];
         self.container_collisions[idx].loss
     }
 
+    #[must_use]
     pub fn get_loss(&self, pk: PItemKey) -> f32 {
         let idx = self.pk_idx_map[pk];
 
@@ -166,6 +189,7 @@ impl CollisionTracker {
         self.container_collisions[idx].loss + pair_loss
     }
 
+    #[must_use]
     pub fn get_weighted_loss(&self, pk: PItemKey) -> f32 {
         let idx = self.pk_idx_map[pk];
 
@@ -176,23 +200,37 @@ impl CollisionTracker {
         self.container_collisions[idx].weighted_loss() + w_pair_loss
     }
 
+    #[must_use]
     pub fn get_total_loss(&self) -> f32 {
-        let cont_o = self.container_collisions.iter().map(|e| e.loss).sum::<f32>();
+        let cont_o = self
+            .container_collisions
+            .iter()
+            .map(|e| e.loss)
+            .sum::<f32>();
 
-        let pair_o = self.pair_collisions.data.iter()
+        let pair_o = self
+            .pair_collisions
+            .data
+            .iter()
             .map(|e| e.loss)
             .sum::<f32>();
 
         cont_o + pair_o
     }
 
+    #[must_use]
     pub fn get_total_weighted_loss(&self) -> f32 {
-        let cont_w_o = self.container_collisions.iter()
-            .map(|e| e.weighted_loss())
+        let cont_w_o = self
+            .container_collisions
+            .iter()
+            .map(CTEntry::weighted_loss)
             .sum::<f32>();
 
-        let pair_w_o = self.pair_collisions.data.iter()
-            .map(|e| e.weighted_loss())
+        let pair_w_o = self
+            .pair_collisions
+            .data
+            .iter()
+            .map(CTEntry::weighted_loss)
             .sum::<f32>();
 
         cont_w_o + pair_w_o
@@ -206,6 +244,7 @@ pub struct CTEntry {
 }
 
 impl CTEntry {
+    #[must_use]
     pub fn weighted_loss(&self) -> f32 {
         self.weight * self.loss
     }

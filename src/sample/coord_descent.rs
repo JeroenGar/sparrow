@@ -29,7 +29,7 @@ pub fn refine_coord_desc(
 ) -> (DTransformation, SampleEval) {
     let n_evals_init = evaluator.n_evals();
     let init_pos = init_dt;
-    
+
     // Initialize the coordinate descent.
     let mut cd = CoordinateDescent {
         pos: init_pos,
@@ -46,17 +46,28 @@ pub fn refine_coord_desc(
     while let Some(c) = cd.ask() {
         // Evaluate the candidates using the evaluator.
         let c_eval = c.map(|c| evaluator.evaluate_sample(c, Some(cd.eval)));
-        
-        let best = c.into_iter().zip(c_eval)
+
+        let best = c
+            .into_iter()
+            .zip(c_eval)
             .min_by_key(|(_, eval)| *eval)
             .expect("At least one candidate should be present");
 
         // Report the best candidate to the coordinate descent state.
         cd.tell(best, rng);
-        trace!("CD: {:?}", cd);
-        debug_assert!(evaluator.n_evals() - n_evals_init < 1000, "coordinate descent exceeded 1000 evals");
+        trace!("CD: {cd:?}");
+        debug_assert!(
+            evaluator.n_evals() - n_evals_init < 1000,
+            "coordinate descent exceeded 1000 evals"
+        );
     }
-    trace!("CD: {} evals, {} -> {}, eval: {:?}",evaluator.n_evals() - n_evals_init, init_pos, cd.pos, cd.eval);
+    trace!(
+        "CD: {} evals, {} -> {}, eval: {:?}",
+        evaluator.n_evals() - n_evals_init,
+        init_pos,
+        cd.pos,
+        cd.eval
+    );
     // Return the best transformation found by the coordinate descent.
     (cd.pos, cd.eval)
 }
@@ -82,13 +93,15 @@ struct CoordinateDescent {
 }
 
 impl CoordinateDescent {
-
-    /// Generates candidates to be evaluated. 
+    /// Generates candidates to be evaluated.
     pub fn ask(&self) -> Option<[DTransformation; 2]> {
         let (sx, sy) = self.t_steps;
         let sr = self.r_step;
 
-        if sx < self.t_step_limit && sy < self.t_step_limit && (sr < self.r_step_limit || !self.wiggle) {
+        if sx < self.t_step_limit
+            && sy < self.t_step_limit
+            && (sr < self.r_step_limit || !self.wiggle)
+        {
             // Stop generating candidates if both steps have reached the limit
             None
         } else {
@@ -100,17 +113,15 @@ impl CoordinateDescent {
                 CDAxis::Vertical => [(tx, ty + sy, r), (tx, ty - sy, r)],
                 CDAxis::ForwardDiag => [(tx + sx, ty + sy, r), (tx - sx, ty - sy, r)],
                 CDAxis::BackwardDiag => [(tx - sx, ty + sy, r), (tx + sx, ty - sy, r)],
-                CDAxis::Wiggle => [(tx, ty, r + sr), (tx, ty, r - sr)]
+                CDAxis::Wiggle => [(tx, ty, r + sr), (tx, ty, r - sr)],
             };
-            
-            let c = transformations.map(|(tx, ty, r)| {
-                DTransformation::new(r, (tx, ty))
-            });
-            
+
+            let c = transformations.map(|(tx, ty, r)| DTransformation::new(r, (tx, ty)));
+
             Some(c)
         }
     }
-    
+
     /// Updates the coordinate descent state with the new position and evaluation.
     pub fn tell(&mut self, (pos, eval): (DTransformation, SampleEval), rng: &mut impl Rng) {
         // Check if the reported evaluation is better or worse than the current one.
@@ -124,7 +135,11 @@ impl CoordinateDescent {
         }
 
         // Determine the step size multiplier depending on whether the new evaluation is better or worse.
-        let m = if better { CD_STEP_SUCCESS } else { CD_STEP_FAIL };
+        let m = if better {
+            CD_STEP_SUCCESS
+        } else {
+            CD_STEP_FAIL
+        };
 
         // Apply the step size multiplier to the relevant steps for the current axis
         match self.axis {

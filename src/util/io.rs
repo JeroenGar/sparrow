@@ -2,7 +2,7 @@ use crate::EPOCH;
 use anyhow::{Context, Result};
 use clap::Parser;
 use jagua_rs::probs::spp::io::ext_repr::{ExtSPInstance, ExtSPSolution};
-use log::{log, Level, LevelFilter};
+use log::{Level, LevelFilter, log};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
@@ -13,7 +13,11 @@ use svg::Document;
 #[derive(Parser)]
 pub struct MainCli {
     /// Path to input file (mandatory)
-    #[arg(short = 'i', long, help = "Path to the input JSON file, or a solution JSON file for warm starting")]
+    #[arg(
+        short = 'i',
+        long,
+        help = "Path to the input JSON file, or a solution JSON file for warm starting"
+    )]
     pub input: String,
 
     /// Global time limit in seconds (mutually exclusive with -e and -c)
@@ -21,15 +25,29 @@ pub struct MainCli {
     pub global_time: Option<u64>,
 
     /// Exploration time limit in seconds (requires compression time)
-    #[arg(short = 'e', long, requires = "compression", help = "Set the exploration phase time limit (in seconds)")]
+    #[arg(
+        short = 'e',
+        long,
+        requires = "compression",
+        help = "Set the exploration phase time limit (in seconds)"
+    )]
     pub exploration: Option<u64>,
 
     /// Compression time limit in seconds (requires exploration time)
-    #[arg(short = 'c', long, requires = "exploration", help = "Set the compression phase time limit (in seconds)")]
+    #[arg(
+        short = 'c',
+        long,
+        requires = "exploration",
+        help = "Set the compression phase time limit (in seconds)"
+    )]
     pub compression: Option<u64>,
 
     /// Enable early and automatic termination
-    #[arg(short = 'x', long, help = "Enable early termination of the optimization process")]
+    #[arg(
+        short = 'x',
+        long,
+        help = "Enable early termination of the optimization process"
+    )]
     pub early_termination: bool,
 
     #[arg(short = 's', long, help = "Fixed seed for the random number generator")]
@@ -66,21 +84,16 @@ pub fn init_logger(level_filter: LevelFilter, log_file_path: &Path) -> Result<()
                 thread_name,
             );
 
-            out.finish(format_args!("{:<25}{}", prefix, message))
+            out.finish(format_args!("{prefix:<25}{message}"));
         })
         // Add blanket level filter -
         .level(level_filter)
         .chain(std::io::stdout())
         .chain(fern::log_file(log_file_path)?)
         .apply()?;
-    log!(
-        Level::Info,
-        "[EPOCH]: {}",
-        jiff::Timestamp::now()
-    );
+    log!(Level::Info, "[EPOCH]: {}", jiff::Timestamp::now());
     Ok(())
 }
-
 
 pub fn write_svg(document: &Document, path: &Path, log_lvl: Level) -> Result<()> {
     //make sure the parent directory exists
@@ -88,7 +101,8 @@ pub fn write_svg(document: &Document, path: &Path, log_lvl: Level) -> Result<()>
         fs::create_dir_all(parent).context("could not create parent directory for svg file")?;
     }
     svg::save(path, document)?;
-    log!(log_lvl,
+    log!(
+        log_lvl,
         "[IO] svg exported to file://{}",
         fs::canonicalize(path)
             .expect("could not canonicalize path")
@@ -101,7 +115,8 @@ pub fn write_svg(document: &Document, path: &Path, log_lvl: Level) -> Result<()>
 pub fn write_json(json: &impl Serialize, path: &Path, log_lvl: Level) -> Result<()> {
     let file = File::create(path)?;
     serde_json::to_writer_pretty(file, json)?;
-    log!(log_lvl,
+    log!(
+        log_lvl,
         "[IO] json exported to file://{}",
         fs::canonicalize(path)
             .expect("could not canonicalize path")
@@ -114,15 +129,12 @@ pub fn write_json(json: &impl Serialize, path: &Path, log_lvl: Level) -> Result<
 pub fn read_spp_input(path: &Path) -> Result<(ExtSPInstance, Option<ExtSPSolution>)> {
     let input_str = fs::read_to_string(path).context("could not read input file")?;
     //try parsing a full output (instance + solution)
-    match serde_json::from_str::<ExtSPOutput>(&input_str) {
-        Ok(ext_output) => {
-            Ok((ext_output.instance, Some(ext_output.solution)))
-        }
-        Err(_) => {
-            //try parsing just the instance
-            let ext_instance = serde_json::from_str::<ExtSPInstance>(&input_str)
-                .context("could not parse instance from input file")?;
-            Ok((ext_instance, None))
-        }
+    if let Ok(ext_output) = serde_json::from_str::<ExtSPOutput>(&input_str) {
+        Ok((ext_output.instance, Some(ext_output.solution)))
+    } else {
+        //try parsing just the instance
+        let ext_instance = serde_json::from_str::<ExtSPInstance>(&input_str)
+            .context("could not parse instance from input file")?;
+        Ok((ext_instance, None))
     }
 }

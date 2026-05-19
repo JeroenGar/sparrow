@@ -2,6 +2,8 @@
 mod integration_tests {
     use anyhow::Result;
     use jagua_rs::io::import::Importer;
+    use rand::SeedableRng;
+    use rand::rngs::Xoshiro256PlusPlus;
     use sparrow::config::DEFAULT_SPARROW_CONFIG;
     use sparrow::consts::LBF_SAMPLE_CONFIG;
     use sparrow::optimizer::compress::compression_phase;
@@ -9,14 +11,12 @@ mod integration_tests {
     use sparrow::optimizer::lbf::LBFBuilder;
     use sparrow::optimizer::separator::Separator;
     use sparrow::util::io;
+    use sparrow::util::listener::DummySolListener;
     use sparrow::util::terminator::BasicTerminator;
     use sparrow::util::terminator::Terminator;
     use std::path::Path;
     use std::time::Duration;
-    use rand::rngs::Xoshiro256PlusPlus;
-    use rand::SeedableRng;
     use test_case::test_case;
-    use sparrow::util::listener::DummySolListener;
 
     const EXPLORE_TIMEOUT: Duration = Duration::from_secs(10);
     const COMPRESS_TIMEOUT: Duration = Duration::from_secs(10);
@@ -31,7 +31,12 @@ mod integration_tests {
         let input_file_path = format!("{INSTANCE_BASE_PATH}/{path}");
         let (json_instance, _) = io::read_spp_input(Path::new(&input_file_path))?;
 
-        let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.min_item_separation, config.narrow_concavity_cutoff_ratio);
+        let importer = Importer::new(
+            config.cde_config,
+            config.poly_simpl_tolerance,
+            config.min_item_separation,
+            config.narrow_concavity_cutoff_ratio,
+        );
         let instance = jagua_rs::probs::spp::io::import_instance(&importer, &json_instance)?;
 
         println!("[TEST] loaded instance: {}", json_instance.name);
@@ -53,13 +58,31 @@ mod integration_tests {
         terminator.new_timeout(EXPLORE_TIMEOUT);
 
         let builder = LBFBuilder::new(instance.clone(), rng, LBF_SAMPLE_CONFIG).construct();
-        let mut separator = Separator::new(builder.instance, builder.prob, builder.rng, config.expl_cfg.separator_config);
+        let mut separator = Separator::new(
+            builder.instance,
+            builder.prob,
+            builder.rng,
+            config.expl_cfg.separator_config,
+        );
 
-        let sols = exploration_phase(&instance, &mut separator, &mut sol_listener, &terminator, &config.expl_cfg);
+        let sols = exploration_phase(
+            &instance,
+            &mut separator,
+            &mut sol_listener,
+            &terminator,
+            &config.expl_cfg,
+        );
         let final_explore_sol = sols.last().expect("no solutions found during exploration");
 
         terminator.new_timeout(COMPRESS_TIMEOUT);
-        compression_phase(&instance, &mut separator, final_explore_sol, &mut sol_listener, &terminator, &config.cmpr_cfg);
+        compression_phase(
+            &instance,
+            &mut separator,
+            final_explore_sol,
+            &mut sol_listener,
+            &terminator,
+            &config.cmpr_cfg,
+        );
         Ok(())
     }
 }
