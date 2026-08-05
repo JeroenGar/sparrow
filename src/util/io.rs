@@ -1,4 +1,5 @@
 use crate::EPOCH;
+use crate::config::SparrowConfig;
 use anyhow::{Context, Result};
 use clap::Parser;
 use jagua_rs::probs::spp::io::ext_repr::{ExtSPInstance, ExtSPSolution};
@@ -7,8 +8,20 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
+use std::num::NonZeroUsize;
 use std::path::Path;
 use svg::Document;
+
+fn parse_non_negative_finite_f32(value: &str) -> Result<f32, String> {
+    let parsed = value
+        .parse::<f32>()
+        .map_err(|_| format!("`{value}` is not a number"))?;
+    if parsed.is_finite() && parsed >= 0.0 {
+        Ok(parsed)
+    } else {
+        Err("value must be finite and non-negative".to_string())
+    }
+}
 
 #[derive(Parser)]
 pub struct MainCli {
@@ -34,6 +47,30 @@ pub struct MainCli {
 
     #[arg(short = 's', long, help = "Fixed seed for the random number generator")]
     pub rng_seed: Option<u64>,
+
+    /// Minimum distance between items and other hazards
+    #[arg(long, allow_negative_numbers = true, value_parser = parse_non_negative_finite_f32)]
+    pub min_item_separation: Option<f32>,
+
+    /// Number of worker threads used by the separator
+    #[arg(long)]
+    pub workers: Option<NonZeroUsize>,
+}
+
+impl MainCli {
+    /// Applies optional CLI values that override the default optimizer configuration.
+    pub fn apply_config_overrides(&self, config: &mut SparrowConfig) {
+        if let Some(rng_seed) = self.rng_seed {
+            config.rng_seed = Some(rng_seed as usize);
+        }
+        if let Some(min_item_separation) = self.min_item_separation {
+            config.min_item_separation = Some(min_item_separation);
+        }
+        if let Some(workers) = self.workers {
+            config.expl_cfg.separator_config.n_workers = workers.get();
+            config.cmpr_cfg.separator_config.n_workers = workers.get();
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -124,5 +161,73 @@ pub fn read_spp_input(path: &Path) -> Result<(ExtSPInstance, Option<ExtSPSolutio
                 .context("could not parse instance from input file")?;
             Ok((ext_instance, None))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::MainCli;
+    use crate::config::DEFAULT_SPARROW_CONFIG;
+    use clap::Parser;
+
+    #[test]
+    fn applies_runtime_configuration_overrides() {
+        let args = MainCli::try_parse_from([
+            "sparrow",
+            "-i",
+            "input.json",
+            "--rng-seed",
+            "42",
+            "--min-item-separation",
+            "1.25",
+            "--workers",
+            "2",
+        ])
+        .unwrap();
+        let mut config = DEFAULT_SPARROW_CONFIG;
+
+        args.apply_config_overrides(&mut config);
+
+        assert_eq!(config.rng_seed, Some(42));
+        assert_eq!(config.min_item_separation, Some(1.25));
+        assert_eq!(config.expl_cfg.separator_config.n_workers, 2);
+        assert_eq!(config.cmpr_cfg.separator_config.n_workers, 2);
+    }
+
+    #[test]
+    fn rejects_zero_workers() {
+        assert!(
+            MainCli::try_parse_from(["sparrow", "-i", "input.json", "--workers", "0"]).is_err()
+        );
+    }
+
+    #[test]
+    fn rejects_non_finite_item_separation() {
+        for value in ["NaN", "inf", "-inf"] {
+            assert!(
+                MainCli::try_parse_from([
+                    "sparrow",
+                    "-i",
+                    "input.json",
+                    "--min-item-separation",
+                    value,
+                ])
+                .is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_negative_item_separation() {
+        assert!(
+            MainCli::try_parse_from([
+                "sparrow",
+                "-i",
+                "input.json",
+                "--min-item-separation",
+                "-1",
+            ])
+            .is_err()
+        );
     }
 }
