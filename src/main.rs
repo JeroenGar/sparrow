@@ -55,9 +55,7 @@ fn main() -> Result<()>{
         config.cmpr_cfg.shrink_decay = ShrinkDecayStrategy::FailureBased(DEFAULT_FAIL_DECAY_RATIO_CMPR);
         warn!("[MAIN] early termination enabled!");
     }
-    if let Some(arg_rng_seed) = args.rng_seed {
-        config.rng_seed = Some(arg_rng_seed as usize);
-    }
+    args.apply_config_overrides(&mut config);
 
     info!("[MAIN] configured to explore for {}s and compress for {}s", explore_dur.as_secs(), compress_dur.as_secs());
 

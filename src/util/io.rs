@@ -1,12 +1,14 @@
 use crate::EPOCH;
+use crate::config::SparrowConfig;
 use anyhow::{Context, Result};
 use clap::Parser;
 use jagua_rs::probs::spp::io::ext_repr::{ExtSPInstance, ExtSPSolution};
-use log::{log, Level, LevelFilter};
+use log::{log, warn, Level, LevelFilter};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
+use std::num::NonZeroUsize;
 use std::path::Path;
 use svg::Document;
 
@@ -34,6 +36,33 @@ pub struct MainCli {
 
     #[arg(short = 's', long, help = "Fixed seed for the random number generator")]
     pub rng_seed: Option<u64>,
+
+    /// Minimum distance between items and other hazards
+    #[arg(long)]
+    pub min_item_separation: Option<f32>,
+
+    /// Number of worker threads used by the separator
+    #[arg(long)]
+    pub workers: Option<NonZeroUsize>,
+}
+
+impl MainCli {
+    /// Applies optional CLI values that override the default optimizer configuration.
+    pub fn apply_config_overrides(&self, config: &mut SparrowConfig) {
+        if let Some(rng_seed) = self.rng_seed {
+            warn!("[MAIN] overriding RNG seed: {rng_seed}");
+            config.rng_seed = Some(rng_seed as usize);
+        }
+        if let Some(min_item_separation) = self.min_item_separation {
+            warn!("[MAIN] overriding minimum item separation: {min_item_separation}");
+            config.min_item_separation = Some(min_item_separation);
+        }
+        if let Some(workers) = self.workers {
+            warn!("[MAIN] overriding separator worker count: {workers}");
+            config.expl_cfg.separator_config.n_workers = workers.get();
+            config.cmpr_cfg.separator_config.n_workers = workers.get();
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
