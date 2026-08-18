@@ -1,15 +1,10 @@
 use crate::quantify::overlap_proxy::overlap_area_proxy;
-use crate::quantify::simd::circles_soa::CirclesSoA;
+use crate::quantify::simd::circles_soa::{CirclesSoA, SIMD_WIDTH};
 use float_cmp::approx_eq;
 use jagua_rs::geometry::fail_fast::SPSurrogate;
-use jagua_rs::geometry::geo_traits::DistanceTo;
-use jagua_rs::geometry::primitives::{Circle, Point};
 use std::f32::consts::PI;
 use std::simd::Select;
 use std::simd::Simd;
-
-/// Width of the SIMD vector
-const SIMD_WIDTH: usize = 4;
 
 #[allow(non_camel_case_types)]
 type f32xN = Simd<f32,SIMD_WIDTH>;
@@ -24,6 +19,10 @@ pub fn poles_overlap_area_proxy_simd(sp1: &SPSurrogate, sp2: &SPSurrogate, epsil
     let e_n = f32xN::splat(epsilon);
     let e_sq_n = f32xN::splat(epsilon * epsilon);
     let two_e_n = f32xN::splat(2.0 * epsilon);
+
+    debug_assert_eq!(p2.x.len(), p2.y.len());
+    debug_assert_eq!(p2.x.len(), p2.r.len());
+    debug_assert_eq!(p2.x.len() % SIMD_WIDTH, 0);
 
     let mut total_overlap = 0.0;
     for p1 in sp1.poles.iter() {
@@ -61,24 +60,6 @@ pub fn poles_overlap_area_proxy_simd(sp1: &SPSurrogate, sp2: &SPSurrogate, epsil
             total_overlap += (pd_decay * min_r).reduce_sum();
         }
 
-        //process remaining elements with scalar operations
-        let remaining_idx = chunks * SIMD_WIDTH;
-        for j in remaining_idx..p2.x.len() {
-            let p2 = Circle { 
-                center : Point(p2.x[j], p2.y[j]), 
-                radius: p2.r[j]
-            };
-
-            //penetration depth between the two poles (circles)
-            let pd = (p1.radius + p2.radius) - p1.center.distance_to(&p2.center);
-
-            let pd_decay = match pd >= epsilon {
-                true => pd,
-                false => epsilon.powi(2) / (-pd + 2.0 * epsilon),
-            };
-
-            total_overlap += pd_decay * f32::min(p1.radius, p2.radius);
-        }
     }
     
     total_overlap *= PI;

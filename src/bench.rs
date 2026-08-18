@@ -1,3 +1,5 @@
+#![cfg_attr(rustfmt, rustfmt::skip)]
+
 extern crate core;
 use sparrow::util::terminator::Terminator;
 

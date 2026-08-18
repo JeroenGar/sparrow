@@ -1,3 +1,4 @@
+#![cfg_attr(rustfmt, rustfmt::skip)]
 #![cfg_attr(feature = "simd", feature(portable_simd))]
 #![allow(const_item_mutation)]
 #![allow(unused_imports)]
@@ -6,12 +7,19 @@ use jagua_rs::Instant;
 use numfmt::{Formatter, Precision, Scales};
 use std::sync::LazyLock;
 
+#[rustfmt::skip]
 pub mod optimizer;
+#[rustfmt::skip]
 pub mod quantify;
+#[rustfmt::skip]
 pub mod sample;
+#[rustfmt::skip]
 pub mod util;
+#[rustfmt::skip]
 pub mod config;
+#[rustfmt::skip]
 pub mod eval;
+#[rustfmt::skip]
 pub mod consts;
 
 pub static EPOCH: LazyLock<Instant> = LazyLock::new(Instant::now);

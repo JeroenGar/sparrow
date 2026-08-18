@@ -1,3 +1,5 @@
+#![cfg_attr(rustfmt, rustfmt::skip)]
+
 #[cfg(test)]
 mod integration_tests {
     use anyhow::Result;
