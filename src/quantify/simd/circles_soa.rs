@@ -1,16 +1,14 @@
+use super::SIMD_WIDTH;
 use itertools::izip;
 use jagua_rs::geometry::primitives::Circle;
 
-pub const SIMD_WIDTH: usize = 4;
-
-/// Collection of circles, but with a memory layout that's more suitable for SIMD operations:
-/// SoA (Structure of Arrays) instead of AoS (Array of Structures).
+/// Structure-of-arrays circle buffer padded with zero-radius circles to [`SIMD_WIDTH`].
 #[derive(Debug, Clone)]
 #[repr(align(32))]
 pub struct CirclesSoA {
-    pub x: Vec<f32>,
-    pub y: Vec<f32>,
-    pub r: Vec<f32>,
+    pub(super) x: Vec<f32>,
+    pub(super) y: Vec<f32>,
+    pub(super) r: Vec<f32>,
 }
 
 impl CirclesSoA {
@@ -37,8 +35,7 @@ impl CirclesSoA {
                 *r = ref_c.radius;
             });
 
-        // Pad with zero-radius circles so the SIMD loop needs no scalar remainder.
-        // Clear the tail explicitly because a reused allocation may contain poles from a previous load.
+        // Clear reused padding; resize only initializes newly allocated slots.
         self.x[n..].fill(0.0);
         self.y[n..].fill(0.0);
         self.r[n..].fill(0.0);

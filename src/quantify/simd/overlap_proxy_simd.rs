@@ -1,5 +1,6 @@
 use crate::quantify::overlap_proxy::overlap_area_proxy;
-use crate::quantify::simd::circles_soa::{CirclesSoA, SIMD_WIDTH};
+use super::circles_soa::CirclesSoA;
+use super::SIMD_WIDTH;
 use float_cmp::approx_eq;
 use jagua_rs::geometry::fail_fast::SPSurrogate;
 use std::f32::consts::PI;
@@ -9,7 +10,7 @@ use std::simd::Simd;
 #[allow(non_camel_case_types)]
 type f32xN = Simd<f32,SIMD_WIDTH>;
 
-/// SIMD version of [`poles_overlap_area_proxy`] with configurable vector width.
+/// SIMD version of [`poles_overlap_area_proxy`].
 /// `p2` should match the poles of `sp2`.
 #[inline(always)]
 pub fn poles_overlap_area_proxy_simd(sp1: &SPSurrogate, sp2: &SPSurrogate, epsilon: f32, p2: &CirclesSoA) -> f32 {
@@ -24,6 +25,7 @@ pub fn poles_overlap_area_proxy_simd(sp1: &SPSurrogate, sp2: &SPSurrogate, epsil
     debug_assert_eq!(p2.x.len(), p2.r.len());
     debug_assert_eq!(p2.x.len() % SIMD_WIDTH, 0);
 
+    let chunks = p2.x.len() / SIMD_WIDTH;
     let mut total_overlap = 0.0;
     for p1 in sp1.poles.iter() {
         //common values for all chunks
@@ -33,8 +35,6 @@ pub fn poles_overlap_area_proxy_simd(sp1: &SPSurrogate, sp2: &SPSurrogate, epsil
         let r1_n = f32xN::splat(r1);
 
         //process complete chunks with SIMD
-        let chunks = p2.x.len() / SIMD_WIDTH;
-
         for chunk in 0..chunks {
             let idx = chunk * SIMD_WIDTH;
 
@@ -59,7 +59,6 @@ pub fn poles_overlap_area_proxy_simd(sp1: &SPSurrogate, sp2: &SPSurrogate, epsil
 
             total_overlap += (pd_decay * min_r).reduce_sum();
         }
-
     }
     
     total_overlap *= PI;

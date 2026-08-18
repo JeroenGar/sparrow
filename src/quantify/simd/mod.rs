@@ -4,6 +4,8 @@ use crate::quantify::simd::circles_soa::CirclesSoA;
 use crate::quantify::simd::overlap_proxy_simd::poles_overlap_area_proxy_simd;
 use jagua_rs::geometry::primitives::SPolygon;
 
+const SIMD_WIDTH: usize = 4;
+
 pub mod circles_soa;
 pub mod overlap_proxy_simd;
 
