@@ -201,8 +201,8 @@ impl<'a> SpecializedHazardCollector<'a> {
 impl<'a> HazardCollector for SpecializedHazardCollector<'a> {
     fn contains_key(&self, hkey: HazKey) -> bool {
         let bit = 1 << (hkey.data().as_ffi() & 63);
-        let contains = self.detected_key_bits & bit != 0 && self.detected.contains_key(hkey)
-            || hkey == self.current_haz_key;
+        let contains = hkey == self.current_haz_key
+            || self.detected_key_bits & bit != 0 && self.detected.contains_key(hkey);
         debug_assert_eq!(contains, self.detected.contains_key(hkey) || hkey == self.current_haz_key);
         contains
     }
