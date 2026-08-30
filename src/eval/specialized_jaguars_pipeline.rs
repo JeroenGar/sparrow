@@ -18,7 +18,7 @@ use jagua_rs::entities::PItemKey;
 use jagua_rs::geometry::geo_traits::TransformableFrom;
 use jagua_rs::geometry::primitives::SPolygon;
 use jagua_rs::geometry::DTransformation;
-use slotmap::SecondaryMap;
+use slotmap::{Key, SecondaryMap};
 use std::f32::consts::PI;
 
 /// Functionally identical to [`CDEngine::collect_poly_collisions`], but with early return.
@@ -96,7 +96,9 @@ pub struct SpecializedHazardCollector<'a> {
     pub ct: &'a CollisionTracker,
     pub current_pk: PItemKey,
     pub current_haz_key: HazKey,
-    pub detected: SecondaryMap<HazKey, (HazardEntity, usize)>,
+    detected: SecondaryMap<HazKey, (HazardEntity, usize)>,
+    /// Lossy negative filter; removals may leave harmless stale positive bits.
+    detected_key_bits: u64,
     pub idx_counter: usize,
     pub loss_cache: (usize, f32),
     pub loss_bound: f32,
@@ -117,6 +119,7 @@ impl<'a> SpecializedHazardCollector<'a> {
             current_pk,
             current_haz_key,
             detected: SecondaryMap::with_capacity(layout.placed_items.len() + 1),
+            detected_key_bits: 0,
             idx_counter: 0,
             loss_cache: (0, 0.0),
             loss_bound: f32::INFINITY,
@@ -127,6 +130,7 @@ impl<'a> SpecializedHazardCollector<'a> {
 
     pub fn reload(&mut self, loss_bound: f32) {
         self.detected.clear();
+        self.detected_key_bits = 0;
         self.idx_counter = 0;
         self.loss_cache = (0, 0.0);
         self.loss_bound = loss_bound;
@@ -179,12 +183,17 @@ impl<'a> SpecializedHazardCollector<'a> {
 
 impl<'a> HazardCollector for SpecializedHazardCollector<'a> {
     fn contains_key(&self, hkey: HazKey) -> bool {
-        self.detected.contains_key(hkey) || hkey == self.current_haz_key
+        let bit = 1 << (hkey.data().as_ffi() & 63);
+        let contains = self.detected_key_bits & bit != 0 && self.detected.contains_key(hkey)
+            || hkey == self.current_haz_key;
+        debug_assert_eq!(contains, self.detected.contains_key(hkey) || hkey == self.current_haz_key);
+        contains
     }
 
     fn insert(&mut self, hkey: HazKey, entity: HazardEntity) {
         debug_assert!(!self.contains_key(hkey));
         self.detected.insert(hkey, (entity, self.idx_counter));
+        self.detected_key_bits |= 1 << (hkey.data().as_ffi() & 63);
         self.idx_counter += 1;
     }
     
