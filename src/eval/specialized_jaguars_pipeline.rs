@@ -5,6 +5,8 @@ use crate::quantify::quantify_collision_poly_poly;
 use crate::quantify::simd::circles_soa::CirclesSoA;
 #[cfg(feature = "simd")]
 use crate::quantify::simd::quantify_collision_poly_poly_simd;
+#[cfg(feature = "simd")]
+use crate::quantify::simd::quantify_collision_poly_poly_simd_bounded;
 use crate::quantify::tracker::CollisionTracker;
 use crate::util::assertions;
 use crate::util::bit_reversal_iterator::BitReversalIterator;
@@ -116,6 +118,7 @@ pub struct SpecializedHazardCollector<'a> {
     pub idx_counter: usize,
     pub loss_cache: (usize, f32),
     pub loss_bound: f32,
+    loss_bound_exceeded: bool,
     #[cfg(feature = "simd")]
     pub poles_soa: CirclesSoA,
 }
@@ -138,6 +141,7 @@ impl<'a> SpecializedHazardCollector<'a> {
             idx_counter: 0,
             loss_cache: (0, 0.0),
             loss_bound: f32::INFINITY,
+            loss_bound_exceeded: false,
             #[cfg(feature = "simd")]
             poles_soa: CirclesSoA::new(),
         }
@@ -150,6 +154,7 @@ impl<'a> SpecializedHazardCollector<'a> {
         self.idx_counter = 0;
         self.loss_cache = (0, 0.0);
         self.loss_bound = loss_bound;
+        self.loss_bound_exceeded = false;
     }
 
     pub fn iter_with_index(&self) -> impl Iterator<Item=&(HazardEntity, usize)> {
@@ -157,6 +162,25 @@ impl<'a> SpecializedHazardCollector<'a> {
     }
 
     pub fn early_terminate(&mut self, shape: &SPolygon) -> bool {
+        if self.loss_bound_exceeded {
+            return true;
+        }
+
+        let (cache_idx, cached_loss) = self.loss_cache;
+        if self.loss_bound.is_finite() && self.idx_counter - cache_idx == 1 {
+            let haz = self.detected
+                .get(self.last_inserted_key.expect("an inserted hazard should have a key"))
+                .map(|(haz, _)| haz)
+                .expect("the inserted hazard should be detected");
+            match self.calc_weighted_loss_bounded(haz, shape, self.loss_bound - cached_loss) {
+                Some(extra_loss) => self.loss_cache = (self.idx_counter, cached_loss + extra_loss),
+                None => {
+                    self.loss_bound_exceeded = true;
+                    return true;
+                }
+            }
+        }
+
         self.loss(shape) > self.loss_bound
     }
 
@@ -206,6 +230,37 @@ impl<'a> SpecializedHazardCollector<'a> {
                 loss * weight
             }
             _ => unimplemented!("unsupported hazard entity"),
+        }
+    }
+
+    fn calc_weighted_loss_bounded(
+        &self,
+        haz: &HazardEntity,
+        shape: &SPolygon,
+        max_loss: f32,
+    ) -> Option<f32> {
+        match haz {
+            HazardEntity::PlacedItem { pk: other_pk, .. } => {
+                let other_shape = &self.layout.placed_items[*other_pk].shape;
+                let weight = self.ct.get_pair_weight(self.current_pk, *other_pk);
+
+                #[cfg(feature = "simd")]
+                {
+                    quantify_collision_poly_poly_simd_bounded(
+                        other_shape,
+                        shape,
+                        &self.poles_soa,
+                        max_loss / weight,
+                    ).map(|loss| loss * weight)
+                }
+
+                #[cfg(not(feature = "simd"))]
+                {
+                    let loss = quantify_collision_poly_poly(other_shape, shape) * weight;
+                    (loss <= max_loss).then_some(loss)
+                }
+            }
+            _ => Some(self.calc_weighted_loss(haz, shape)),
         }
     }
 }
