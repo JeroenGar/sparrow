@@ -99,6 +99,8 @@ pub struct SpecializedHazardCollector<'a> {
     detected: SecondaryMap<HazKey, (HazardEntity, usize)>,
     /// Lossy negative filter; removals may leave harmless stale positive bits.
     detected_key_bits: u64,
+    /// Key of the most recently inserted hazard, used for single-insert loss updates.
+    last_inserted_key: Option<HazKey>,
     pub idx_counter: usize,
     pub loss_cache: (usize, f32),
     pub loss_bound: f32,
@@ -120,6 +122,7 @@ impl<'a> SpecializedHazardCollector<'a> {
             current_haz_key,
             detected: SecondaryMap::with_capacity(layout.placed_items.len() + 1),
             detected_key_bits: 0,
+            last_inserted_key: None,
             idx_counter: 0,
             loss_cache: (0, 0.0),
             loss_bound: f32::INFINITY,
@@ -131,6 +134,7 @@ impl<'a> SpecializedHazardCollector<'a> {
     pub fn reload(&mut self, loss_bound: f32) {
         self.detected.clear();
         self.detected_key_bits = 0;
+        self.last_inserted_key = None;
         self.idx_counter = 0;
         self.loss_cache = (0, 0.0);
         self.loss_bound = loss_bound;
@@ -148,10 +152,23 @@ impl<'a> SpecializedHazardCollector<'a> {
         let (cache_idx, cached_loss) = self.loss_cache;
         if cache_idx < self.idx_counter {
             // additional hazards were detected, update the cache
-            let extra_loss: f32 = self.iter_with_index()
-                .filter(|(_, idx)| *idx >= cache_idx)
-                .map(|(h, _)| self.calc_weighted_loss(h, shape))
-                .sum();
+            let extra_loss = if self.idx_counter - cache_idx == 1 {
+                self.detected
+                    .get(self.last_inserted_key.expect("an inserted hazard should have a key"))
+                    .map_or(0.0, |(haz, _)| self.calc_weighted_loss(haz, shape))
+            } else {
+                self.iter_with_index()
+                    .filter(|(_, idx)| *idx >= cache_idx)
+                    .map(|(haz, _)| self.calc_weighted_loss(haz, shape))
+                    .sum()
+            };
+            debug_assert_eq!(
+                (cached_loss + extra_loss).to_bits(),
+                (cached_loss + self.iter_with_index()
+                    .filter(|(_, idx)| *idx >= cache_idx)
+                    .map(|(haz, _)| self.calc_weighted_loss(haz, shape))
+                    .sum::<f32>()).to_bits(),
+            );
             self.loss_cache = (self.idx_counter, cached_loss + extra_loss);
         }
         debug_assert!(approx_eq!(f32, self.loss_cache.1, self.iter().map(|(_, he)| self.calc_weighted_loss(he, shape)).sum()));
@@ -194,6 +211,7 @@ impl<'a> HazardCollector for SpecializedHazardCollector<'a> {
         debug_assert!(!self.contains_key(hkey));
         self.detected.insert(hkey, (entity, self.idx_counter));
         self.detected_key_bits |= 1 << (hkey.data().as_ffi() & 63);
+        self.last_inserted_key = Some(hkey);
         self.idx_counter += 1;
     }
     
