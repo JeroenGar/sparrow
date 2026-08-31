@@ -54,6 +54,8 @@ jobs:
     runs-on: ${{ inputs.cpu_tag }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: dtolnay/rust-toolchain@nightly
       - name: Prepare input JSON
         run: |
