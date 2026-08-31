@@ -13,14 +13,6 @@ on:
         default: 1200
         required: true
         type: number
-      cpu_tag:
-        description: 'CPU type for runner (5950X, 9950X)'
-        required: true
-        type: choice
-        options:
-          - 5950X
-          - 9950X
-
 jobs:
   swim:
     uses: ./.github/workflows/single_bench.yml
@@ -28,7 +20,6 @@ jobs:
       instance: swim
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
 
   trousers:
     needs: swim
@@ -37,7 +28,6 @@ jobs:
       instance: trousers
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
 
   shirts:
     needs: trousers
@@ -46,7 +36,6 @@ jobs:
       instance: shirts
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
 
   mao:
     needs: shirts
@@ -55,7 +44,6 @@ jobs:
       instance: mao
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
 
   dagli:
     needs: mao
@@ -64,7 +52,6 @@ jobs:
       instance: dagli
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
 
   albano:
     needs: dagli
@@ -73,7 +60,6 @@ jobs:
       instance: albano
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
 
   marques:
     needs: albano
@@ -82,4 +68,3 @@ jobs:
       instance: marques
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}

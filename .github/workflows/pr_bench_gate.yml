@@ -17,7 +17,6 @@ jobs:
       instance: swim
       n_runs: 16
       run_time_s: 1200
-      cpu_tag: 9950X
 
   trousers:
     needs: swim
@@ -26,7 +25,6 @@ jobs:
       instance: trousers
       n_runs: 16
       run_time_s: 1200
-      cpu_tag: 9950X
 
   shirts:
     needs: trousers
@@ -35,4 +33,3 @@ jobs:
       instance: shirts
       n_runs: 16
       run_time_s: 1200
-      cpu_tag: 9950X

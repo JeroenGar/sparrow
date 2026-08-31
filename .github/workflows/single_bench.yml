@@ -12,9 +12,6 @@ on:
       run_time_s:
         required: true
         type: number
-      cpu_tag:
-        required: true
-        type: string
   workflow_dispatch:
     inputs:
       instance:
@@ -39,18 +36,10 @@ on:
         default: 1200
         required: true
         type: number
-      cpu_tag:
-        description: 'CPU type for job'
-        required: true
-        type: choice
-        options:
-          - 5950X
-          - 9950X
-
 jobs:
   run-benchmark:
     name: bench ${{ inputs.instance }} (${{ inputs.n_runs }} x ${{ inputs.run_time_s }}s)
-    runs-on: ${{ inputs.cpu_tag }}
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v6
         with:
