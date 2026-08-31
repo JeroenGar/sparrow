@@ -63,7 +63,7 @@ impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
             .shape_buff
             .transform_from(self.item.shape_cd.as_ref(), &dt.compose());
         self.collector.clear();
-        // Ignore the item being moved without giving collision traversal Sparrow-specific state.
+        // Mark the moving item's existing hazard as already collected so traversal skips it.
         self.collector.insert(self.current_hazard.0, self.current_hazard.1);
         self.loss_evaluator.reload(loss_bound, shape);
 

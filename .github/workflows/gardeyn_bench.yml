@@ -14,12 +14,11 @@ on:
         required: true
         type: number
       cpu_tag:
-        description: 'CPU type for runner (5950X, 7950X)'
+        description: 'CPU type for runner (5950X, 9950X)'
         required: true
         type: choice
         options:
           - 5950X
-          - 7950X
           - 9950X
 
 jobs:

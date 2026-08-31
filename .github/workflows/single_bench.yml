@@ -45,7 +45,6 @@ on:
         type: choice
         options:
           - 5950X
-          - 7950X
           - 9950X
 
 jobs:
