@@ -1,17 +1,19 @@
+use crate::eval::collision_loss::CollisionLossEvaluator;
 use crate::eval::sample_eval::{SampleEval, SampleEvaluator};
-use crate::eval::specialized_jaguars_pipeline::{collect_poly_collisions_in_detector_custom, SpecializedHazardCollector};
 use crate::quantify::tracker::CollisionTracker;
-use jagua_rs::collision_detection::hazards::collector::HazardCollector;
-use jagua_rs::entities::Item;
-use jagua_rs::entities::Layout;
-use jagua_rs::entities::PItemKey;
+use jagua_rs::collision_detection::hazards::collector::BasicHazardCollector;
+use jagua_rs::collision_detection::hazards::{HazKey, HazardEntity};
+use jagua_rs::entities::{Item, Layout, PItemKey};
+use jagua_rs::geometry::geo_traits::TransformableFrom;
 use jagua_rs::geometry::primitives::SPolygon;
 use jagua_rs::geometry::DTransformation;
 
 pub struct SeparationEvaluator<'a> {
     layout: &'a Layout,
     item: &'a Item,
-    collector: SpecializedHazardCollector<'a>,
+    collector: BasicHazardCollector,
+    current_hazard: (HazKey, HazardEntity),
+    loss_evaluator: CollisionLossEvaluator<'a>,
     shape_buff: SPolygon,
     n_evals: usize,
 }
@@ -23,12 +25,21 @@ impl<'a> SeparationEvaluator<'a> {
         current_pk: PItemKey,
         ct: &'a CollisionTracker,
     ) -> Self {
-        let collector = SpecializedHazardCollector::new(layout, ct, current_pk);
+        let current_haz_key = layout
+            .cde()
+            .haz_key_from_pi_key(current_pk)
+            .expect("placed item should be registered in the CDE");
+        let current_hazard = (
+            current_haz_key,
+            layout.cde().hazards_map[current_haz_key].entity,
+        );
 
         Self {
             layout,
             item,
-            collector,
+            collector: BasicHazardCollector::with_capacity(layout.placed_items.len() + 1),
+            current_hazard,
+            loss_evaluator: CollisionLossEvaluator::new(layout, ct, current_pk),
             shape_buff: item.shape_cd.as_ref().clone(),
             n_evals: 0,
         }
@@ -48,25 +59,35 @@ impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
             Some(SampleEval::Clear { .. }) => 0.0,
             _ => f32::INFINITY,
         };
-        
-        // Reload the hazard collector to prepare for a new query
-        self.collector.reload(loss_bound);
+        let shape = self
+            .shape_buff
+            .transform_from(self.item.shape_cd.as_ref(), &dt.compose());
+        self.collector.clear();
+        // Ignore the item being moved without giving collision traversal Sparrow-specific state.
+        self.collector.insert(self.current_hazard.0, self.current_hazard.1);
+        self.loss_evaluator.reload(loss_bound, shape);
 
-        // Perform the collision detection and the collision quantification. The 'collector' will be populated with the results.
-        collect_poly_collisions_in_detector_custom(cde, &dt, &mut self.shape_buff, self.item.shape_cd.as_ref(), &mut self.collector);
-        
-        if self.collector.early_terminate(&self.shape_buff) {
+        let stopped = {
+            let (collector, loss_evaluator) = (&mut self.collector, &mut self.loss_evaluator);
+            cde.collect_surrogate_collisions_until(shape, collector, |hazard| {
+                loss_evaluator.add(hazard, shape)
+            }) || cde.collect_poly_collisions_until(shape, collector, |hazard| {
+                loss_evaluator.add(hazard, shape)
+            })
+        };
+
+        if stopped {
             // The total quantification of the collisions exceeded the upper bound and the process was terminated early.
             // Note that we might have exited before detecting/quantifying all collisions.
-            // However, since we can asure that this sample will always be rejected, we don't need to spend any more time on it and just return `Invalid`.
+            // However, since we can assure that this sample will always be rejected, we don't need to spend any more time on it and just return `Invalid`.
             SampleEval::Invalid
-        } else if self.collector.is_empty() {
+        } else if self.collector.len() == 1 {
             // No collisions detected, return clear
             SampleEval::Clear { loss: 0.0 }
         } else {
-            // Some collisions detected but withing the upper bound, return collision with total loss
+            // Some collisions detected but within the upper bound, return collision with total loss
             SampleEval::Collision {
-                loss: self.collector.loss(&self.shape_buff),
+                loss: self.loss_evaluator.loss(),
             }
         }
     }
@@ -75,4 +96,3 @@ impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
         self.n_evals
     }
 }
-

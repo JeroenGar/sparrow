@@ -1,4 +1,3 @@
-use crate::eval::specialized_jaguars_pipeline::SpecializedHazardCollector;
 use crate::quantify::tracker::CollisionTracker;
 use crate::quantify::{quantify_collision_poly_container, quantify_collision_poly_poly};
 use float_cmp::{approx_eq, assert_approx_eq};
@@ -6,12 +5,10 @@ use itertools::Itertools;
 use jagua_rs::collision_detection::hazards::collector::{BasicHazardCollector, HazardCollector};
 use jagua_rs::collision_detection::hazards::HazardEntity;
 use jagua_rs::entities::Layout;
-use jagua_rs::geometry::primitives::SPolygon;
 use jagua_rs::io::svg::SvgDrawOptions;
 use jagua_rs::probs::spp::entities::SPProblem;
 use jagua_rs::util::assertions;
 use log::warn;
-use std::collections::HashSet;
 
 pub fn tracker_matches_layout(ct: &CollisionTracker, l: &Layout) -> bool {
     assert!(l.placed_items.keys().all(|k| ct.pk_idx_map.contains_key(k)));
@@ -132,28 +129,6 @@ pub fn tracker_matches_layout(ct: &CollisionTracker, l: &Layout) -> bool {
         }
     }
 
-    true
-}
-
-pub fn custom_pipeline_matches_jaguars(shape: &SPolygon, det: &SpecializedHazardCollector) -> bool {
-    //Standard colllision collection, provided by jagua-rs, for comparison
-    let cde = det.layout.cde();
-    let base_detector = {
-        let pi = &det.layout.placed_items[det.current_pk];
-        let pk = det.current_pk;
-        let mut coll = BasicHazardCollector::new();
-        cde.collect_poly_collisions(shape, &mut coll);
-        if coll.contains_entity(&HazardEntity::from((pk, pi))){
-            coll.remove_by_entity(&HazardEntity::from((pk, pi)));
-        }
-        coll
-    };
-
-    //make sure these detection maps are equivalent
-    let default_set: HashSet<HazardEntity> = base_detector.entities().cloned().collect();
-    let custom_set: HashSet<HazardEntity> = det.entities().cloned().collect();
-
-    assert_eq!(default_set, custom_set, "custom cde pipeline does not match jagua-rs! for pk: {:?}", det.current_pk);
     true
 }
 
