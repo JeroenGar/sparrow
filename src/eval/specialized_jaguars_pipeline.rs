@@ -48,12 +48,11 @@ pub fn collect_poly_collisions_in_detector_custom(
         let area_threshold = shape.area * 0.5 / PI;
         let mut area_sum = 0.0;
         for pole in shape.surrogate().poles.iter() {
-            let stopped = cde.quadtree.collect_collisions_until(
+            if cde.quadtree.collect_collisions_until(
                 pole,
                 collector,
                 &mut |collector| collector.early_terminate(shape),
-            );
-            if stopped {
+            ) {
                 return;
             }
             area_sum += pole.radius * pole.radius;
@@ -71,12 +70,11 @@ pub fn collect_poly_collisions_in_detector_custom(
     let custom_edge_iter = BitReversalIterator::new(shape.n_vertices())
         .map(|i| shape.edge(i));
     for edge in custom_edge_iter {
-        let stopped = v_quadtree.collect_collisions_until(
+        if v_quadtree.collect_collisions_until(
             &edge,
             collector,
             &mut |collector| collector.early_terminate(shape),
-        );
-        if stopped {
+        ) {
             return;
         }
     }
@@ -172,13 +170,13 @@ impl<'a> SpecializedHazardCollector<'a> {
                 .get(self.last_inserted_key.expect("an inserted hazard should have a key"))
                 .map(|(haz, _)| haz)
                 .expect("the inserted hazard should be detected");
-            match self.calc_weighted_loss_bounded(haz, shape, self.loss_bound - cached_loss) {
-                Some(extra_loss) => self.loss_cache = (self.idx_counter, cached_loss + extra_loss),
-                None => {
-                    self.loss_bound_exceeded = true;
-                    return true;
-                }
-            }
+            let Some(extra_loss) =
+                self.calc_weighted_loss_bounded(haz, shape, self.loss_bound - cached_loss)
+            else {
+                self.loss_bound_exceeded = true;
+                return true;
+            };
+            self.loss_cache = (self.idx_counter, cached_loss + extra_loss);
         }
 
         self.loss(shape) > self.loss_bound
