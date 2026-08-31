@@ -25,11 +25,14 @@ pub fn quantify_collision_poly_poly_simd_bounded(
     let epsilon = f32::max(s1.diameter, s2.diameter) * OVERLAP_PROXY_EPSILON_DIAM_RATIO;
     let epsilon_sq = epsilon * epsilon;
     let penalty = calc_shape_penalty(s1, s2);
-    let max_sqrt_proxy = max_loss / penalty;
-    let max_unscaled_overlap = (max_sqrt_proxy * max_sqrt_proxy - epsilon_sq) / PI;
-    if max_unscaled_overlap < 0.0 {
-        return None;
-    }
+    let max_unscaled_overlap = {
+        let max_sqrt_proxy = max_loss / penalty;
+        let overlap = (max_sqrt_proxy * max_sqrt_proxy - epsilon_sq) / PI;
+        if overlap < 0.0 {
+            return None;
+        }
+        overlap
+    };
 
     let overlap_proxy = poles_overlap_area_proxy_simd_bounded(
         s1.surrogate(),

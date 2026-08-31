@@ -67,27 +67,29 @@ impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
         self.collector.insert(self.current_hazard.0, self.current_hazard.1);
         self.loss_evaluator.reload(loss_bound, shape);
 
-        let stopped = {
-            let (collector, loss_evaluator) = (&mut self.collector, &mut self.loss_evaluator);
-            cde.collect_surrogate_collisions_until(shape, collector, |hazard| {
-                loss_evaluator.add(hazard, shape)
-            }) || cde.collect_poly_collisions_until(shape, collector, |hazard| {
-                loss_evaluator.add(hazard, shape)
-            })
-        };
+        let mut should_stop = |hazard| self.loss_evaluator.add(hazard, shape);
+        let stopped_during_surrogate_check = cde.collect_surrogate_collisions_until(
+            shape,
+            &mut self.collector,
+            &mut should_stop,
+        );
 
-        if stopped {
-            // The total quantification of the collisions exceeded the upper bound and the process was terminated early.
-            // Note that we might have exited before detecting/quantifying all collisions.
-            // However, since we can assure that this sample will always be rejected, we don't need to spend any more time on it and just return `Invalid`.
-            SampleEval::Invalid
-        } else if self.collector.len() == 1 {
-            // No collisions detected, return clear
-            SampleEval::Clear { loss: 0.0 }
-        } else {
-            // Some collisions detected but within the upper bound, return collision with total loss
-            SampleEval::Collision {
-                loss: self.loss_evaluator.loss(),
+        match stopped_during_surrogate_check {
+            true => SampleEval::Invalid,
+            false => {
+                let stopped_during_precise_check = cde.collect_poly_collisions_until(
+                    shape,
+                    &mut self.collector,
+                    &mut should_stop,
+                );
+
+                match stopped_during_precise_check {
+                    true => SampleEval::Invalid,
+                    false if self.collector.len() == 1 => SampleEval::Clear { loss: 0.0 },
+                    false => SampleEval::Collision {
+                        loss: self.loss_evaluator.loss(),
+                    },
+                }
             }
         }
     }
