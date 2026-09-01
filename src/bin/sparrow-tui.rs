@@ -37,6 +37,7 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 const OUTPUT_DIR: &str = "output";
+const LIVE_VIEWER_PATH: &str = "data/live/live_viewer.html";
 const LIVE_SVG_PATH: &str = "data/live/.live_solution.svg";
 const FRAME_INTERVAL: Duration = Duration::from_millis(100);
 const SNAPSHOT_INTERVAL: Duration = Duration::from_millis(100);
@@ -203,11 +204,24 @@ fn run_tui(
         if event::poll(FRAME_INTERVAL)?
             && let Event::Key(key) = event::read()?
             && key.kind == KeyEventKind::Press
-            && (matches!(key.code, KeyCode::Esc | KeyCode::Char('q'))
-                || key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL))
         {
-            app.quit_requested = true;
-            stop.store(true, Ordering::Relaxed);
+            match key.code {
+                KeyCode::Esc | KeyCode::Char('q') => {
+                    app.quit_requested = true;
+                    stop.store(true, Ordering::Relaxed);
+                }
+                KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    app.quit_requested = true;
+                    stop.store(true, Ordering::Relaxed);
+                }
+                KeyCode::Up => app.scroll_logs_up(1),
+                KeyCode::Down => app.scroll_logs_down(1),
+                KeyCode::PageUp => app.scroll_logs_up(10),
+                KeyCode::PageDown => app.scroll_logs_down(10),
+                KeyCode::Home => app.scroll_logs_up(usize::MAX),
+                KeyCode::End => app.log_scroll = 0,
+                _ => {}
+            }
         }
     }
 }
@@ -226,6 +240,8 @@ struct App {
     started: Instant,
     total_duration: Duration,
     logs: VecDeque<LogEntry>,
+    log_scroll: usize,
+    log_view_height: usize,
     finished: bool,
     finished_elapsed: Option<Duration>,
     quit_requested: bool,
@@ -247,6 +263,8 @@ impl App {
             started: Instant::now(),
             total_duration,
             logs: VecDeque::new(),
+            log_scroll: 0,
+            log_view_height: 1,
             finished: false,
             finished_elapsed: None,
             quit_requested: false,
@@ -298,16 +316,35 @@ impl App {
     }
 
     fn push_log(&mut self, log: LogEntry) {
+        let keep_position = self.log_scroll > 0;
         if self.logs.len() == MAX_LOG_LINES {
             self.logs.pop_front();
         }
         self.logs.push_back(log);
+        if keep_position {
+            self.log_scroll = self.log_scroll.saturating_add(1).min(self.max_log_scroll());
+        }
+    }
+
+    fn scroll_logs_up(&mut self, lines: usize) {
+        self.log_scroll = self
+            .log_scroll
+            .saturating_add(lines)
+            .min(self.max_log_scroll());
+    }
+
+    fn scroll_logs_down(&mut self, lines: usize) {
+        self.log_scroll = self.log_scroll.saturating_sub(lines);
+    }
+
+    fn max_log_scroll(&self) -> usize {
+        self.logs.len().saturating_sub(self.log_view_height)
     }
 
     fn render(&mut self, frame: &mut Frame) {
         let [summary_area, loss_area, logs_area, help_area] = Layout::vertical([
-            Constraint::Length(6),
-            Constraint::Length(11),
+            Constraint::Length(7),
+            Constraint::Length(10),
             Constraint::Min(5),
             Constraint::Length(1),
         ])
@@ -320,9 +357,7 @@ impl App {
         let help = match (self.finished, self.quit_requested) {
             (true, _) => "Finished. Press q or Esc to exit.",
             (false, true) => "Stopping optimizer...",
-            (false, false) => {
-                "Viewer: data/live/live_viewer.html   q / Esc / Ctrl-C: stop and exit"
-            }
+            (false, false) => "↑/↓ PgUp/PgDn: scroll logs   q / Esc / Ctrl-C: stop and exit",
         };
         frame.render_widget(
             Paragraph::new(help).style(Style::default().fg(Color::DarkGray)),
@@ -337,7 +372,7 @@ impl App {
         let inner = block.inner(area);
         frame.render_widget(block, area);
         let [metrics_area, progress_area] =
-            Layout::vertical([Constraint::Length(3), Constraint::Length(1)]).areas(inner);
+            Layout::vertical([Constraint::Length(4), Constraint::Length(1)]).areas(inner);
 
         let (state, state_color) = match (&self.report, self.loss_remaining) {
             (Some(ReportType::Final), _) => ("FINISHED", Color::Green),
@@ -407,8 +442,20 @@ impl App {
                 Style::default().fg(Color::LightCyan),
             ),
         ]);
+        let viewer = TextLine::from(vec![
+            Span::styled(
+                "Live solution viewer  ",
+                Style::default().fg(Color::DarkGray),
+            ),
+            Span::styled(
+                LIVE_VIEWER_PATH,
+                Style::default()
+                    .fg(Color::LightBlue)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+            ),
+        ]);
         frame.render_widget(
-            Paragraph::new(vec![phase, dimensions, attempt]),
+            Paragraph::new(vec![phase, dimensions, attempt, viewer]),
             metrics_area,
         );
 
@@ -485,20 +532,27 @@ impl App {
         frame.render_widget(chart, area);
     }
 
-    fn render_logs(&self, frame: &mut Frame, area: Rect) {
+    fn render_logs(&mut self, frame: &mut Frame, area: Rect) {
         let visible_lines = area.height.saturating_sub(2) as usize;
+        self.log_view_height = visible_lines.max(1);
+        self.log_scroll = self.log_scroll.min(self.max_log_scroll());
         let lines = self
             .logs
             .iter()
             .rev()
+            .skip(self.log_scroll)
             .take(visible_lines)
             .rev()
             .map(|entry| TextLine::styled(entry.message.as_str(), log_style(entry)))
             .collect::<Vec<_>>();
+        let title = match self.log_scroll {
+            0 => " Logs ".to_owned(),
+            lines => format!(" Logs · {lines} lines above latest "),
+        };
         frame.render_widget(
             Paragraph::new(lines).block(
                 Block::bordered()
-                    .title(" Logs ")
+                    .title(title)
                     .border_style(Style::default().fg(Color::DarkGray)),
             ),
             area,
@@ -527,7 +581,7 @@ fn log_style(entry: &LogEntry) -> Style {
         match entry.level {
             Level::Error => Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
             Level::Warn => Style::default().fg(Color::Yellow),
-            Level::Info => Style::default().fg(Color::Gray),
+            Level::Info => Style::default().fg(Color::White),
             Level::Debug | Level::Trace => Style::default().fg(Color::DarkGray),
         }
     }
@@ -710,5 +764,27 @@ mod tests {
 
         app.apply(progress(99.0, 0, 12.0));
         assert_eq!(app.attempt, 1);
+    }
+
+    #[test]
+    fn keeps_scrolled_logs_in_place_as_new_lines_arrive() {
+        let mut app = App::new(Duration::ZERO);
+        app.log_view_height = 2;
+        for line in 0..4 {
+            app.push_log(LogEntry {
+                level: Level::Info,
+                message: line.to_string(),
+            });
+        }
+
+        app.scroll_logs_up(usize::MAX);
+        assert_eq!(app.log_scroll, 2);
+        app.push_log(LogEntry {
+            level: Level::Info,
+            message: "new".to_owned(),
+        });
+        assert_eq!(app.log_scroll, 3);
+        app.scroll_logs_down(usize::MAX);
+        assert_eq!(app.log_scroll, 0);
     }
 }
