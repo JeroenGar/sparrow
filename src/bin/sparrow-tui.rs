@@ -42,6 +42,12 @@ const LIVE_SVG_PATH: &str = "data/live/.live_solution.svg";
 const FRAME_INTERVAL: Duration = Duration::from_millis(100);
 const SNAPSHOT_INTERVAL: Duration = Duration::from_millis(100);
 const MAX_LOG_LINES: usize = 200;
+const COLOR_ACCENT: Color = Color::Rgb(75, 170, 255);
+const COLOR_SUCCESS: Color = Color::Rgb(70, 210, 110);
+const COLOR_FAILURE: Color = Color::Rgb(255, 80, 40);
+const COLOR_TEXT: Color = Color::Rgb(240, 242, 245);
+const COLOR_MUTED: Color = Color::Rgb(130, 140, 155);
+const COLOR_TRACK: Color = Color::Rgb(45, 50, 60);
 
 fn main() -> Result<()> {
     let args = MainCli::parse();
@@ -72,19 +78,29 @@ fn main() -> Result<()> {
     let initial_solution = ext_solution
         .map(|solution| jagua_rs::probs::spp::io::import_solution(&instance, &solution));
 
-    let stop = Arc::new(AtomicBool::new(false));
+    let quit = Arc::new(AtomicBool::new(false));
+    let interrupt_phase = Arc::new(AtomicBool::new(false));
     let (updates_tx, updates_rx) = mpsc::channel();
     let worker = start_optimizer(
         instance.clone(),
         initial_solution,
         config,
         rng,
-        stop.clone(),
+        quit.clone(),
+        interrupt_phase.clone(),
         updates_tx,
     );
 
     let solution = ratatui::run(|terminal| {
-        run_tui(terminal, updates_rx, logs_rx, worker, stop, total_duration)
+        run_tui(
+            terminal,
+            updates_rx,
+            logs_rx,
+            worker,
+            quit,
+            interrupt_phase,
+            total_duration,
+        )
     })?;
 
     let svg_path = format!("{OUTPUT_DIR}/final_{}.svg", ext_instance.name);
@@ -144,7 +160,8 @@ fn start_optimizer(
     initial_solution: Option<SPSolution>,
     config: SparrowConfig,
     rng: Xoshiro256PlusPlus,
-    stop: Arc<AtomicBool>,
+    quit: Arc<AtomicBool>,
+    interrupt_phase: Arc<AtomicBool>,
     updates: Sender<Update>,
 ) -> JoinHandle<SPSolution> {
     thread::Builder::new()
@@ -154,7 +171,7 @@ fn start_optimizer(
                 instance,
                 rng,
                 &mut TuiListener::new(updates),
-                &mut TuiTerminator::new(stop),
+                &mut TuiTerminator::new(quit, interrupt_phase),
                 &config.expl_cfg,
                 &config.cmpr_cfg,
                 initial_solution.as_ref(),
@@ -168,7 +185,8 @@ fn run_tui(
     updates: Receiver<Update>,
     logs: Receiver<LogEntry>,
     worker: JoinHandle<SPSolution>,
-    stop: Arc<AtomicBool>,
+    quit: Arc<AtomicBool>,
+    interrupt_phase: Arc<AtomicBool>,
     total_duration: Duration,
 ) -> Result<SPSolution> {
     let mut app = App::new(total_duration);
@@ -208,11 +226,10 @@ fn run_tui(
             match key.code {
                 KeyCode::Esc | KeyCode::Char('q') => {
                     app.quit_requested = true;
-                    stop.store(true, Ordering::Relaxed);
+                    quit.store(true, Ordering::Relaxed);
                 }
                 KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                    app.quit_requested = true;
-                    stop.store(true, Ordering::Relaxed);
+                    interrupt_phase.store(true, Ordering::Relaxed);
                 }
                 KeyCode::Up => app.scroll_logs_up(1),
                 KeyCode::Down => app.scroll_logs_down(1),
@@ -357,42 +374,39 @@ impl App {
         let help = match (self.finished, self.quit_requested) {
             (true, _) => "Finished. Press q or Esc to exit.",
             (false, true) => "Stopping optimizer...",
-            (false, false) => "↑/↓ PgUp/PgDn: scroll logs   q / Esc / Ctrl-C: stop and exit",
+            (false, false) => {
+                "↑/↓ PgUp/PgDn: scroll logs   Ctrl-C: skip phase   q / Esc: stop and exit"
+            }
         };
         frame.render_widget(
-            Paragraph::new(help).style(Style::default().fg(Color::DarkGray)),
+            Paragraph::new(help).style(Style::default().fg(COLOR_MUTED)),
             help_area,
         );
     }
 
     fn render_summary(&self, frame: &mut Frame, area: Rect) {
         let block = Block::bordered()
-            .title(" Sparrow search ")
-            .border_style(Style::default().fg(Color::Cyan));
+            .title(" sparrow search ")
+            .border_style(Style::default().fg(COLOR_ACCENT));
         let inner = block.inner(area);
         frame.render_widget(block, area);
         let [metrics_area, progress_area] =
             Layout::vertical([Constraint::Length(4), Constraint::Length(1)]).areas(inner);
 
         let (state, state_color) = match (&self.report, self.loss_remaining) {
-            (Some(ReportType::Final), _) => ("FINISHED", Color::Green),
-            (_, Some(0.0)) => ("FEASIBLE", Color::Green),
-            (_, Some(_)) => ("SEPARATING", Color::Yellow),
-            (Some(report), None) if report_is_feasible(report) => ("FEASIBLE", Color::Green),
-            (Some(_), None) => ("INFEASIBLE", Color::Red),
-            (None, None) => ("STARTING", Color::Yellow),
-        };
-        let phase_color = match self.phase {
-            "exploration" => Color::Cyan,
-            "compression" | "final" => Color::Magenta,
-            _ => Color::DarkGray,
+            (Some(ReportType::Final), _) => ("FINISHED", COLOR_SUCCESS),
+            (_, Some(0.0)) => ("FEASIBLE", COLOR_SUCCESS),
+            (_, Some(_)) => ("SEPARATING", COLOR_ACCENT),
+            (Some(report), None) if report_is_feasible(report) => ("FEASIBLE", COLOR_SUCCESS),
+            (Some(_), None) => ("INFEASIBLE", COLOR_FAILURE),
+            (None, None) => ("STARTING", COLOR_ACCENT),
         };
         let phase = TextLine::from(vec![
             Span::styled(
                 format!(" {} ", self.phase),
                 Style::default()
                     .fg(Color::Black)
-                    .bg(phase_color)
+                    .bg(COLOR_ACCENT)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::raw("  "),
@@ -407,50 +421,47 @@ impl App {
             .finished_elapsed
             .unwrap_or_else(|| self.started.elapsed());
         let dimensions = TextLine::from(vec![
-            Span::styled("width ", Style::default().fg(Color::DarkGray)),
+            Span::styled("width ", Style::default().fg(COLOR_MUTED)),
             Span::styled(
                 self.width
                     .map_or("-".to_owned(), |width| format!("{width:.3}")),
-                Style::default().fg(Color::White),
+                Style::default().fg(COLOR_TEXT),
             ),
-            Span::styled("   density ", Style::default().fg(Color::DarkGray)),
+            Span::styled("   density ", Style::default().fg(COLOR_MUTED)),
             Span::styled(
                 self.density
                     .map_or("-".to_owned(), |density| format!("{density:.3}%")),
-                Style::default().fg(Color::Green),
+                Style::default().fg(COLOR_ACCENT),
             ),
-            Span::styled("   loss remaining ", Style::default().fg(Color::DarkGray)),
+            Span::styled("   loss remaining ", Style::default().fg(COLOR_MUTED)),
             Span::styled(
                 self.loss_remaining
                     .map_or("-".to_owned(), |loss| format!("{loss:.1}%")),
                 Style::default().fg(match self.loss_remaining {
-                    Some(0.0) => Color::Green,
-                    Some(_) => Color::Yellow,
-                    None => Color::DarkGray,
+                    Some(0.0) => COLOR_SUCCESS,
+                    Some(_) => COLOR_ACCENT,
+                    None => COLOR_MUTED,
                 }),
             ),
         ]);
         let attempt = TextLine::from(vec![
-            Span::styled("attempt ", Style::default().fg(Color::DarkGray)),
-            Span::styled(self.attempt.to_string(), Style::default().fg(Color::Yellow)),
+            Span::styled("attempt ", Style::default().fg(COLOR_MUTED)),
+            Span::styled(self.attempt.to_string(), Style::default().fg(COLOR_ACCENT)),
             Span::styled(
                 " at this width   iteration ",
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(COLOR_MUTED),
             ),
             Span::styled(
                 self.iteration.to_string(),
-                Style::default().fg(Color::LightCyan),
+                Style::default().fg(COLOR_ACCENT),
             ),
         ]);
         let viewer = TextLine::from(vec![
-            Span::styled(
-                "Live solution viewer  ",
-                Style::default().fg(Color::DarkGray),
-            ),
+            Span::styled("Live solution viewer  ", Style::default().fg(COLOR_MUTED)),
             Span::styled(
                 LIVE_VIEWER_PATH,
                 Style::default()
-                    .fg(Color::LightBlue)
+                    .fg(COLOR_ACCENT)
                     .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
             ),
         ]);
@@ -475,8 +486,8 @@ impl App {
                 ))
                 .gauge_style(
                     Style::default()
-                        .fg(Color::LightCyan)
-                        .bg(Color::DarkGray)
+                        .fg(COLOR_ACCENT)
+                        .bg(COLOR_TRACK)
                         .add_modifier(Modifier::BOLD),
                 ),
             progress_area,
@@ -493,11 +504,11 @@ impl App {
         };
         let block = Block::bordered()
             .title(title)
-            .border_style(Style::default().fg(Color::DarkGray));
+            .border_style(Style::default().fg(COLOR_MUTED));
         if self.loss_history.is_empty() {
             frame.render_widget(
                 Paragraph::new("Waiting for the first separation attempt...")
-                    .style(Style::default().fg(Color::DarkGray))
+                    .style(Style::default().fg(COLOR_MUTED))
                     .block(block),
                 area,
             );
@@ -508,14 +519,14 @@ impl App {
         let dataset = Dataset::default()
             .marker(Marker::Braille)
             .graph_type(GraphType::Line)
-            .style(Style::default().fg(Color::LightCyan))
+            .style(Style::default().fg(COLOR_ACCENT))
             .data(&self.loss_history);
         let chart = Chart::new(vec![dataset])
             .block(block)
             .x_axis(
                 Axis::default()
                     .title(" iteration ")
-                    .style(Style::default().fg(Color::DarkGray))
+                    .style(Style::default().fg(COLOR_MUTED))
                     .bounds([0.0, max_iteration])
                     .labels(vec![
                         TextLine::from("0"),
@@ -525,7 +536,7 @@ impl App {
             .y_axis(
                 Axis::default()
                     .title(" loss remaining ")
-                    .style(Style::default().fg(Color::DarkGray))
+                    .style(Style::default().fg(COLOR_MUTED))
                     .bounds([0.0, 100.0])
                     .labels(vec![TextLine::from("0%"), TextLine::from("100%")]),
             );
@@ -553,7 +564,7 @@ impl App {
             Paragraph::new(lines).block(
                 Block::bordered()
                     .title(title)
-                    .border_style(Style::default().fg(Color::DarkGray)),
+                    .border_style(Style::default().fg(COLOR_MUTED)),
             ),
             area,
         );
@@ -565,24 +576,24 @@ fn log_style(entry: &LogEntry) -> Style {
         || entry.message.contains("[CMPR] success at")
     {
         Style::default()
-            .fg(Color::LightGreen)
+            .fg(COLOR_SUCCESS)
             .add_modifier(Modifier::BOLD)
     } else if entry.message.contains("[EXPL] unable to reach feasibility")
         || entry.message.contains("[CMPR] failed at")
     {
         Style::default()
-            .fg(Color::LightYellow)
+            .fg(COLOR_FAILURE)
             .add_modifier(Modifier::BOLD)
     } else if entry.message.contains("[SEP] finished") {
-        Style::default()
-            .fg(Color::White)
-            .add_modifier(Modifier::BOLD)
+        Style::default().fg(COLOR_TEXT).add_modifier(Modifier::BOLD)
     } else {
         match entry.level {
-            Level::Error => Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
-            Level::Warn => Style::default().fg(Color::Yellow),
-            Level::Info => Style::default().fg(Color::White),
-            Level::Debug | Level::Trace => Style::default().fg(Color::DarkGray),
+            Level::Error => Style::default()
+                .fg(COLOR_FAILURE)
+                .add_modifier(Modifier::BOLD),
+            Level::Warn => Style::default().fg(COLOR_FAILURE),
+            Level::Info => Style::default().fg(COLOR_TEXT),
+            Level::Debug | Level::Trace => Style::default().fg(COLOR_MUTED),
         }
     }
 }
@@ -701,27 +712,31 @@ impl SolutionListener for TuiListener {
 
 struct TuiTerminator {
     timeout: Option<CdeInstant>,
-    stop: Arc<AtomicBool>,
+    quit: Arc<AtomicBool>,
+    interrupt_phase: Arc<AtomicBool>,
 }
 
 impl TuiTerminator {
-    fn new(stop: Arc<AtomicBool>) -> Self {
+    fn new(quit: Arc<AtomicBool>, interrupt_phase: Arc<AtomicBool>) -> Self {
         Self {
             timeout: None,
-            stop,
+            quit,
+            interrupt_phase,
         }
     }
 }
 
 impl Terminator for TuiTerminator {
     fn kill(&self) -> bool {
-        self.stop.load(Ordering::Relaxed)
+        self.quit.load(Ordering::Relaxed)
+            || self.interrupt_phase.load(Ordering::Relaxed)
             || self
                 .timeout
                 .is_some_and(|timeout| CdeInstant::now() > timeout)
     }
 
     fn new_timeout(&mut self, timeout: Duration) {
+        self.interrupt_phase.store(false, Ordering::Relaxed);
         self.timeout = Some(CdeInstant::now() + timeout);
     }
 
@@ -786,5 +801,20 @@ mod tests {
         assert_eq!(app.log_scroll, 3);
         app.scroll_logs_down(usize::MAX);
         assert_eq!(app.log_scroll, 0);
+    }
+
+    #[test]
+    fn phase_interrupt_resets_but_quit_does_not() {
+        let quit = Arc::new(AtomicBool::new(false));
+        let interrupt_phase = Arc::new(AtomicBool::new(true));
+        let mut terminator = TuiTerminator::new(quit.clone(), interrupt_phase.clone());
+
+        assert!(terminator.kill());
+        terminator.new_timeout(Duration::from_secs(1));
+        assert!(!terminator.kill());
+
+        quit.store(true, Ordering::Relaxed);
+        terminator.new_timeout(Duration::from_secs(1));
+        assert!(terminator.kill());
     }
 }
