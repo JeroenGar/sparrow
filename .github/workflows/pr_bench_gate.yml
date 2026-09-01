@@ -1,10 +1,9 @@
-name: nightly benches
+name: PR benchmark gate
 
 on:
-#  schedule:
-#    - cron: '0 23 * * *'
   workflow_dispatch:
   pull_request:
+    types: [ ready_for_review ]
     branches: [ "main" ]
     paths:
       - '**.rs'
@@ -18,7 +17,6 @@ jobs:
       instance: swim
       n_runs: 16
       run_time_s: 1200
-      cpu_tag: 7950X
 
   trousers:
     needs: swim
@@ -27,7 +25,6 @@ jobs:
       instance: trousers
       n_runs: 16
       run_time_s: 1200
-      cpu_tag: 7950X
 
   shirts:
     needs: trousers
@@ -36,4 +33,3 @@ jobs:
       instance: shirts
       n_runs: 16
       run_time_s: 1200
-      cpu_tag: 7950X

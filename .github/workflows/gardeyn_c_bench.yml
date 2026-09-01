@@ -13,15 +13,6 @@ on:
         default: 1200
         required: true
         type: number
-      cpu_tag:
-        description: 'CPU type for runner (5950X, 7950X)'
-        required: true
-        type: choice
-        options:
-          - 5950X
-          - 7950X
-          - 9950X
-
 jobs:
   gardeyn0:
     uses: ./.github/workflows/single_bench.yml
@@ -29,7 +20,6 @@ jobs:
       instance: gardeyn0_c
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
   gardeyn1:
     needs: gardeyn0
     uses: ./.github/workflows/single_bench.yml
@@ -37,7 +27,6 @@ jobs:
       instance: gardeyn1_c
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
   gardeyn2:
     needs: gardeyn1
     uses: ./.github/workflows/single_bench.yml
@@ -45,7 +34,6 @@ jobs:
       instance: gardeyn2_c
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
   gardeyn3:
     needs: gardeyn2
     uses: ./.github/workflows/single_bench.yml
@@ -53,7 +41,6 @@ jobs:
       instance: gardeyn3_c
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
   gardeyn4:
     needs: gardeyn3
     uses: ./.github/workflows/single_bench.yml
@@ -61,7 +48,6 @@ jobs:
       instance: gardeyn4_c
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
   gardeyn5:
     needs: gardeyn4
     uses: ./.github/workflows/single_bench.yml
@@ -69,7 +55,6 @@ jobs:
       instance: gardeyn5_c
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
   gardeyn6:
     needs: gardeyn5
     uses: ./.github/workflows/single_bench.yml
@@ -77,7 +62,6 @@ jobs:
       instance: gardeyn6_c
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
   gardeyn7:
     needs: gardeyn6
     uses: ./.github/workflows/single_bench.yml
@@ -85,7 +69,6 @@ jobs:
       instance: gardeyn7_c
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
   gardeyn8:
     needs: gardeyn7
     uses: ./.github/workflows/single_bench.yml
@@ -93,7 +76,6 @@ jobs:
       instance: gardeyn8_c
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}
   gardeyn9:
     needs: gardeyn8
     uses: ./.github/workflows/single_bench.yml
@@ -101,4 +83,3 @@ jobs:
       instance: gardeyn9_c
       n_runs: ${{ fromJSON(inputs.n_runs) }}
       run_time_s: ${{ fromJSON(inputs.run_time_s) }}
-      cpu_tag: ${{ inputs.cpu_tag }}

@@ -18,6 +18,17 @@ type f32xN = Simd<f32,SIMD_WIDTH>;
 /// `p2` should match the poles of `sp2`.
 #[inline(always)]
 pub fn poles_overlap_area_proxy_simd(sp1: &SPSurrogate, sp2: &SPSurrogate, epsilon: f32, p2: &CirclesSoA) -> f32 {
+    poles_overlap_area_proxy_simd_bounded(sp1, sp2, epsilon, p2, f32::INFINITY).unwrap()
+}
+
+#[inline(always)]
+pub fn poles_overlap_area_proxy_simd_bounded(
+    sp1: &SPSurrogate,
+    sp2: &SPSurrogate,
+    epsilon: f32,
+    p2: &CirclesSoA,
+    max_unscaled_overlap: f32,
+) -> Option<f32> {
     use std::simd::prelude::{SimdFloat, SimdPartialOrd};
     use std::simd::StdFloat;
 
@@ -79,6 +90,10 @@ pub fn poles_overlap_area_proxy_simd(sp1: &SPSurrogate, sp2: &SPSurrogate, epsil
 
             total_overlap += pd_decay * f32::min(p1.radius, p2.radius);
         }
+
+        if total_overlap > max_unscaled_overlap {
+            return None;
+        }
     }
     
     total_overlap *= PI;
@@ -91,5 +106,5 @@ pub fn poles_overlap_area_proxy_simd(sp1: &SPSurrogate, sp2: &SPSurrogate, epsil
     );
 
     debug_assert!(total_overlap.is_normal());
-    total_overlap
+    Some(total_overlap)
 }
