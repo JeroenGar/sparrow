@@ -220,7 +220,8 @@ struct App {
     separation_width: Option<f32>,
     attempt: usize,
     iteration: usize,
-    min_loss: Option<f32>,
+    attempt_initial_loss: Option<f32>,
+    loss_remaining: Option<f32>,
     loss_history: Vec<(f64, f64)>,
     started: Instant,
     total_duration: Duration,
@@ -240,7 +241,8 @@ impl App {
             separation_width: None,
             attempt: 0,
             iteration: 0,
-            min_loss: None,
+            attempt_initial_loss: None,
+            loss_remaining: None,
             loss_history: Vec::new(),
             started: Instant::now(),
             total_duration,
@@ -277,14 +279,22 @@ impl App {
                 false => 1,
             };
             self.separation_width = Some(progress.strip_width);
+            self.attempt_initial_loss = Some(progress.min_loss);
             self.loss_history.clear();
         }
+        let initial_loss = self
+            .attempt_initial_loss
+            .expect("separation progress must start at iteration zero");
+        let loss_remaining = match initial_loss {
+            0.0 => 0.0,
+            _ => (progress.min_loss / initial_loss * 100.0).clamp(0.0, 100.0),
+        };
         self.width = Some(progress.strip_width);
         self.density = Some(progress.density);
         self.iteration = progress.iteration;
-        self.min_loss = Some(progress.min_loss);
+        self.loss_remaining = Some(loss_remaining);
         self.loss_history
-            .push((progress.iteration as f64, progress.min_loss as f64));
+            .push((progress.iteration as f64, loss_remaining as f64));
     }
 
     fn push_log(&mut self, log: LogEntry) {
@@ -329,7 +339,7 @@ impl App {
         let [metrics_area, progress_area] =
             Layout::vertical([Constraint::Length(3), Constraint::Length(1)]).areas(inner);
 
-        let (state, state_color) = match (&self.report, self.min_loss) {
+        let (state, state_color) = match (&self.report, self.loss_remaining) {
             (Some(ReportType::Final), _) => ("FINISHED", Color::Green),
             (_, Some(0.0)) => ("FEASIBLE", Color::Green),
             (_, Some(_)) => ("SEPARATING", Color::Yellow),
@@ -374,11 +384,11 @@ impl App {
                     .map_or("-".to_owned(), |density| format!("{density:.3}%")),
                 Style::default().fg(Color::Green),
             ),
-            Span::styled("   min loss ", Style::default().fg(Color::DarkGray)),
+            Span::styled("   loss remaining ", Style::default().fg(Color::DarkGray)),
             Span::styled(
-                self.min_loss
-                    .map_or("-".to_owned(), |loss| format!("{loss:.2}")),
-                Style::default().fg(match self.min_loss {
+                self.loss_remaining
+                    .map_or("-".to_owned(), |loss| format!("{loss:.1}%")),
+                Style::default().fg(match self.loss_remaining {
                     Some(0.0) => Color::Green,
                     Some(_) => Color::Yellow,
                     None => Color::DarkGray,
@@ -429,10 +439,10 @@ impl App {
     fn render_loss_chart(&self, frame: &mut Frame, area: Rect) {
         let title = match self.separation_width {
             Some(width) => format!(
-                " Minimum collision loss · attempt {} at width {width:.3} ",
+                " Relative collision loss · attempt {} at width {width:.3} ",
                 self.attempt
             ),
-            None => " Minimum collision loss ".to_owned(),
+            None => " Relative collision loss ".to_owned(),
         };
         let block = Block::bordered()
             .title(title)
@@ -448,12 +458,6 @@ impl App {
         }
 
         let max_iteration = self.iteration.max(1) as f64;
-        let max_loss = self
-            .loss_history
-            .iter()
-            .map(|(_, loss)| *loss)
-            .fold(0.0, f64::max)
-            .max(1.0);
         let dataset = Dataset::default()
             .marker(Marker::Braille)
             .graph_type(GraphType::Line)
@@ -473,13 +477,10 @@ impl App {
             )
             .y_axis(
                 Axis::default()
-                    .title(" min loss ")
+                    .title(" loss remaining ")
                     .style(Style::default().fg(Color::DarkGray))
-                    .bounds([0.0, max_loss])
-                    .labels(vec![
-                        TextLine::from("0"),
-                        TextLine::from(format!("{max_loss:.2}")),
-                    ]),
+                    .bounds([0.0, 100.0])
+                    .labels(vec![TextLine::from("0%"), TextLine::from("100%")]),
             );
         frame.render_widget(chart, area);
     }
@@ -492,19 +493,7 @@ impl App {
             .rev()
             .take(visible_lines)
             .rev()
-            .map(|entry| {
-                TextLine::styled(
-                    entry.message.as_str(),
-                    match entry.level {
-                        Level::Error => {
-                            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
-                        }
-                        Level::Warn => Style::default().fg(Color::Yellow),
-                        Level::Info => Style::default().fg(Color::Gray),
-                        Level::Debug | Level::Trace => Style::default().fg(Color::DarkGray),
-                    },
-                )
-            })
+            .map(|entry| TextLine::styled(entry.message.as_str(), log_style(entry)))
             .collect::<Vec<_>>();
         frame.render_widget(
             Paragraph::new(lines).block(
@@ -514,6 +503,29 @@ impl App {
             ),
             area,
         );
+    }
+}
+
+fn log_style(entry: &LogEntry) -> Style {
+    if entry.message.contains("[EXPL] feasible solution found!")
+        || entry.message.contains("[CMPR] success at")
+    {
+        Style::default()
+            .fg(Color::LightGreen)
+            .add_modifier(Modifier::BOLD)
+    } else if entry.message.contains("[EXPL] unable to reach feasibility")
+        || entry.message.contains("[CMPR] failed at")
+    {
+        Style::default()
+            .fg(Color::LightYellow)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        match entry.level {
+            Level::Error => Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            Level::Warn => Style::default().fg(Color::Yellow),
+            Level::Info => Style::default().fg(Color::Gray),
+            Level::Debug | Level::Trace => Style::default().fg(Color::DarkGray),
+        }
     }
 }
 
@@ -686,11 +698,11 @@ mod tests {
         app.apply(progress(100.0, 0, 20.0));
         app.apply(progress(100.0, 1, 10.0));
         assert_eq!(app.attempt, 1);
-        assert_eq!(app.loss_history, vec![(0.0, 20.0), (1.0, 10.0)]);
+        assert_eq!(app.loss_history, vec![(0.0, 100.0), (1.0, 50.0)]);
 
         app.apply(progress(100.0, 0, 15.0));
         assert_eq!(app.attempt, 2);
-        assert_eq!(app.loss_history, vec![(0.0, 15.0)]);
+        assert_eq!(app.loss_history, vec![(0.0, 100.0)]);
 
         app.apply(progress(99.0, 0, 12.0));
         assert_eq!(app.attempt, 1);
