@@ -1,8 +1,8 @@
 use anyhow::{Result, anyhow, bail};
 use clap::Parser;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
+use image::{DynamicImage, RgbaImage};
 use jagua_rs::Instant as CdeInstant;
-use jagua_rs::geometry::primitives::SPolygon;
 use jagua_rs::io::import::Importer;
 use jagua_rs::io::svg::s_layout_to_svg;
 use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
@@ -11,11 +11,13 @@ use rand::SeedableRng;
 use rand::rngs::Xoshiro256PlusPlus;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::symbols::Marker;
 use ratatui::text::{Line as TextLine, Span};
-use ratatui::widgets::canvas::{Canvas, Context, Line};
 use ratatui::widgets::{Block, Gauge, Paragraph};
 use ratatui::{DefaultTerminal, Frame};
+use ratatui_image::picker::{Picker, ProtocolType};
+use ratatui_image::protocol::StatefulProtocol;
+use ratatui_image::{Resize, StatefulImage};
+use resvg::{tiny_skia, usvg};
 use sparrow::EPOCH;
 use sparrow::config::{DEFAULT_SPARROW_CONFIG, ShrinkDecayStrategy, SparrowConfig};
 use sparrow::consts::{
@@ -39,6 +41,7 @@ const OUTPUT_DIR: &str = "output";
 const FRAME_INTERVAL: Duration = Duration::from_millis(100);
 const SNAPSHOT_INTERVAL: Duration = Duration::from_millis(100);
 const MAX_LOG_LINES: usize = 200;
+const MAX_RASTER_SIZE: (u32, u32) = (1600, 1000);
 
 fn main() -> Result<()> {
     let args = MainCli::parse();
@@ -177,7 +180,11 @@ fn run_tui(
     stop: Arc<AtomicBool>,
     total_duration: Duration,
 ) -> Result<SPSolution> {
-    let mut app = App::new(total_duration);
+    let picker = Picker::from_query_stdio()?;
+    if picker.protocol_type() == ProtocolType::Halfblocks {
+        bail!("this terminal does not support Kitty, Sixel, or iTerm2 images");
+    }
+    let mut app = App::new(picker, total_duration);
     let mut worker = Some(worker);
     let mut solution = None;
 
@@ -219,7 +226,9 @@ fn run_tui(
 }
 
 struct App {
-    solution: Option<SPSolution>,
+    picker: Picker,
+    svg_options: usvg::Options<'static>,
+    image: Option<StatefulProtocol>,
     report: Option<ReportType>,
     phase: &'static str,
     width: Option<f32>,
@@ -230,12 +239,15 @@ struct App {
     logs: VecDeque<LogEntry>,
     finished: bool,
     quit_requested: bool,
+    render_error: Option<String>,
 }
 
 impl App {
-    fn new(total_duration: Duration) -> Self {
+    fn new(picker: Picker, total_duration: Duration) -> Self {
         Self {
-            solution: None,
+            picker,
+            svg_options: svg_options(),
+            image: None,
             report: None,
             phase: "starting",
             width: None,
@@ -246,6 +258,7 @@ impl App {
             logs: VecDeque::new(),
             finished: false,
             quit_requested: false,
+            render_error: None,
         }
     }
 
@@ -255,8 +268,21 @@ impl App {
         self.width = Some(solution.strip_width());
         self.density = Some(solution.density(instance) * 100.0);
         self.report = Some(report);
-        self.solution = Some(solution);
         self.n_updates += 1;
+
+        let svg = s_layout_to_svg(
+            &solution.layout_snapshot,
+            instance,
+            DRAW_OPTIONS,
+            self.phase,
+        );
+        match rasterize_svg(&svg.to_string(), &self.svg_options) {
+            Ok(image) => {
+                self.image = Some(self.picker.new_resize_protocol(image));
+                self.render_error = None;
+            }
+            Err(error) => self.render_error = Some(error.to_string()),
+        }
     }
 
     fn push_log(&mut self, log: LogEntry) {
@@ -276,7 +302,7 @@ impl App {
         .areas(frame.area());
 
         self.render_dashboard(frame, dashboard_area);
-        self.render_canvas(frame, canvas_area);
+        self.render_image(frame, canvas_area);
         self.render_logs(frame, logs_area);
 
         let help = match (self.finished, self.quit_requested) {
@@ -372,40 +398,27 @@ impl App {
         );
     }
 
-    fn render_canvas(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
-        let Some(solution) = &self.solution else {
-            frame.render_widget(
-                Paragraph::new("Waiting for the initial layout...")
-                    .block(Block::bordered().title(" Live packing ")),
-                area,
-            );
-            return;
-        };
-
-        let snapshot = &solution.layout_snapshot;
-        let container = &snapshot.container;
-        let bbox = container.outer_cd.bbox;
-        let canvas = Canvas::default()
-            .block(
-                Block::bordered()
-                    .title(" Live packing ")
-                    .border_style(Style::default().fg(Color::DarkGray)),
-            )
-            .marker(Marker::Braille)
-            .x_bounds([f64::from(bbox.x_min), f64::from(bbox.x_max)])
-            .y_bounds([f64::from(bbox.y_min), f64::from(bbox.y_max)])
-            .paint(|context| {
-                draw_polygon(context, &container.outer_cd, Color::White);
-                for quality_zone in container.quality_zones.iter().flatten() {
-                    for shape in &quality_zone.shapes_cd {
-                        draw_polygon(context, shape, Color::Red);
-                    }
-                }
-                for (_, item) in &snapshot.placed_items {
-                    draw_polygon(context, &item.shape, item_color(item.item_id));
-                }
-            });
-        frame.render_widget(canvas, area);
+    fn render_image(&mut self, frame: &mut Frame, area: ratatui::layout::Rect) {
+        let block = Block::bordered()
+            .title(" Live packing ")
+            .border_style(Style::default().fg(Color::DarkGray));
+        let inner = block.inner(area);
+        frame.render_widget(block, area);
+        match &mut self.image {
+            Some(image) => frame.render_stateful_widget(
+                StatefulImage::new().resize(Resize::Fit(None)),
+                inner,
+                image,
+            ),
+            None => frame.render_widget(
+                Paragraph::new(
+                    self.render_error
+                        .as_deref()
+                        .unwrap_or("Waiting for the initial layout..."),
+                ),
+                inner,
+            ),
+        }
     }
 
     fn render_logs(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
@@ -439,30 +452,6 @@ impl App {
             area,
         );
     }
-}
-
-fn draw_polygon(context: &mut Context, polygon: &SPolygon, color: Color) {
-    for edge in polygon.edge_iter() {
-        context.draw(&Line::new(
-            f64::from(edge.start.0),
-            f64::from(edge.start.1),
-            f64::from(edge.end.0),
-            f64::from(edge.end.1),
-            color,
-        ));
-    }
-}
-
-fn item_color(item_id: usize) -> Color {
-    const COLORS: [Color; 6] = [
-        Color::Cyan,
-        Color::Green,
-        Color::Yellow,
-        Color::Magenta,
-        Color::LightBlue,
-        Color::LightGreen,
-    ];
-    COLORS[item_id % COLORS.len()]
 }
 
 fn report_is_feasible(report: &ReportType) -> bool {
@@ -604,37 +593,44 @@ fn report_label(report: &ReportType) -> &'static str {
     }
 }
 
+fn svg_options() -> usvg::Options<'static> {
+    let mut options = usvg::Options::default();
+    options.fontdb_mut().load_system_fonts();
+    options
+}
+
+fn rasterize_svg(svg: &str, options: &usvg::Options) -> Result<DynamicImage> {
+    let tree = usvg::Tree::from_str(svg, options)?;
+    let source = tree.size();
+    let scale =
+        (MAX_RASTER_SIZE.0 as f32 / source.width()).min(MAX_RASTER_SIZE.1 as f32 / source.height());
+    let width = (source.width() * scale).round().max(1.0) as u32;
+    let height = (source.height() * scale).round().max(1.0) as u32;
+    let mut pixmap =
+        tiny_skia::Pixmap::new(width, height).ok_or_else(|| anyhow!("SVG raster is too large"))?;
+    pixmap.fill(tiny_skia::Color::WHITE);
+    resvg::render(
+        &tree,
+        tiny_skia::Transform::from_scale(scale, scale),
+        &mut pixmap.as_mut(),
+    );
+    let pixels = RgbaImage::from_raw(width, height, pixmap.data().to_vec())
+        .ok_or_else(|| anyhow!("invalid SVG raster buffer"))?;
+    Ok(DynamicImage::ImageRgba8(pixels))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jagua_rs::geometry::primitives::Point;
-    use ratatui::Terminal;
-    use ratatui::backend::TestBackend;
 
     #[test]
-    fn draws_an_arbitrary_polygon() {
-        let polygon =
-            SPolygon::new(vec![Point(1.0, 1.0), Point(9.0, 1.0), Point(5.0, 9.0)]).unwrap();
-        let mut terminal = Terminal::new(TestBackend::new(20, 10)).unwrap();
+    fn rasterizes_svg_with_its_aspect_ratio() {
+        let image = rasterize_svg(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><rect width="200" height="100" fill="red"/></svg>"#,
+            &svg_options(),
+        )
+        .unwrap();
 
-        terminal
-            .draw(|frame| {
-                let canvas = Canvas::default()
-                    .marker(Marker::Braille)
-                    .x_bounds([0.0, 10.0])
-                    .y_bounds([0.0, 10.0])
-                    .paint(|context| draw_polygon(context, &polygon, Color::Cyan));
-                frame.render_widget(canvas, frame.area());
-            })
-            .unwrap();
-
-        assert!(
-            terminal
-                .backend()
-                .buffer()
-                .content
-                .iter()
-                .any(|cell| cell.symbol() != " ")
-        );
+        assert_eq!((image.width(), image.height()), (1600, 800));
     }
 }
