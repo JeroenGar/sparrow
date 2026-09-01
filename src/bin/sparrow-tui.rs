@@ -459,28 +459,12 @@ impl App {
             metrics_area,
         );
 
-        let [loss_area, phase_progress_area, time_area] = Layout::vertical([
+        let [time_area, phase_progress_area, loss_area] = Layout::vertical([
             Constraint::Length(1),
             Constraint::Length(1),
             Constraint::Length(1),
         ])
         .areas(progress_area);
-        let loss_remaining = self.loss_remaining.unwrap_or(100.0);
-        frame.render_widget(
-            Gauge::default()
-                .ratio((loss_remaining / 100.0) as f64)
-                .label(match self.loss_remaining {
-                    Some(loss) => format!("collision loss  {loss:.1}%"),
-                    None => "collision loss  -".to_owned(),
-                })
-                .gauge_style(
-                    Style::default()
-                        .fg(COLOR_LOSS)
-                        .bg(COLOR_TRACK)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            loss_area,
-        );
         let phase_progress = match self.phase {
             "exploration" => self.budget.max_attempts.map(|max_attempts| {
                 let attempt = self.attempt.min(max_attempts);
@@ -502,7 +486,7 @@ impl App {
             }),
             _ => None,
         };
-        let time_area = match phase_progress {
+        let loss_area = match phase_progress {
             Some((ratio, label)) => {
                 frame.render_widget(
                     Gauge::default().ratio(ratio).label(label).gauge_style(
@@ -513,7 +497,7 @@ impl App {
                     ),
                     phase_progress_area,
                 );
-                time_area
+                loss_area
             }
             None => phase_progress_area,
         };
@@ -567,6 +551,22 @@ impl App {
                 Style::default().fg(COLOR_TEXT).add_modifier(Modifier::BOLD),
             );
         }
+        let collision_progress = self.loss_remaining.map(|loss| 100.0 - loss);
+        frame.render_widget(
+            Gauge::default()
+                .ratio((collision_progress.unwrap_or(0.0) / 100.0) as f64)
+                .label(match collision_progress {
+                    Some(progress) => format!("collision progress  {progress:.1}%"),
+                    None => "collision progress  -".to_owned(),
+                })
+                .gauge_style(
+                    Style::default()
+                        .fg(COLOR_LOSS)
+                        .bg(COLOR_TRACK)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            loss_area,
+        );
     }
 
     fn render_logs(&mut self, frame: &mut Frame, area: Rect) {
