@@ -1,7 +1,6 @@
 use anyhow::{Result, anyhow, bail};
 use clap::Parser;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
-use image::{DynamicImage, RgbaImage};
 use jagua_rs::Instant as CdeInstant;
 use jagua_rs::io::import::Importer;
 use jagua_rs::io::svg::s_layout_to_svg;
@@ -14,10 +13,6 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line as TextLine, Span};
 use ratatui::widgets::{Block, Gauge, Paragraph};
 use ratatui::{DefaultTerminal, Frame};
-use ratatui_image::picker::{Picker, ProtocolType};
-use ratatui_image::protocol::StatefulProtocol;
-use ratatui_image::{Resize, StatefulImage};
-use resvg::{tiny_skia, usvg};
 use sparrow::EPOCH;
 use sparrow::config::{DEFAULT_SPARROW_CONFIG, ShrinkDecayStrategy, SparrowConfig};
 use sparrow::consts::{
@@ -27,6 +22,7 @@ use sparrow::consts::{
 use sparrow::optimizer::optimize;
 use sparrow::util::io::{self, ExtSPOutput, MainCli};
 use sparrow::util::listener::{ReportType, SolutionListener};
+use sparrow::util::svg_exporter::SvgExporter;
 use sparrow::util::terminator::Terminator;
 use std::collections::VecDeque;
 use std::fs;
@@ -38,10 +34,10 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 const OUTPUT_DIR: &str = "output";
+const LIVE_SVG_PATH: &str = "data/live/.live_solution.svg";
 const FRAME_INTERVAL: Duration = Duration::from_millis(100);
 const SNAPSHOT_INTERVAL: Duration = Duration::from_millis(100);
 const MAX_LOG_LINES: usize = 200;
-const MAX_RASTER_SIZE: (u32, u32) = (1600, 1000);
 
 fn main() -> Result<()> {
     let args = MainCli::parse();
@@ -180,11 +176,7 @@ fn run_tui(
     stop: Arc<AtomicBool>,
     total_duration: Duration,
 ) -> Result<SPSolution> {
-    let picker = Picker::from_query_stdio()?;
-    if picker.protocol_type() == ProtocolType::Halfblocks {
-        bail!("this terminal does not support Kitty, Sixel, or iTerm2 images");
-    }
-    let mut app = App::new(picker, total_duration);
+    let mut app = App::new(total_duration);
     let mut worker = Some(worker);
     let mut solution = None;
 
@@ -226,9 +218,6 @@ fn run_tui(
 }
 
 struct App {
-    picker: Picker,
-    svg_options: usvg::Options<'static>,
-    image: Option<StatefulProtocol>,
     report: Option<ReportType>,
     phase: &'static str,
     width: Option<f32>,
@@ -239,15 +228,11 @@ struct App {
     logs: VecDeque<LogEntry>,
     finished: bool,
     quit_requested: bool,
-    render_error: Option<String>,
 }
 
 impl App {
-    fn new(picker: Picker, total_duration: Duration) -> Self {
+    fn new(total_duration: Duration) -> Self {
         Self {
-            picker,
-            svg_options: svg_options(),
-            image: None,
             report: None,
             phase: "starting",
             width: None,
@@ -258,7 +243,6 @@ impl App {
             logs: VecDeque::new(),
             finished: false,
             quit_requested: false,
-            render_error: None,
         }
     }
 
@@ -269,20 +253,6 @@ impl App {
         self.density = Some(solution.density(instance) * 100.0);
         self.report = Some(report);
         self.n_updates += 1;
-
-        let svg = s_layout_to_svg(
-            &solution.layout_snapshot,
-            instance,
-            DRAW_OPTIONS,
-            self.phase,
-        );
-        match rasterize_svg(&svg.to_string(), &self.svg_options) {
-            Ok(image) => {
-                self.image = Some(self.picker.new_resize_protocol(image));
-                self.render_error = None;
-            }
-            Err(error) => self.render_error = Some(error.to_string()),
-        }
     }
 
     fn push_log(&mut self, log: LogEntry) {
@@ -293,22 +263,22 @@ impl App {
     }
 
     fn render(&mut self, frame: &mut Frame) {
-        let [dashboard_area, canvas_area, logs_area, help_area] = Layout::vertical([
+        let [dashboard_area, logs_area, help_area] = Layout::vertical([
             Constraint::Length(5),
             Constraint::Min(5),
-            Constraint::Length(8),
             Constraint::Length(1),
         ])
         .areas(frame.area());
 
         self.render_dashboard(frame, dashboard_area);
-        self.render_image(frame, canvas_area);
         self.render_logs(frame, logs_area);
 
         let help = match (self.finished, self.quit_requested) {
             (true, _) => "Finished. Press q or Esc to exit.",
             (false, true) => "Stopping optimizer...",
-            (false, false) => "q / Esc / Ctrl-C: stop and exit",
+            (false, false) => {
+                "Viewer: data/live/live_viewer.html   q / Esc / Ctrl-C: stop and exit"
+            }
         };
         frame.render_widget(
             Paragraph::new(help).style(Style::default().fg(Color::DarkGray)),
@@ -396,29 +366,6 @@ impl App {
                 ),
             progress_area,
         );
-    }
-
-    fn render_image(&mut self, frame: &mut Frame, area: ratatui::layout::Rect) {
-        let block = Block::bordered()
-            .title(" Live packing ")
-            .border_style(Style::default().fg(Color::DarkGray));
-        let inner = block.inner(area);
-        frame.render_widget(block, area);
-        match &mut self.image {
-            Some(image) => frame.render_stateful_widget(
-                StatefulImage::new().resize(Resize::Fit(None)),
-                inner,
-                image,
-            ),
-            None => frame.render_widget(
-                Paragraph::new(
-                    self.render_error
-                        .as_deref()
-                        .unwrap_or("Waiting for the initial layout..."),
-                ),
-                inner,
-            ),
-        }
     }
 
     fn render_logs(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
@@ -517,6 +464,7 @@ struct Update {
 
 struct TuiListener {
     updates: SyncSender<Update>,
+    live_svg: SvgExporter,
     last_snapshot: Option<Instant>,
 }
 
@@ -524,13 +472,14 @@ impl TuiListener {
     fn new(updates: SyncSender<Update>) -> Self {
         Self {
             updates,
+            live_svg: SvgExporter::new(None, None, Some(LIVE_SVG_PATH.to_owned())),
             last_snapshot: None,
         }
     }
 }
 
 impl SolutionListener for TuiListener {
-    fn report(&mut self, report: ReportType, solution: &SPSolution, _instance: &SPInstance) {
+    fn report(&mut self, report: ReportType, solution: &SPSolution, instance: &SPInstance) {
         let now = Instant::now();
         if report != ReportType::Final
             && self
@@ -540,17 +489,16 @@ impl SolutionListener for TuiListener {
             return;
         }
 
+        self.live_svg.report(report.clone(), solution, instance);
+        self.last_snapshot = Some(now);
         let update = Update {
             report: report.clone(),
             solution: solution.clone(),
         };
-        let sent = match report {
+        let _ = match report {
             ReportType::Final => self.updates.send(update).map_err(|_| ()),
             _ => self.updates.try_send(update).map_err(|_| ()),
         };
-        if sent.is_ok() {
-            self.last_snapshot = Some(now);
-        }
     }
 }
 
@@ -590,51 +538,5 @@ fn report_label(report: &ReportType) -> &'static str {
         ReportType::ExplFeas | ReportType::ExplInfeas | ReportType::ExplImproving => "exploration",
         ReportType::CmprFeas => "compression",
         ReportType::Final => "final",
-    }
-}
-
-fn svg_options() -> usvg::Options<'static> {
-    let mut options = usvg::Options::default();
-    options.fontdb_mut().load_system_fonts();
-    options.style_sheet =
-        Some("text { fill: #D8DEE9; } [stroke=black] { stroke: #D8DEE9; }".to_owned());
-    options
-}
-
-fn rasterize_svg(svg: &str, options: &usvg::Options) -> Result<DynamicImage> {
-    let tree = usvg::Tree::from_str(svg, options)?;
-    let source = tree.size();
-    let scale =
-        (MAX_RASTER_SIZE.0 as f32 / source.width()).min(MAX_RASTER_SIZE.1 as f32 / source.height());
-    let width = (source.width() * scale).round().max(1.0) as u32;
-    let height = (source.height() * scale).round().max(1.0) as u32;
-    let mut pixmap =
-        tiny_skia::Pixmap::new(width, height).ok_or_else(|| anyhow!("SVG raster is too large"))?;
-    resvg::render(
-        &tree,
-        tiny_skia::Transform::from_scale(scale, scale),
-        &mut pixmap.as_mut(),
-    );
-    let pixels = RgbaImage::from_raw(width, height, pixmap.data().to_vec())
-        .ok_or_else(|| anyhow!("invalid SVG raster buffer"))?;
-    Ok(DynamicImage::ImageRgba8(pixels))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn rasterizes_svg_with_its_aspect_ratio() {
-        let image = rasterize_svg(
-            r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><rect x="50" y="25" width="100" height="50" fill="red" stroke="black" stroke-width="10"/></svg>"#,
-            &svg_options(),
-        )
-        .unwrap();
-
-        assert_eq!((image.width(), image.height()), (1600, 800));
-        let image = image.to_rgba8();
-        assert_eq!(image.get_pixel(0, 0).0[3], 0);
-        assert_eq!(image.get_pixel(400, 400).0, [216, 222, 233, 255]);
     }
 }
