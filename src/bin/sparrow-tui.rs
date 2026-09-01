@@ -48,6 +48,88 @@ const COLOR_LINK: Color = Color::LightCyan;
 const COLOR_TEXT: Color = Color::White;
 const COLOR_MUTED: Color = Color::DarkGray;
 const COLOR_TRACK: Color = Color::Black;
+const COLOR_SPARROW_RUST: Color = Color::Rgb(190, 66, 35);
+const COLOR_SPARROW_BROWN: Color = Color::Rgb(150, 84, 44);
+const COLOR_SPARROW_GRAY: Color = Color::Rgb(160, 160, 160);
+const COLOR_SPARROW_OCHRE: Color = Color::Rgb(195, 139, 60);
+const COLOR_SPARROW_DARK: Color = Color::Gray;
+const SPARROW_LOGO: &[&[(&str, Color)]] = &[
+    &[
+        ("   ", Color::Reset),
+        ("⣠⣾", COLOR_SPARROW_DARK),
+        ("⣿⣿⣷", COLOR_SPARROW_RUST),
+        ("⣦⡀", COLOR_SPARROW_DARK),
+    ],
+    &[
+        (" ", Color::Reset),
+        ("⠐⢿⣿", COLOR_SPARROW_DARK),
+        ("⠐", COLOR_TEXT),
+        ("⣿⣿", COLOR_SPARROW_GRAY),
+        ("⣿⣿", COLOR_SPARROW_RUST),
+        ("⣷⣀", COLOR_SPARROW_DARK),
+    ],
+    &[
+        ("  ", Color::Reset),
+        ("⢸⣿⣿", COLOR_SPARROW_DARK),
+        ("⣿", COLOR_SPARROW_GRAY),
+        ("⣿", COLOR_TEXT),
+        ("⣿", COLOR_SPARROW_GRAY),
+        ("⣿⣿⣿⣷", COLOR_SPARROW_BROWN),
+        ("⣄", COLOR_SPARROW_DARK),
+    ],
+    &[
+        ("  ", Color::Reset),
+        ("⢻", COLOR_SPARROW_DARK),
+        ("⣿⣿⣿⣿⣿", COLOR_SPARROW_GRAY),
+        ("⣿⣿⣿⣿⣿", COLOR_SPARROW_BROWN),
+        ("⣆", COLOR_SPARROW_DARK),
+    ],
+    &[
+        ("  ", Color::Reset),
+        ("⠈", COLOR_SPARROW_DARK),
+        ("⢿", COLOR_SPARROW_BROWN),
+        ("⣿⣿⣿⣿⣿⣿⣿", COLOR_SPARROW_GRAY),
+        ("⣿", COLOR_SPARROW_BROWN),
+        ("⡿⠿⣿⣦⡄", COLOR_SPARROW_DARK),
+    ],
+    &[
+        ("   ", Color::Reset),
+        ("⢀⣽", COLOR_SPARROW_DARK),
+        ("⣿⣿", COLOR_SPARROW_BROWN),
+        ("⣿⣿", COLOR_SPARROW_GRAY),
+        ("⣿", COLOR_SPARROW_BROWN),
+        ("⣟⠁", COLOR_SPARROW_DARK),
+        ("   ", Color::Reset),
+        ("⠉", COLOR_SPARROW_DARK),
+    ],
+    &[
+        ("   ", Color::Reset),
+        ("⢸", COLOR_SPARROW_DARK),
+        ("⣿⣿⣿⣿⣿⣿", COLOR_SPARROW_OCHRE),
+        ("⣿", COLOR_SPARROW_BROWN),
+    ],
+    &[
+        ("   ", Color::Reset),
+        ("⠸", COLOR_SPARROW_DARK),
+        ("⣿⣿", COLOR_SPARROW_OCHRE),
+        ("⣿", COLOR_SPARROW_BROWN),
+        ("⣿⣿⣿", COLOR_SPARROW_OCHRE),
+        ("⡿", COLOR_SPARROW_BROWN),
+    ],
+];
+
+fn sparrow_logo() -> Vec<TextLine<'static>> {
+    SPARROW_LOGO
+        .iter()
+        .map(|line| {
+            TextLine::from(
+                line.iter()
+                    .map(|&(text, color)| Span::styled(text, Style::default().fg(color)))
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .collect()
+}
 
 fn main() -> Result<()> {
     let args = MainCli::parse();
@@ -363,7 +445,7 @@ impl App {
 
     fn render(&mut self, frame: &mut Frame) {
         let [summary_area, logs_area, help_area] = Layout::vertical([
-            Constraint::Length(6),
+            Constraint::Length(10),
             Constraint::Min(5),
             Constraint::Length(1),
         ])
@@ -391,12 +473,28 @@ impl App {
             .border_style(Style::default().fg(COLOR_ACCENT));
         let inner = block.inner(area);
         frame.render_widget(block, area);
-        let [metrics_area, _, progress_area] = Layout::horizontal([
-            Constraint::Percentage(50),
-            Constraint::Length(2),
+        let [logo_area, _, metrics_area, _, progress_area] = Layout::horizontal([
+            Constraint::Length(18),
+            Constraint::Length(1),
+            Constraint::Min(34),
+            Constraint::Length(1),
             Constraint::Min(20),
         ])
         .areas(inner);
+        frame.render_widget(Paragraph::new(sparrow_logo()), logo_area);
+
+        let [_, metrics_area, _] = Layout::vertical([
+            Constraint::Length(2),
+            Constraint::Length(4),
+            Constraint::Fill(1),
+        ])
+        .areas(metrics_area);
+        let [_, progress_area, _] = Layout::vertical([
+            Constraint::Length(2),
+            Constraint::Length(3),
+            Constraint::Fill(1),
+        ])
+        .areas(progress_area);
 
         let (state, state_color) = match (&self.report, self.loss_remaining) {
             (Some(ReportType::Final), _) => ("FINISHED", COLOR_ACCENT),
