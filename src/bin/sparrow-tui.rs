@@ -473,7 +473,7 @@ impl App {
 
     fn render_summary(&self, frame: &mut Frame, area: Rect) {
         let block = Block::bordered()
-            .title(" sparrow search overview ")
+            .title(" sparrow dashboard ")
             .border_style(Style::default().fg(COLOR_ACCENT));
         let inner = block.inner(area);
         frame.render_widget(block, area);
@@ -504,12 +504,11 @@ impl App {
         };
         let phase = TextLine::from(vec![
             Span::styled(
-                format!(" {} ", self.phase),
+                format!("{:<18}", self.phase),
                 Style::default()
                     .fg(COLOR_ACCENT)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::raw("  "),
             Span::styled(
                 state,
                 Style::default()
@@ -520,14 +519,13 @@ impl App {
         let elapsed = self
             .finished_elapsed
             .unwrap_or_else(|| self.started.elapsed());
+        let width = self
+            .width
+            .map_or("-".to_owned(), |width| format!("{width:.3}"));
         let dimensions = TextLine::from(vec![
             Span::styled("width ", Style::default().fg(COLOR_MUTED)),
-            Span::styled(
-                self.width
-                    .map_or("-".to_owned(), |width| format!("{width:.3}")),
-                Style::default().fg(COLOR_TEXT),
-            ),
-            Span::styled("   density ", Style::default().fg(COLOR_MUTED)),
+            Span::styled(format!("{width:<12}"), Style::default().fg(COLOR_TEXT)),
+            Span::styled("density ", Style::default().fg(COLOR_MUTED)),
             Span::styled(
                 self.density
                     .map_or("-".to_owned(), |density| format!("{density:.3}%")),
@@ -611,12 +609,26 @@ impl App {
             elapsed.as_secs(),
             self.budget.total_duration.as_secs()
         );
-        let time_label = match self.budget.exploration_boundary {
-            Some(boundary) if boundary < 0.5 => {
-                format!("{time_label:>width$}", width = time_area.width.into())
+        let (time_label, boundary_marker_x) = match self.budget.exploration_boundary {
+            Some(boundary) if time_area.width > 0 => {
+                let marker_offset =
+                    (f64::from(time_area.width.saturating_sub(1)) * boundary).round() as u16;
+                let label_width = time_label.len();
+                let space_left = usize::from(marker_offset);
+                let space_right = usize::from(time_area.width.saturating_sub(marker_offset + 1));
+                match (space_left >= label_width, space_right >= label_width) {
+                    (true, _) => (
+                        format!("{time_label:<width$}", width = time_area.width.into()),
+                        Some(time_area.x + marker_offset),
+                    ),
+                    (_, true) => (
+                        format!("{time_label:>width$}", width = time_area.width.into()),
+                        Some(time_area.x + marker_offset),
+                    ),
+                    _ => (time_label, None),
+                }
             }
-            Some(_) => format!("{time_label:<width$}", width = time_area.width.into()),
-            None => time_label,
+            _ => (time_label, None),
         };
         frame.render_widget(
             Gauge::default()
@@ -630,11 +642,7 @@ impl App {
                 ),
             time_area,
         );
-        if let Some(boundary) = self.budget.exploration_boundary
-            && time_area.width > 0
-        {
-            let marker_x = time_area.x
-                + (f64::from(time_area.width.saturating_sub(1)) * boundary).round() as u16;
+        if let Some(marker_x) = boundary_marker_x {
             frame.buffer_mut()[(marker_x, time_area.y)]
                 .set_symbol("│")
                 .set_style(
