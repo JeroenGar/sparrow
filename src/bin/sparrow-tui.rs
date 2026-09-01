@@ -40,6 +40,9 @@ const LIVE_VIEWER_PATH: &str = "data/live/live_viewer.html";
 const LIVE_SVG_PATH: &str = "data/live/.live_solution.svg";
 const FRAME_INTERVAL: Duration = Duration::from_millis(100);
 const SNAPSHOT_INTERVAL: Duration = Duration::from_millis(100);
+const LOGO_WIDTH: u16 = 19;
+const METRICS_WIDTH: u16 = 34;
+const PROGRESS_MAX_WIDTH: u16 = 60;
 const COLOR_ACCENT: Color = Color::LightGreen;
 const COLOR_ACTIVE: Color = Color::LightYellow;
 const COLOR_LOSS: Color = Color::LightBlue;
@@ -477,14 +480,20 @@ impl App {
             .border_style(Style::default().fg(COLOR_ACCENT));
         let inner = block.inner(area);
         frame.render_widget(block, area);
-        let [logo_area, _, metrics_area, _, progress_area] = Layout::horizontal([
-            Constraint::Length(19),
+        let [logo_area, _, metrics_area, _, progress_space] = Layout::horizontal([
+            Constraint::Length(LOGO_WIDTH),
             Constraint::Length(1),
-            Constraint::Min(34),
+            Constraint::Length(METRICS_WIDTH),
             Constraint::Length(1),
-            Constraint::Min(20),
+            Constraint::Min(0),
         ])
         .areas(inner);
+        let progress_area = Rect::new(
+            progress_space.x,
+            progress_space.y,
+            progress_space.width.min(PROGRESS_MAX_WIDTH),
+            progress_space.height,
+        );
         frame.render_widget(Paragraph::new(sparrow_logo()), logo_area);
 
         let [_, metrics_area, _] = Layout::vertical([
@@ -553,16 +562,6 @@ impl App {
             metrics_area,
         );
 
-        let [_, time_area, _, phase_progress_area, _, loss_area, _] = Layout::vertical([
-            Constraint::Length(1),
-            Constraint::Length(1),
-            Constraint::Length(1),
-            Constraint::Length(1),
-            Constraint::Length(1),
-            Constraint::Length(1),
-            Constraint::Fill(1),
-        ])
-        .areas(progress_area);
         let phase_progress = match self.phase {
             "exploration" => self.budget.max_attempts.map(|max_attempts| {
                 let attempt = self.attempt.min(max_attempts);
@@ -584,21 +583,32 @@ impl App {
             }),
             _ => None,
         };
-        let loss_area = match phase_progress {
-            Some((ratio, label)) => {
-                frame.render_widget(
-                    Gauge::default().ratio(ratio).label(label).gauge_style(
-                        Style::default()
-                            .fg(COLOR_ACTIVE)
-                            .bg(COLOR_TRACK)
-                            .add_modifier(Modifier::BOLD),
-                    ),
-                    phase_progress_area,
-                );
-                loss_area
-            }
-            None => phase_progress_area,
-        };
+        let has_phase_progress = phase_progress.is_some();
+        let stack_height = if has_phase_progress { 5 } else { 3 };
+        let stack_y = progress_area.y
+            + progress_area
+                .height
+                .saturating_sub(stack_height)
+                .div_ceil(2);
+        let time_area = Rect::new(progress_area.x, stack_y, progress_area.width, 1);
+        let phase_progress_area = Rect::new(progress_area.x, stack_y + 2, progress_area.width, 1);
+        let loss_area = Rect::new(
+            progress_area.x,
+            stack_y + if has_phase_progress { 4 } else { 2 },
+            progress_area.width,
+            1,
+        );
+        if let Some((ratio, label)) = phase_progress {
+            frame.render_widget(
+                Gauge::default().ratio(ratio).label(label).gauge_style(
+                    Style::default()
+                        .fg(COLOR_ACTIVE)
+                        .bg(COLOR_TRACK)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                phase_progress_area,
+            );
+        }
         let time_progress = match self.finished {
             true => 1.0,
             false => elapsed.as_secs_f64() / self.budget.total_duration.as_secs_f64().max(0.001),
