@@ -13,6 +13,11 @@ path = "src/main.rs"
 name = "bench"
 path = "src/bench.rs"
 
+[[bin]]
+name = "sparrow-tui"
+path = "src/bin/sparrow-tui.rs"
+required-features = ["tui"]
+
 [dependencies]
 jagua-rs = { features = ["spp"], version = "0.8.0" }
 rand = "0.10"
@@ -34,6 +39,11 @@ jiff = "0.2"
 test-case = "3.3"
 clap = { version = "4.6", features = ["derive"] }
 anyhow = "1.0"
+crossterm = { version = "0.29", optional = true }
+image = { version = "0.25", default-features = false, optional = true }
+ratatui = { version = "0.30", optional = true }
+ratatui-image = { version = "11.0", default-features = false, features = ["crossterm"], optional = true }
+resvg = { version = "0.48", optional = true }
 
 getrandom = { version = "0.4", features = ["wasm_js"] }
 
@@ -44,6 +54,7 @@ ctrlc = "3.5"
 live_svg = []
 only_final_svg = []
 simd = []
+tui = ["dep:crossterm", "dep:image", "dep:ratatui", "dep:ratatui-image", "dep:resvg"]
 
 [profile.dev]
 overflow-checks = true
