@@ -519,6 +519,10 @@ fn log_style(entry: &LogEntry) -> Style {
         Style::default()
             .fg(Color::LightYellow)
             .add_modifier(Modifier::BOLD)
+    } else if entry.message.contains("[SEP] finished") {
+        Style::default()
+            .fg(Color::White)
+            .add_modifier(Modifier::BOLD)
     } else {
         match entry.level {
             Level::Error => Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
