@@ -666,8 +666,8 @@ impl App {
             Gauge::default()
                 .ratio((collision_progress.unwrap_or(0.0) / 100.0) as f64)
                 .label(match collision_progress {
-                    Some(progress) => format!("collision progress  {progress:.1}%"),
-                    None => "collision progress  -".to_owned(),
+                    Some(progress) => format!("separation progress  {progress:.1}%"),
+                    None => "separation progress  -".to_owned(),
                 })
                 .gauge_style(
                     Style::default()
