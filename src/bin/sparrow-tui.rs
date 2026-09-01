@@ -8,10 +8,11 @@ use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
 use log::{Level, Log, Metadata, Record};
 use rand::SeedableRng;
 use rand::rngs::Xoshiro256PlusPlus;
-use ratatui::layout::{Constraint, Layout};
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
+use ratatui::symbols::Marker;
 use ratatui::text::{Line as TextLine, Span};
-use ratatui::widgets::{Block, Gauge, Paragraph};
+use ratatui::widgets::{Axis, Block, Chart, Dataset, Gauge, GraphType, Paragraph};
 use ratatui::{DefaultTerminal, Frame};
 use sparrow::EPOCH;
 use sparrow::config::{DEFAULT_SPARROW_CONFIG, ShrinkDecayStrategy, SparrowConfig};
@@ -21,7 +22,9 @@ use sparrow::consts::{
 };
 use sparrow::optimizer::optimize;
 use sparrow::util::io::{self, ExtSPOutput, MainCli};
-use sparrow::util::listener::{ReportType, SolutionListener};
+use sparrow::util::listener::{
+    OptimizationPhase, ReportType, SeparationProgress, SolutionListener,
+};
 use sparrow::util::svg_exporter::SvgExporter;
 use sparrow::util::terminator::Terminator;
 use std::collections::VecDeque;
@@ -29,7 +32,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{self, Receiver, SyncSender};
+use std::sync::mpsc::{self, Receiver, Sender, SyncSender};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
@@ -69,7 +72,7 @@ fn main() -> Result<()> {
         .map(|solution| jagua_rs::probs::spp::io::import_solution(&instance, &solution));
 
     let stop = Arc::new(AtomicBool::new(false));
-    let (updates_tx, updates_rx) = mpsc::sync_channel(1);
+    let (updates_tx, updates_rx) = mpsc::channel();
     let worker = start_optimizer(
         instance.clone(),
         initial_solution,
@@ -80,15 +83,7 @@ fn main() -> Result<()> {
     );
 
     let solution = ratatui::run(|terminal| {
-        run_tui(
-            terminal,
-            instance.clone(),
-            updates_rx,
-            logs_rx,
-            worker,
-            stop,
-            total_duration,
-        )
+        run_tui(terminal, updates_rx, logs_rx, worker, stop, total_duration)
     })?;
 
     let svg_path = format!("{OUTPUT_DIR}/final_{}.svg", ext_instance.name);
@@ -149,7 +144,7 @@ fn start_optimizer(
     config: SparrowConfig,
     rng: Xoshiro256PlusPlus,
     stop: Arc<AtomicBool>,
-    updates: SyncSender<Update>,
+    updates: Sender<Update>,
 ) -> JoinHandle<SPSolution> {
     thread::Builder::new()
         .name("optimizer".into())
@@ -169,7 +164,6 @@ fn start_optimizer(
 
 fn run_tui(
     terminal: &mut DefaultTerminal,
-    instance: SPInstance,
     updates: Receiver<Update>,
     logs: Receiver<LogEntry>,
     worker: JoinHandle<SPSolution>,
@@ -184,8 +178,8 @@ fn run_tui(
         for log in logs.try_iter() {
             app.push_log(log);
         }
-        if let Some(update) = updates.try_iter().last() {
-            app.apply(update, &instance);
+        for update in updates.try_iter() {
+            app.apply(update);
         }
         if worker.as_ref().is_some_and(JoinHandle::is_finished) {
             solution = Some(
@@ -196,6 +190,7 @@ fn run_tui(
                     .map_err(|_| anyhow!("optimizer thread panicked"))?,
             );
             app.finished = true;
+            app.finished_elapsed = Some(app.started.elapsed());
         }
 
         terminal.draw(|frame| app.render(frame))?;
@@ -222,11 +217,16 @@ struct App {
     phase: &'static str,
     width: Option<f32>,
     density: Option<f32>,
+    separation_width: Option<f32>,
+    attempt: usize,
+    iteration: usize,
+    min_loss: Option<f32>,
+    loss_history: Vec<(f64, f64)>,
     started: Instant,
     total_duration: Duration,
-    n_updates: usize,
     logs: VecDeque<LogEntry>,
     finished: bool,
+    finished_elapsed: Option<Duration>,
     quit_requested: bool,
 }
 
@@ -237,22 +237,54 @@ impl App {
             phase: "starting",
             width: None,
             density: None,
+            separation_width: None,
+            attempt: 0,
+            iteration: 0,
+            min_loss: None,
+            loss_history: Vec::new(),
             started: Instant::now(),
             total_duration,
-            n_updates: 0,
             logs: VecDeque::new(),
             finished: false,
+            finished_elapsed: None,
             quit_requested: false,
         }
     }
 
-    fn apply(&mut self, update: Update, instance: &SPInstance) {
-        let Update { report, solution } = update;
-        self.phase = report_label(&report);
-        self.width = Some(solution.strip_width());
-        self.density = Some(solution.density(instance) * 100.0);
-        self.report = Some(report);
-        self.n_updates += 1;
+    fn apply(&mut self, update: Update) {
+        match update {
+            Update::Solution {
+                report,
+                width,
+                density,
+            } => {
+                if report == ReportType::Final {
+                    self.phase = "final";
+                }
+                self.width = Some(width);
+                self.density = Some(density);
+                self.report = Some(report);
+            }
+            Update::Phase(phase) => self.phase = phase_label(phase),
+            Update::Separation(progress) => self.apply_separation_progress(progress),
+        }
+    }
+
+    fn apply_separation_progress(&mut self, progress: SeparationProgress) {
+        if progress.iteration == 0 {
+            self.attempt = match self.separation_width == Some(progress.strip_width) {
+                true => self.attempt + 1,
+                false => 1,
+            };
+            self.separation_width = Some(progress.strip_width);
+            self.loss_history.clear();
+        }
+        self.width = Some(progress.strip_width);
+        self.density = Some(progress.density);
+        self.iteration = progress.iteration;
+        self.min_loss = Some(progress.min_loss);
+        self.loss_history
+            .push((progress.iteration as f64, progress.min_loss as f64));
     }
 
     fn push_log(&mut self, log: LogEntry) {
@@ -263,14 +295,16 @@ impl App {
     }
 
     fn render(&mut self, frame: &mut Frame) {
-        let [dashboard_area, logs_area, help_area] = Layout::vertical([
-            Constraint::Length(5),
+        let [summary_area, loss_area, logs_area, help_area] = Layout::vertical([
+            Constraint::Length(6),
+            Constraint::Length(11),
             Constraint::Min(5),
             Constraint::Length(1),
         ])
         .areas(frame.area());
 
-        self.render_dashboard(frame, dashboard_area);
+        self.render_summary(frame, summary_area);
+        self.render_loss_chart(frame, loss_area);
         self.render_logs(frame, logs_area);
 
         let help = match (self.finished, self.quit_requested) {
@@ -286,24 +320,27 @@ impl App {
         );
     }
 
-    fn render_dashboard(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
+    fn render_summary(&self, frame: &mut Frame, area: Rect) {
         let block = Block::bordered()
             .title(" Sparrow search ")
             .border_style(Style::default().fg(Color::Cyan));
         let inner = block.inner(area);
         frame.render_widget(block, area);
         let [metrics_area, progress_area] =
-            Layout::vertical([Constraint::Length(2), Constraint::Length(1)]).areas(inner);
+            Layout::vertical([Constraint::Length(3), Constraint::Length(1)]).areas(inner);
 
-        let (state, state_color) = match self.report.as_ref() {
-            Some(report) if report_is_feasible(report) => ("FEASIBLE", Color::Green),
-            Some(_) => ("INFEASIBLE", Color::Red),
-            None => ("STARTING", Color::Yellow),
+        let (state, state_color) = match (&self.report, self.min_loss) {
+            (Some(ReportType::Final), _) => ("FINISHED", Color::Green),
+            (_, Some(0.0)) => ("FEASIBLE", Color::Green),
+            (_, Some(_)) => ("SEPARATING", Color::Yellow),
+            (Some(report), None) if report_is_feasible(report) => ("FEASIBLE", Color::Green),
+            (Some(_), None) => ("INFEASIBLE", Color::Red),
+            (None, None) => ("STARTING", Color::Yellow),
         };
-        let phase_color = match self.report {
-            Some(ReportType::CmprFeas | ReportType::Final) => Color::Magenta,
-            Some(_) => Color::Cyan,
-            None => Color::DarkGray,
+        let phase_color = match self.phase {
+            "exploration" => Color::Cyan,
+            "compression" | "final" => Color::Magenta,
+            _ => Color::DarkGray,
         };
         let phase = TextLine::from(vec![
             Span::styled(
@@ -321,9 +358,10 @@ impl App {
                     .add_modifier(Modifier::BOLD),
             ),
         ]);
-        let elapsed = self.started.elapsed();
-        let update_rate = self.n_updates as f64 / elapsed.as_secs_f64().max(0.001);
-        let metrics = TextLine::from(vec![
+        let elapsed = self
+            .finished_elapsed
+            .unwrap_or_else(|| self.started.elapsed());
+        let dimensions = TextLine::from(vec![
             Span::styled("width ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 self.width
@@ -336,18 +374,33 @@ impl App {
                     .map_or("-".to_owned(), |density| format!("{density:.3}%")),
                 Style::default().fg(Color::Green),
             ),
-            Span::styled("   updates ", Style::default().fg(Color::DarkGray)),
+            Span::styled("   min loss ", Style::default().fg(Color::DarkGray)),
             Span::styled(
-                format!("{update_rate:.1}/s"),
-                Style::default().fg(Color::Yellow),
-            ),
-            Span::styled("   elapsed ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                format!("{}s", elapsed.as_secs()),
-                Style::default().fg(Color::White),
+                self.min_loss
+                    .map_or("-".to_owned(), |loss| format!("{loss:.2}")),
+                Style::default().fg(match self.min_loss {
+                    Some(0.0) => Color::Green,
+                    Some(_) => Color::Yellow,
+                    None => Color::DarkGray,
+                }),
             ),
         ]);
-        frame.render_widget(Paragraph::new(vec![phase, metrics]), metrics_area);
+        let attempt = TextLine::from(vec![
+            Span::styled("attempt ", Style::default().fg(Color::DarkGray)),
+            Span::styled(self.attempt.to_string(), Style::default().fg(Color::Yellow)),
+            Span::styled(
+                " at this width   iteration ",
+                Style::default().fg(Color::DarkGray),
+            ),
+            Span::styled(
+                self.iteration.to_string(),
+                Style::default().fg(Color::LightCyan),
+            ),
+        ]);
+        frame.render_widget(
+            Paragraph::new(vec![phase, dimensions, attempt]),
+            metrics_area,
+        );
 
         let progress = match self.finished {
             true => 1.0,
@@ -357,7 +410,12 @@ impl App {
         frame.render_widget(
             Gauge::default()
                 .ratio(progress)
-                .label(format!("time budget {:>3.0}%", progress * 100.0))
+                .label(format!(
+                    "{}s / {}s  {:>3.0}%",
+                    elapsed.as_secs(),
+                    self.total_duration.as_secs(),
+                    progress * 100.0
+                ))
                 .gauge_style(
                     Style::default()
                         .fg(Color::LightCyan)
@@ -368,7 +426,65 @@ impl App {
         );
     }
 
-    fn render_logs(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
+    fn render_loss_chart(&self, frame: &mut Frame, area: Rect) {
+        let title = match self.separation_width {
+            Some(width) => format!(
+                " Minimum collision loss · attempt {} at width {width:.3} ",
+                self.attempt
+            ),
+            None => " Minimum collision loss ".to_owned(),
+        };
+        let block = Block::bordered()
+            .title(title)
+            .border_style(Style::default().fg(Color::DarkGray));
+        if self.loss_history.is_empty() {
+            frame.render_widget(
+                Paragraph::new("Waiting for the first separation attempt...")
+                    .style(Style::default().fg(Color::DarkGray))
+                    .block(block),
+                area,
+            );
+            return;
+        }
+
+        let max_iteration = self.iteration.max(1) as f64;
+        let max_loss = self
+            .loss_history
+            .iter()
+            .map(|(_, loss)| *loss)
+            .fold(0.0, f64::max)
+            .max(1.0);
+        let dataset = Dataset::default()
+            .marker(Marker::Braille)
+            .graph_type(GraphType::Line)
+            .style(Style::default().fg(Color::LightCyan))
+            .data(&self.loss_history);
+        let chart = Chart::new(vec![dataset])
+            .block(block)
+            .x_axis(
+                Axis::default()
+                    .title(" iteration ")
+                    .style(Style::default().fg(Color::DarkGray))
+                    .bounds([0.0, max_iteration])
+                    .labels(vec![
+                        TextLine::from("0"),
+                        TextLine::from(self.iteration.to_string()),
+                    ]),
+            )
+            .y_axis(
+                Axis::default()
+                    .title(" min loss ")
+                    .style(Style::default().fg(Color::DarkGray))
+                    .bounds([0.0, max_loss])
+                    .labels(vec![
+                        TextLine::from("0"),
+                        TextLine::from(format!("{max_loss:.2}")),
+                    ]),
+            );
+        frame.render_widget(chart, area);
+    }
+
+    fn render_logs(&self, frame: &mut Frame, area: Rect) {
         let visible_lines = area.height.saturating_sub(2) as usize;
         let lines = self
             .logs
@@ -457,19 +573,24 @@ fn init_tui_logger(
     Ok(())
 }
 
-struct Update {
-    report: ReportType,
-    solution: SPSolution,
+enum Update {
+    Solution {
+        report: ReportType,
+        width: f32,
+        density: f32,
+    },
+    Phase(OptimizationPhase),
+    Separation(SeparationProgress),
 }
 
 struct TuiListener {
-    updates: SyncSender<Update>,
+    updates: Sender<Update>,
     live_svg: SvgExporter,
     last_snapshot: Option<Instant>,
 }
 
 impl TuiListener {
-    fn new(updates: SyncSender<Update>) -> Self {
+    fn new(updates: Sender<Update>) -> Self {
         Self {
             updates,
             live_svg: SvgExporter::new(None, None, Some(LIVE_SVG_PATH.to_owned())),
@@ -491,14 +612,20 @@ impl SolutionListener for TuiListener {
 
         self.live_svg.report(report.clone(), solution, instance);
         self.last_snapshot = Some(now);
-        let update = Update {
+        let update = Update::Solution {
             report: report.clone(),
-            solution: solution.clone(),
+            width: solution.strip_width(),
+            density: solution.density(instance) * 100.0,
         };
-        let _ = match report {
-            ReportType::Final => self.updates.send(update).map_err(|_| ()),
-            _ => self.updates.try_send(update).map_err(|_| ()),
-        };
+        let _ = self.updates.send(update);
+    }
+
+    fn report_phase(&mut self, phase: OptimizationPhase) {
+        let _ = self.updates.send(Update::Phase(phase));
+    }
+
+    fn report_separation_progress(&mut self, progress: SeparationProgress) {
+        let _ = self.updates.send(Update::Separation(progress));
     }
 }
 
@@ -533,10 +660,39 @@ impl Terminator for TuiTerminator {
     }
 }
 
-fn report_label(report: &ReportType) -> &'static str {
-    match report {
-        ReportType::ExplFeas | ReportType::ExplInfeas | ReportType::ExplImproving => "exploration",
-        ReportType::CmprFeas => "compression",
-        ReportType::Final => "final",
+fn phase_label(phase: OptimizationPhase) -> &'static str {
+    match phase {
+        OptimizationPhase::Exploration => "exploration",
+        OptimizationPhase::Compression => "compression",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn groups_separation_attempts_by_width() {
+        let mut app = App::new(Duration::ZERO);
+        let progress = |strip_width, iteration, min_loss| {
+            Update::Separation(SeparationProgress {
+                strip_width,
+                density: 80.0,
+                iteration,
+                min_loss,
+            })
+        };
+
+        app.apply(progress(100.0, 0, 20.0));
+        app.apply(progress(100.0, 1, 10.0));
+        assert_eq!(app.attempt, 1);
+        assert_eq!(app.loss_history, vec![(0.0, 20.0), (1.0, 10.0)]);
+
+        app.apply(progress(100.0, 0, 15.0));
+        assert_eq!(app.attempt, 2);
+        assert_eq!(app.loss_history, vec![(0.0, 15.0)]);
+
+        app.apply(progress(99.0, 0, 12.0));
+        assert_eq!(app.attempt, 1);
     }
 }

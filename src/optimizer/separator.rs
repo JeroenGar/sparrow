@@ -3,7 +3,7 @@ use crate::optimizer::Terminator;
 use crate::quantify::tracker::{CTSnapshot, CollisionTracker};
 use crate::sample::search::SampleConfig;
 use crate::util::assertions::tracker_matches_layout;
-use crate::util::listener::{ReportType, SolutionListener};
+use crate::util::listener::{ReportType, SeparationProgress, SolutionListener};
 use crate::FMT;
 use itertools::Itertools;
 use jagua_rs::entities::PItemKey;
@@ -72,6 +72,10 @@ impl Separator {
     pub fn separate(&mut self, term: &impl Terminator, sol_listener: &mut impl SolutionListener) -> (SPSolution, CTSnapshot) {
         let mut min_loss_sol = (self.prob.save(), self.ct.save());
         let mut min_loss = self.ct.get_total_loss();
+        let strip_width = self.prob.strip_width();
+        let density = self.prob.density() * 100.0;
+        let progress = |iteration, min_loss| SeparationProgress { strip_width, density, iteration, min_loss };
+        sol_listener.report_separation_progress(progress(0, min_loss));
         log!(self.config.log_level,"[SEP] separating at width: {:.3} and loss: {} ", self.prob.strip_width(), FMT().fmt2(min_loss));
 
         let mut n_strikes = 0;
@@ -98,7 +102,7 @@ impl Separator {
                     //All collisions are resolved
                     log!(self.config.log_level,"[SEP] [s:{n_strikes},i:{n_iter}] (S)  min_l: {}",FMT().fmt2(loss));
                     min_loss_sol = (self.prob.save(), self.ct.save());
-                    break 'outer;
+                    min_loss = loss;
                 } else if loss < min_loss {
                     //Not all collisions are resolved, but we found a new 'best' solution
                     log!(self.config.log_level,"[SEP] [s:{n_strikes},i:{n_iter}] (*) min_l: {}",FMT().fmt2(loss));
@@ -112,6 +116,11 @@ impl Separator {
                 } else {
                     // No improvement this iteration
                     n_iter_no_improvement += 1;
+                }
+
+                sol_listener.report_separation_progress(progress(n_iter + 1, min_loss));
+                if loss == 0.0 {
+                    break 'outer;
                 }
 
                 // Update the GLS weights
