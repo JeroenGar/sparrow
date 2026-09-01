@@ -596,6 +596,8 @@ fn report_label(report: &ReportType) -> &'static str {
 fn svg_options() -> usvg::Options<'static> {
     let mut options = usvg::Options::default();
     options.fontdb_mut().load_system_fonts();
+    options.style_sheet =
+        Some("text { fill: #D8DEE9; } [stroke=black] { stroke: #D8DEE9; }".to_owned());
     options
 }
 
@@ -608,7 +610,6 @@ fn rasterize_svg(svg: &str, options: &usvg::Options) -> Result<DynamicImage> {
     let height = (source.height() * scale).round().max(1.0) as u32;
     let mut pixmap =
         tiny_skia::Pixmap::new(width, height).ok_or_else(|| anyhow!("SVG raster is too large"))?;
-    pixmap.fill(tiny_skia::Color::WHITE);
     resvg::render(
         &tree,
         tiny_skia::Transform::from_scale(scale, scale),
@@ -626,11 +627,14 @@ mod tests {
     #[test]
     fn rasterizes_svg_with_its_aspect_ratio() {
         let image = rasterize_svg(
-            r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><rect width="200" height="100" fill="red"/></svg>"#,
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><rect x="50" y="25" width="100" height="50" fill="red" stroke="black" stroke-width="10"/></svg>"#,
             &svg_options(),
         )
         .unwrap();
 
         assert_eq!((image.width(), image.height()), (1600, 800));
+        let image = image.to_rgba8();
+        assert_eq!(image.get_pixel(0, 0).0[3], 0);
+        assert_eq!(image.get_pixel(400, 400).0, [216, 222, 233, 255]);
     }
 }
