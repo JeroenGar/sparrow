@@ -484,7 +484,7 @@ impl App {
             Constraint::Length(LOGO_WIDTH),
             Constraint::Length(1),
             Constraint::Length(METRICS_WIDTH),
-            Constraint::Length(1),
+            Constraint::Length(3),
             Constraint::Min(0),
         ])
         .areas(inner);
