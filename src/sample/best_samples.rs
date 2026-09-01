@@ -60,7 +60,7 @@ impl BestSamples {
             debug_assert!(
                 self.samples.iter()
                     .filter(|(_, eval)| *eval != SampleEval::Invalid)
-                    .tuple_combinations().all(|(a, b)| {
+                    .array_combinations().all(|[a, b]| {
                         !dtransfs_are_similar(a.0, b.0, self.unique_thresh, self.unique_thresh)
                     }
                 ),
