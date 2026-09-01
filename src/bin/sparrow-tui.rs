@@ -56,65 +56,69 @@ const COLOR_SPARROW_DARK: Color = Color::Gray;
 const SPARROW_LOGO: &[&[(&str, Color)]] = &[
     &[
         ("   ", Color::Reset),
-        ("⣠⣾", COLOR_SPARROW_DARK),
-        ("⣿⣿⣷", COLOR_SPARROW_RUST),
-        ("⣦⡀", COLOR_SPARROW_DARK),
+        ("⣴⣾", COLOR_SPARROW_DARK),
+        ("⣿⣿⣿⣶", COLOR_SPARROW_RUST),
+        ("⣄", COLOR_SPARROW_DARK),
     ],
     &[
         (" ", Color::Reset),
-        ("⠐⢿⣿", COLOR_SPARROW_DARK),
+        ("⠺", COLOR_SPARROW_DARK),
+        ("⢿", COLOR_SPARROW_BROWN),
+        ("⣿", COLOR_SPARROW_DARK),
         ("⠐", COLOR_TEXT),
-        ("⣿⣿", COLOR_SPARROW_GRAY),
-        ("⣿⣿", COLOR_SPARROW_RUST),
-        ("⣷⣀", COLOR_SPARROW_DARK),
+        ("⣿⣿⣿", COLOR_SPARROW_GRAY),
+        ("⣿", COLOR_SPARROW_RUST),
+        ("⣿", COLOR_SPARROW_BROWN),
+        ("⣆⡀", COLOR_SPARROW_DARK),
     ],
     &[
         ("  ", Color::Reset),
-        ("⢸⣿⣿", COLOR_SPARROW_DARK),
+        ("⣾⣿⣿", COLOR_SPARROW_DARK),
         ("⣿", COLOR_SPARROW_GRAY),
         ("⣿", COLOR_TEXT),
         ("⣿", COLOR_SPARROW_GRAY),
-        ("⣿⣿⣿⣷", COLOR_SPARROW_BROWN),
+        ("⣿⣿⣿⣿⣷", COLOR_SPARROW_BROWN),
         ("⣄", COLOR_SPARROW_DARK),
     ],
     &[
         ("  ", Color::Reset),
-        ("⢻", COLOR_SPARROW_DARK),
-        ("⣿⣿⣿⣿⣿", COLOR_SPARROW_GRAY),
+        ("⣿", COLOR_SPARROW_BROWN),
+        ("⣿⣿⣿⣿⣿⣿", COLOR_SPARROW_GRAY),
         ("⣿⣿⣿⣿⣿", COLOR_SPARROW_BROWN),
         ("⣆", COLOR_SPARROW_DARK),
     ],
     &[
         ("  ", Color::Reset),
-        ("⠈", COLOR_SPARROW_DARK),
-        ("⢿", COLOR_SPARROW_BROWN),
-        ("⣿⣿⣿⣿⣿⣿⣿", COLOR_SPARROW_GRAY),
-        ("⣿", COLOR_SPARROW_BROWN),
-        ("⡿⠿⣿⣦⡄", COLOR_SPARROW_DARK),
+        ("⠘", COLOR_SPARROW_DARK),
+        ("⢿⣿⣿⣿⣿⣿⣿⣿⣿", COLOR_SPARROW_GRAY),
+        ("⣿⠿", COLOR_SPARROW_BROWN),
+        ("⠿⣿⣶⣤", COLOR_SPARROW_DARK),
     ],
     &[
         ("   ", Color::Reset),
-        ("⢀⣽", COLOR_SPARROW_DARK),
+        ("⢠⣽", COLOR_SPARROW_DARK),
         ("⣿⣿", COLOR_SPARROW_BROWN),
-        ("⣿⣿", COLOR_SPARROW_GRAY),
+        ("⣿⣿⣿", COLOR_SPARROW_GRAY),
         ("⣿", COLOR_SPARROW_BROWN),
-        ("⣟⠁", COLOR_SPARROW_DARK),
+        ("⡋⠁", COLOR_SPARROW_DARK),
         ("   ", Color::Reset),
-        ("⠉", COLOR_SPARROW_DARK),
+        ("⠉⠁", COLOR_SPARROW_DARK),
     ],
     &[
         ("   ", Color::Reset),
-        ("⢸", COLOR_SPARROW_DARK),
-        ("⣿⣿⣿⣿⣿⣿", COLOR_SPARROW_OCHRE),
+        ("⣿", COLOR_SPARROW_DARK),
+        ("⣿⣿⣿⣿", COLOR_SPARROW_OCHRE),
         ("⣿", COLOR_SPARROW_BROWN),
+        ("⣿⣿", COLOR_SPARROW_OCHRE),
+        ("⣿", COLOR_SPARROW_DARK),
     ],
     &[
         ("   ", Color::Reset),
-        ("⠸", COLOR_SPARROW_DARK),
+        ("⢿", COLOR_SPARROW_DARK),
         ("⣿⣿", COLOR_SPARROW_OCHRE),
         ("⣿", COLOR_SPARROW_BROWN),
-        ("⣿⣿⣿", COLOR_SPARROW_OCHRE),
-        ("⡿", COLOR_SPARROW_BROWN),
+        ("⣿⣿⣿⣿", COLOR_SPARROW_OCHRE),
+        ("⡿", COLOR_SPARROW_DARK),
     ],
 ];
 
@@ -474,7 +478,7 @@ impl App {
         let inner = block.inner(area);
         frame.render_widget(block, area);
         let [logo_area, _, metrics_area, _, progress_area] = Layout::horizontal([
-            Constraint::Length(18),
+            Constraint::Length(19),
             Constraint::Length(1),
             Constraint::Min(34),
             Constraint::Length(1),
@@ -489,12 +493,6 @@ impl App {
             Constraint::Fill(1),
         ])
         .areas(metrics_area);
-        let [_, progress_area, _] = Layout::vertical([
-            Constraint::Length(2),
-            Constraint::Length(3),
-            Constraint::Fill(1),
-        ])
-        .areas(progress_area);
 
         let (state, state_color) = match (&self.report, self.loss_remaining) {
             (Some(ReportType::Final), _) => ("FINISHED", COLOR_ACCENT),
@@ -557,10 +555,14 @@ impl App {
             metrics_area,
         );
 
-        let [time_area, phase_progress_area, loss_area] = Layout::vertical([
+        let [_, time_area, _, phase_progress_area, _, loss_area, _] = Layout::vertical([
             Constraint::Length(1),
             Constraint::Length(1),
             Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Fill(1),
         ])
         .areas(progress_area);
         let phase_progress = match self.phase {
@@ -609,13 +611,17 @@ impl App {
             elapsed.as_secs(),
             self.budget.total_duration.as_secs()
         );
+        let time_label = match self.budget.exploration_boundary {
+            Some(boundary) if boundary < 0.5 => {
+                format!("{time_label:>width$}", width = time_area.width.into())
+            }
+            Some(_) => format!("{time_label:<width$}", width = time_area.width.into()),
+            None => time_label,
+        };
         frame.render_widget(
             Gauge::default()
                 .ratio(time_progress)
-                .label(match self.budget.exploration_boundary {
-                    Some(_) => String::new(),
-                    None => time_label.clone(),
-                })
+                .label(time_label)
                 .gauge_style(
                     Style::default()
                         .fg(COLOR_ACCENT)
@@ -636,18 +642,6 @@ impl App {
                         .fg(COLOR_ACTIVE)
                         .add_modifier(Modifier::BOLD),
                 );
-            let label_width = time_label.len().min(time_area.width.into()) as u16;
-            let label_x = match boundary < 0.5 {
-                true => time_area.right().saturating_sub(label_width),
-                false => time_area.x,
-            };
-            frame.buffer_mut().set_stringn(
-                label_x,
-                time_area.y,
-                time_label,
-                label_width.into(),
-                Style::default().fg(COLOR_TEXT).add_modifier(Modifier::BOLD),
-            );
         }
         let collision_progress = self.loss_remaining.map(|loss| 100.0 - loss);
         frame.render_widget(
