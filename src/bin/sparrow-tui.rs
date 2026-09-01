@@ -5,14 +5,14 @@ use jagua_rs::Instant as CdeInstant;
 use jagua_rs::io::import::Importer;
 use jagua_rs::io::svg::s_layout_to_svg;
 use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
+use jagua_rs::probs::spp::io::ext_repr::ExtSPInstance;
 use log::{Level, Log, Metadata, Record};
 use rand::SeedableRng;
 use rand::rngs::Xoshiro256PlusPlus;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::symbols::Marker;
 use ratatui::text::{Line as TextLine, Span};
-use ratatui::widgets::{Axis, Block, Chart, Dataset, Gauge, GraphType, Paragraph};
+use ratatui::widgets::{Block, Gauge, Paragraph};
 use ratatui::{DefaultTerminal, Frame};
 use sparrow::EPOCH;
 use sparrow::config::{DEFAULT_SPARROW_CONFIG, ShrinkDecayStrategy, SparrowConfig};
@@ -42,12 +42,13 @@ const LIVE_SVG_PATH: &str = "data/live/.live_solution.svg";
 const FRAME_INTERVAL: Duration = Duration::from_millis(100);
 const SNAPSHOT_INTERVAL: Duration = Duration::from_millis(100);
 const MAX_LOG_LINES: usize = 200;
-const COLOR_ACCENT: Color = Color::Rgb(75, 170, 255);
-const COLOR_SUCCESS: Color = Color::Rgb(70, 210, 110);
-const COLOR_FAILURE: Color = Color::Rgb(255, 80, 40);
-const COLOR_TEXT: Color = Color::Rgb(240, 242, 245);
-const COLOR_MUTED: Color = Color::Rgb(130, 140, 155);
-const COLOR_TRACK: Color = Color::Rgb(45, 50, 60);
+const COLOR_ACCENT: Color = Color::LightGreen;
+const COLOR_ACTIVE: Color = Color::LightYellow;
+const COLOR_FAILURE: Color = Color::LightRed;
+const COLOR_LINK: Color = Color::LightCyan;
+const COLOR_TEXT: Color = Color::White;
+const COLOR_MUTED: Color = Color::DarkGray;
+const COLOR_TRACK: Color = Color::Black;
 
 fn main() -> Result<()> {
     let args = MainCli::parse();
@@ -78,16 +79,14 @@ fn main() -> Result<()> {
     let initial_solution = ext_solution
         .map(|solution| jagua_rs::probs::spp::io::import_solution(&instance, &solution));
 
-    let quit = Arc::new(AtomicBool::new(false));
-    let interrupt_phase = Arc::new(AtomicBool::new(false));
+    let signals = TuiSignals::new();
     let (updates_tx, updates_rx) = mpsc::channel();
     let worker = start_optimizer(
         instance.clone(),
         initial_solution,
         config,
         rng,
-        quit.clone(),
-        interrupt_phase.clone(),
+        signals.clone(),
         updates_tx,
     );
 
@@ -97,28 +96,14 @@ fn main() -> Result<()> {
             updates_rx,
             logs_rx,
             worker,
-            quit,
-            interrupt_phase,
+            signals,
+            (&instance, &ext_instance),
             total_duration,
         )
     })?;
 
     let svg_path = format!("{OUTPUT_DIR}/final_{}.svg", ext_instance.name);
-    io::write_svg(
-        &s_layout_to_svg(&solution.layout_snapshot, &instance, DRAW_OPTIONS, "final"),
-        Path::new(&svg_path),
-        Level::Info,
-    )?;
     let json_path = format!("{OUTPUT_DIR}/final_{}.json", ext_instance.name);
-    io::write_json(
-        &ExtSPOutput {
-            instance: ext_instance,
-            solution: jagua_rs::probs::spp::io::export(&instance, &solution, *EPOCH),
-        },
-        Path::new(&json_path),
-        Level::Info,
-    )?;
-
     println!(
         "Finished at width {:.3}, density {:.3}%\n{svg_path}\n{json_path}",
         solution.strip_width(),
@@ -160,8 +145,7 @@ fn start_optimizer(
     initial_solution: Option<SPSolution>,
     config: SparrowConfig,
     rng: Xoshiro256PlusPlus,
-    quit: Arc<AtomicBool>,
-    interrupt_phase: Arc<AtomicBool>,
+    signals: TuiSignals,
     updates: Sender<Update>,
 ) -> JoinHandle<SPSolution> {
     thread::Builder::new()
@@ -171,7 +155,7 @@ fn start_optimizer(
                 instance,
                 rng,
                 &mut TuiListener::new(updates),
-                &mut TuiTerminator::new(quit, interrupt_phase),
+                &mut TuiTerminator::new(signals),
                 &config.expl_cfg,
                 &config.cmpr_cfg,
                 initial_solution.as_ref(),
@@ -185,10 +169,11 @@ fn run_tui(
     updates: Receiver<Update>,
     logs: Receiver<LogEntry>,
     worker: JoinHandle<SPSolution>,
-    quit: Arc<AtomicBool>,
-    interrupt_phase: Arc<AtomicBool>,
+    signals: TuiSignals,
+    final_output: (&SPInstance, &ExtSPInstance),
     total_duration: Duration,
 ) -> Result<SPSolution> {
+    let (instance, ext_instance) = final_output;
     let mut app = App::new(total_duration);
     let mut worker = Some(worker);
     let mut solution = None;
@@ -201,13 +186,13 @@ fn run_tui(
             app.apply(update);
         }
         if worker.as_ref().is_some_and(JoinHandle::is_finished) {
-            solution = Some(
-                worker
-                    .take()
-                    .unwrap()
-                    .join()
-                    .map_err(|_| anyhow!("optimizer thread panicked"))?,
-            );
+            let final_solution = worker
+                .take()
+                .unwrap()
+                .join()
+                .map_err(|_| anyhow!("optimizer thread panicked"))?;
+            export_final_solution(&final_solution, instance, ext_instance)?;
+            solution = Some(final_solution);
             app.finished = true;
             app.finished_elapsed = Some(app.started.elapsed());
         }
@@ -226,10 +211,10 @@ fn run_tui(
             match key.code {
                 KeyCode::Esc | KeyCode::Char('q') => {
                     app.quit_requested = true;
-                    quit.store(true, Ordering::Relaxed);
+                    signals.quit.store(true, Ordering::Relaxed);
                 }
                 KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                    interrupt_phase.store(true, Ordering::Relaxed);
+                    signals.interrupt_phase.store(true, Ordering::Relaxed);
                 }
                 KeyCode::Up => app.scroll_logs_up(1),
                 KeyCode::Down => app.scroll_logs_down(1),
@@ -253,7 +238,6 @@ struct App {
     iteration: usize,
     attempt_initial_loss: Option<f32>,
     loss_remaining: Option<f32>,
-    loss_history: Vec<(f64, f64)>,
     started: Instant,
     total_duration: Duration,
     logs: VecDeque<LogEntry>,
@@ -276,7 +260,6 @@ impl App {
             iteration: 0,
             attempt_initial_loss: None,
             loss_remaining: None,
-            loss_history: Vec::new(),
             started: Instant::now(),
             total_duration,
             logs: VecDeque::new(),
@@ -298,6 +281,9 @@ impl App {
                 if report == ReportType::Final {
                     self.phase = "final";
                 }
+                if report_is_feasible(&report) {
+                    self.loss_remaining = Some(0.0);
+                }
                 self.width = Some(width);
                 self.density = Some(density);
                 self.report = Some(report);
@@ -315,7 +301,6 @@ impl App {
             };
             self.separation_width = Some(progress.strip_width);
             self.attempt_initial_loss = Some(progress.min_loss);
-            self.loss_history.clear();
         }
         let initial_loss = self
             .attempt_initial_loss
@@ -328,8 +313,6 @@ impl App {
         self.density = Some(progress.density);
         self.iteration = progress.iteration;
         self.loss_remaining = Some(loss_remaining);
-        self.loss_history
-            .push((progress.iteration as f64, loss_remaining as f64));
     }
 
     fn push_log(&mut self, log: LogEntry) {
@@ -359,16 +342,14 @@ impl App {
     }
 
     fn render(&mut self, frame: &mut Frame) {
-        let [summary_area, loss_area, logs_area, help_area] = Layout::vertical([
+        let [summary_area, logs_area, help_area] = Layout::vertical([
             Constraint::Length(7),
-            Constraint::Length(10),
             Constraint::Min(5),
             Constraint::Length(1),
         ])
         .areas(frame.area());
 
         self.render_summary(frame, summary_area);
-        self.render_loss_chart(frame, loss_area);
         self.render_logs(frame, logs_area);
 
         let help = match (self.finished, self.quit_requested) {
@@ -394,19 +375,18 @@ impl App {
             Layout::vertical([Constraint::Length(4), Constraint::Length(1)]).areas(inner);
 
         let (state, state_color) = match (&self.report, self.loss_remaining) {
-            (Some(ReportType::Final), _) => ("FINISHED", COLOR_SUCCESS),
-            (_, Some(0.0)) => ("FEASIBLE", COLOR_SUCCESS),
-            (_, Some(_)) => ("SEPARATING", COLOR_ACCENT),
-            (Some(report), None) if report_is_feasible(report) => ("FEASIBLE", COLOR_SUCCESS),
+            (Some(ReportType::Final), _) => ("FINISHED", COLOR_ACCENT),
+            (_, Some(0.0)) => ("FEASIBLE", COLOR_ACCENT),
+            (_, Some(_)) => ("SEPARATING", COLOR_ACTIVE),
+            (Some(report), None) if report_is_feasible(report) => ("FEASIBLE", COLOR_ACCENT),
             (Some(_), None) => ("INFEASIBLE", COLOR_FAILURE),
-            (None, None) => ("STARTING", COLOR_ACCENT),
+            (None, None) => ("STARTING", COLOR_ACTIVE),
         };
         let phase = TextLine::from(vec![
             Span::styled(
                 format!(" {} ", self.phase),
                 Style::default()
-                    .fg(Color::Black)
-                    .bg(COLOR_ACCENT)
+                    .fg(COLOR_ACCENT)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::raw("  "),
@@ -433,16 +413,6 @@ impl App {
                     .map_or("-".to_owned(), |density| format!("{density:.3}%")),
                 Style::default().fg(COLOR_ACCENT),
             ),
-            Span::styled("   loss remaining ", Style::default().fg(COLOR_MUTED)),
-            Span::styled(
-                self.loss_remaining
-                    .map_or("-".to_owned(), |loss| format!("{loss:.1}%")),
-                Style::default().fg(match self.loss_remaining {
-                    Some(0.0) => COLOR_SUCCESS,
-                    Some(_) => COLOR_ACCENT,
-                    None => COLOR_MUTED,
-                }),
-            ),
         ]);
         let attempt = TextLine::from(vec![
             Span::styled("attempt ", Style::default().fg(COLOR_MUTED)),
@@ -461,7 +431,7 @@ impl App {
             Span::styled(
                 LIVE_VIEWER_PATH,
                 Style::default()
-                    .fg(COLOR_ACCENT)
+                    .fg(COLOR_LINK)
                     .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
             ),
         ]);
@@ -470,19 +440,22 @@ impl App {
             metrics_area,
         );
 
-        let progress = match self.finished {
+        let [time_area, loss_area] =
+            Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
+                .areas(progress_area);
+        let time_progress = match self.finished {
             true => 1.0,
             false => elapsed.as_secs_f64() / self.total_duration.as_secs_f64().max(0.001),
         }
         .clamp(0.0, 1.0);
         frame.render_widget(
             Gauge::default()
-                .ratio(progress)
+                .ratio(time_progress)
                 .label(format!(
-                    "{}s / {}s  {:>3.0}%",
+                    "time  {}s / {}s  {:>3.0}%",
                     elapsed.as_secs(),
                     self.total_duration.as_secs(),
-                    progress * 100.0
+                    time_progress * 100.0
                 ))
                 .gauge_style(
                     Style::default()
@@ -490,57 +463,28 @@ impl App {
                         .bg(COLOR_TRACK)
                         .add_modifier(Modifier::BOLD),
                 ),
-            progress_area,
+            time_area,
         );
-    }
-
-    fn render_loss_chart(&self, frame: &mut Frame, area: Rect) {
-        let title = match self.separation_width {
-            Some(width) => format!(
-                " Relative collision loss · attempt {} at width {width:.3} ",
-                self.attempt
-            ),
-            None => " Relative collision loss ".to_owned(),
-        };
-        let block = Block::bordered()
-            .title(title)
-            .border_style(Style::default().fg(COLOR_MUTED));
-        if self.loss_history.is_empty() {
-            frame.render_widget(
-                Paragraph::new("Waiting for the first separation attempt...")
-                    .style(Style::default().fg(COLOR_MUTED))
-                    .block(block),
-                area,
-            );
-            return;
-        }
-
-        let max_iteration = self.iteration.max(1) as f64;
-        let dataset = Dataset::default()
-            .marker(Marker::Braille)
-            .graph_type(GraphType::Line)
-            .style(Style::default().fg(COLOR_ACCENT))
-            .data(&self.loss_history);
-        let chart = Chart::new(vec![dataset])
-            .block(block)
-            .x_axis(
-                Axis::default()
-                    .title(" iteration ")
-                    .style(Style::default().fg(COLOR_MUTED))
-                    .bounds([0.0, max_iteration])
-                    .labels(vec![
-                        TextLine::from("0"),
-                        TextLine::from(self.iteration.to_string()),
-                    ]),
-            )
-            .y_axis(
-                Axis::default()
-                    .title(" loss remaining ")
-                    .style(Style::default().fg(COLOR_MUTED))
-                    .bounds([0.0, 100.0])
-                    .labels(vec![TextLine::from("0%"), TextLine::from("100%")]),
-            );
-        frame.render_widget(chart, area);
+        let loss_remaining = self.loss_remaining.unwrap_or(100.0);
+        frame.render_widget(
+            Gauge::default()
+                .ratio((loss_remaining / 100.0) as f64)
+                .label(match self.loss_remaining {
+                    Some(loss) => format!("collision loss  {loss:.1}%"),
+                    None => "collision loss  -".to_owned(),
+                })
+                .gauge_style(
+                    Style::default()
+                        .fg(match self.loss_remaining {
+                            Some(0.0) => COLOR_ACCENT,
+                            Some(_) => COLOR_ACTIVE,
+                            None => COLOR_MUTED,
+                        })
+                        .bg(COLOR_TRACK)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            loss_area,
+        );
     }
 
     fn render_logs(&mut self, frame: &mut Frame, area: Rect) {
@@ -576,7 +520,7 @@ fn log_style(entry: &LogEntry) -> Style {
         || entry.message.contains("[CMPR] success at")
     {
         Style::default()
-            .fg(COLOR_SUCCESS)
+            .fg(COLOR_ACCENT)
             .add_modifier(Modifier::BOLD)
     } else if entry.message.contains("[EXPL] unable to reach feasibility")
         || entry.message.contains("[CMPR] failed at")
@@ -591,7 +535,7 @@ fn log_style(entry: &LogEntry) -> Style {
             Level::Error => Style::default()
                 .fg(COLOR_FAILURE)
                 .add_modifier(Modifier::BOLD),
-            Level::Warn => Style::default().fg(COLOR_FAILURE),
+            Level::Warn => Style::default().fg(COLOR_ACTIVE),
             Level::Info => Style::default().fg(COLOR_TEXT),
             Level::Debug | Level::Trace => Style::default().fg(COLOR_MUTED),
         }
@@ -603,6 +547,29 @@ fn report_is_feasible(report: &ReportType) -> bool {
         ReportType::ExplFeas | ReportType::CmprFeas | ReportType::Final => true,
         ReportType::ExplInfeas | ReportType::ExplImproving => false,
     }
+}
+
+fn export_final_solution(
+    solution: &SPSolution,
+    instance: &SPInstance,
+    ext_instance: &ExtSPInstance,
+) -> Result<()> {
+    let svg_path = format!("{OUTPUT_DIR}/final_{}.svg", ext_instance.name);
+    io::write_svg(
+        &s_layout_to_svg(&solution.layout_snapshot, instance, DRAW_OPTIONS, "final"),
+        Path::new(&svg_path),
+        Level::Info,
+    )?;
+
+    let json_path = format!("{OUTPUT_DIR}/final_{}.json", ext_instance.name);
+    io::write_json(
+        &ExtSPOutput {
+            instance: ext_instance.clone(),
+            solution: jagua_rs::probs::spp::io::export(instance, solution, *EPOCH),
+        },
+        Path::new(&json_path),
+        Level::Info,
+    )
 }
 
 struct LogEntry {
@@ -712,36 +679,49 @@ impl SolutionListener for TuiListener {
 
 struct TuiTerminator {
     timeout: Option<CdeInstant>,
-    quit: Arc<AtomicBool>,
-    interrupt_phase: Arc<AtomicBool>,
+    signals: TuiSignals,
 }
 
 impl TuiTerminator {
-    fn new(quit: Arc<AtomicBool>, interrupt_phase: Arc<AtomicBool>) -> Self {
+    fn new(signals: TuiSignals) -> Self {
         Self {
             timeout: None,
-            quit,
-            interrupt_phase,
+            signals,
         }
     }
 }
 
 impl Terminator for TuiTerminator {
     fn kill(&self) -> bool {
-        self.quit.load(Ordering::Relaxed)
-            || self.interrupt_phase.load(Ordering::Relaxed)
+        self.signals.quit.load(Ordering::Relaxed)
+            || self.signals.interrupt_phase.load(Ordering::Relaxed)
             || self
                 .timeout
                 .is_some_and(|timeout| CdeInstant::now() > timeout)
     }
 
     fn new_timeout(&mut self, timeout: Duration) {
-        self.interrupt_phase.store(false, Ordering::Relaxed);
+        self.signals.interrupt_phase.store(false, Ordering::Relaxed);
         self.timeout = Some(CdeInstant::now() + timeout);
     }
 
     fn timeout_at(&self) -> Option<CdeInstant> {
         self.timeout
+    }
+}
+
+#[derive(Clone)]
+struct TuiSignals {
+    quit: Arc<AtomicBool>,
+    interrupt_phase: Arc<AtomicBool>,
+}
+
+impl TuiSignals {
+    fn new() -> Self {
+        Self {
+            quit: Arc::new(AtomicBool::new(false)),
+            interrupt_phase: Arc::new(AtomicBool::new(false)),
+        }
     }
 }
 
@@ -771,11 +751,11 @@ mod tests {
         app.apply(progress(100.0, 0, 20.0));
         app.apply(progress(100.0, 1, 10.0));
         assert_eq!(app.attempt, 1);
-        assert_eq!(app.loss_history, vec![(0.0, 100.0), (1.0, 50.0)]);
+        assert_eq!(app.loss_remaining, Some(50.0));
 
         app.apply(progress(100.0, 0, 15.0));
         assert_eq!(app.attempt, 2);
-        assert_eq!(app.loss_history, vec![(0.0, 100.0)]);
+        assert_eq!(app.loss_remaining, Some(100.0));
 
         app.apply(progress(99.0, 0, 12.0));
         assert_eq!(app.attempt, 1);
@@ -805,15 +785,15 @@ mod tests {
 
     #[test]
     fn phase_interrupt_resets_but_quit_does_not() {
-        let quit = Arc::new(AtomicBool::new(false));
-        let interrupt_phase = Arc::new(AtomicBool::new(true));
-        let mut terminator = TuiTerminator::new(quit.clone(), interrupt_phase.clone());
+        let signals = TuiSignals::new();
+        signals.interrupt_phase.store(true, Ordering::Relaxed);
+        let mut terminator = TuiTerminator::new(signals.clone());
 
         assert!(terminator.kill());
         terminator.new_timeout(Duration::from_secs(1));
         assert!(!terminator.kill());
 
-        quit.store(true, Ordering::Relaxed);
+        signals.quit.store(true, Ordering::Relaxed);
         terminator.new_timeout(Duration::from_secs(1));
         assert!(terminator.kill());
     }
