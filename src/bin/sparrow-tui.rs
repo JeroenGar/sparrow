@@ -42,6 +42,7 @@ const FRAME_INTERVAL: Duration = Duration::from_millis(100);
 const SNAPSHOT_INTERVAL: Duration = Duration::from_millis(100);
 const COLOR_ACCENT: Color = Color::LightGreen;
 const COLOR_ACTIVE: Color = Color::LightYellow;
+const COLOR_LOSS: Color = Color::LightBlue;
 const COLOR_FAILURE: Color = Color::LightRed;
 const COLOR_LINK: Color = Color::LightCyan;
 const COLOR_TEXT: Color = Color::White;
@@ -452,8 +453,28 @@ impl App {
             metrics_area,
         );
 
-        let [phase_progress_area, time_area] =
-            Layout::vertical([Constraint::Length(1), Constraint::Length(1)]).areas(progress_area);
+        let [loss_area, phase_progress_area, time_area] = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
+        .areas(progress_area);
+        let loss_remaining = self.loss_remaining.unwrap_or(100.0);
+        frame.render_widget(
+            Gauge::default()
+                .ratio((loss_remaining / 100.0) as f64)
+                .label(match self.loss_remaining {
+                    Some(loss) => format!("collision loss  {loss:.1}%"),
+                    None => "collision loss  -".to_owned(),
+                })
+                .gauge_style(
+                    Style::default()
+                        .fg(COLOR_LOSS)
+                        .bg(COLOR_TRACK)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            loss_area,
+        );
         let phase_progress = match self.phase {
             "exploration" => self.budget.max_attempts.map(|max_attempts| {
                 let attempt = self.attempt.min(max_attempts);
