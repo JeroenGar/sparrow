@@ -49,7 +49,7 @@ pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listene
             current_width = next_width;
             infeas_sol_pool.clear();
         } else {
-            info!("[EXPL] unable to reach feasibility (width: {:.3}, dens: {:.3}%, min loss: {:.3})", current_width, sep.prob.density() * 100.0, FMT().fmt2(total_loss));
+            info!("[EXPL] unable to reach feasibility (width: {:.3}, dens: {:.3}%, min loss: {})", current_width, sep.prob.density() * 100.0, FMT().fmt2(total_loss));
             sol_listener.report(ReportType::ExplInfeas, &local_best.0, instance);
 
             // Separation was not successful add it to the pool of infeasible solutions
