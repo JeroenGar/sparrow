@@ -44,9 +44,18 @@ const LOGO_WIDTH: u16 = 19;
 const METRICS_WIDTH: u16 = 34;
 const PROGRESS_MAX_WIDTH: u16 = 60;
 const ACTIVITY_INTERVAL: Duration = Duration::from_millis(200);
-const ACTIVITY_FRAMES: &[&str] = &["⠐⠀", "⠺⠂", "⠪⠂", "⠯⠇", "⠅⠅", "⠀⠀"];
+const ACTIVITY_FRAMES: &[[u8; 3]] = &[
+    [2, 0, 0],
+    [2, 1, 0],
+    [1, 2, 0],
+    [0, 2, 1],
+    [0, 1, 2],
+    [0, 0, 1],
+];
 const COLOR_ACCENT: Color = Color::LightGreen;
 const COLOR_ACTIVE: Color = Color::LightYellow;
+const COLOR_ACTIVITY_DIM: Color = Color::Rgb(75, 70, 35);
+const COLOR_ACTIVITY_MID: Color = Color::Rgb(165, 140, 50);
 const COLOR_LOSS: Color = Color::LightBlue;
 const COLOR_FAILURE: Color = Color::LightRed;
 const COLOR_LINK: Color = Color::LightCyan;
@@ -482,11 +491,11 @@ impl App {
             .border_style(Style::default().fg(COLOR_ACCENT));
         let inner = block.inner(area);
         frame.render_widget(block, area);
-        let [logo_area, _, metrics_area, _, progress_space] = Layout::horizontal([
+        let [logo_area, _, metrics_area, activity_space, progress_space] = Layout::horizontal([
             Constraint::Length(LOGO_WIDTH),
             Constraint::Length(1),
             Constraint::Length(METRICS_WIDTH),
-            Constraint::Length(3),
+            Constraint::Length(9),
             Constraint::Min(0),
         ])
         .areas(inner);
@@ -513,14 +522,6 @@ impl App {
             (Some(_), None) => ("INFEASIBLE", COLOR_FAILURE),
             (None, None) => ("STARTING", COLOR_ACTIVE),
         };
-        let activity = match self.finished {
-            true => "✓ ",
-            false => {
-                let frame = (self.started.elapsed().as_millis() / ACTIVITY_INTERVAL.as_millis())
-                    % ACTIVITY_FRAMES.len() as u128;
-                ACTIVITY_FRAMES[frame as usize]
-            }
-        };
         let phase = TextLine::from(vec![
             Span::styled(
                 format!("{:<18}", self.phase),
@@ -528,17 +529,6 @@ impl App {
                     .fg(COLOR_ACCENT)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled("[", Style::default().fg(COLOR_MUTED)),
-            Span::styled(
-                activity,
-                Style::default()
-                    .fg(match self.finished {
-                        true => COLOR_ACCENT,
-                        false => COLOR_ACTIVE,
-                    })
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled("] ", Style::default().fg(COLOR_MUTED)),
             Span::styled(
                 state,
                 Style::default()
@@ -581,6 +571,10 @@ impl App {
         frame.render_widget(
             Paragraph::new(vec![phase, dimensions, iteration, viewer]),
             metrics_area,
+        );
+        frame.render_widget(
+            Paragraph::new(activity_indicator(self.finished, self.started.elapsed())),
+            Rect::new(activity_space.x, metrics_area.y, 5, 3),
         );
 
         let phase_progress = match self.phase {
@@ -726,6 +720,33 @@ impl App {
             area,
         );
     }
+}
+
+fn activity_indicator(finished: bool, elapsed: Duration) -> Vec<TextLine<'static>> {
+    let frame = ACTIVITY_FRAMES
+        [(elapsed.as_millis() / ACTIVITY_INTERVAL.as_millis()) as usize % ACTIVITY_FRAMES.len()];
+
+    (0_usize..3)
+        .map(|row| {
+            let mut dots = Vec::with_capacity(5);
+            for col in 0_usize..3 {
+                let color = match finished {
+                    true if row + col == 2 => COLOR_ACCENT,
+                    true => COLOR_ACTIVITY_DIM,
+                    false => match frame[(row.abs_diff(1) + col.abs_diff(1)).min(2)] {
+                        0 => COLOR_ACTIVITY_DIM,
+                        1 => COLOR_ACTIVITY_MID,
+                        _ => COLOR_ACTIVE,
+                    },
+                };
+                dots.push(Span::styled("●", Style::default().fg(color)));
+                if col < 2 {
+                    dots.push(Span::raw(" "));
+                }
+            }
+            TextLine::from(dots)
+        })
+        .collect()
 }
 
 fn log_style(entry: &LogEntry) -> Style {
