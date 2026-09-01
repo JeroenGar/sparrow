@@ -62,6 +62,11 @@ fn main() -> Result<()> {
     let budget = SearchBudget {
         total_duration: config.expl_cfg.time_limit + config.cmpr_cfg.time_limit,
         max_attempts: config.expl_cfg.max_conseq_failed_attempts,
+        shrink_range: matches!(
+            config.cmpr_cfg.shrink_decay,
+            ShrinkDecayStrategy::FailureBased(_)
+        )
+        .then_some(config.cmpr_cfg.shrink_range),
     };
     let rng = Xoshiro256PlusPlus::seed_from_u64(
         config
@@ -233,6 +238,7 @@ fn run_tui(
 struct SearchBudget {
     total_duration: Duration,
     max_attempts: Option<usize>,
+    shrink_range: Option<(f32, f32)>,
 }
 
 struct App {
@@ -245,6 +251,7 @@ struct App {
     iteration: usize,
     attempt_initial_loss: Option<f32>,
     loss_remaining: Option<f32>,
+    shrink_step: Option<f32>,
     started: Instant,
     budget: SearchBudget,
     logs: Vec<LogEntry>,
@@ -267,6 +274,7 @@ impl App {
             iteration: 0,
             attempt_initial_loss: None,
             loss_remaining: None,
+            shrink_step: None,
             started: Instant::now(),
             budget,
             logs: Vec::new(),
@@ -297,6 +305,7 @@ impl App {
             }
             Update::Phase(phase) => self.phase = phase_label(phase),
             Update::Separation(progress) => self.apply_separation_progress(progress),
+            Update::Compression(shrink_step) => self.shrink_step = Some(shrink_step),
         }
     }
 
@@ -443,49 +452,44 @@ impl App {
             metrics_area,
         );
 
-        let [loss_area, attempt_area, time_area] = Layout::vertical([
-            Constraint::Length(1),
-            Constraint::Length(1),
-            Constraint::Length(1),
-        ])
-        .areas(progress_area);
-        let loss_remaining = self.loss_remaining.unwrap_or(100.0);
-        frame.render_widget(
-            Gauge::default()
-                .ratio((loss_remaining / 100.0) as f64)
-                .label(match self.loss_remaining {
-                    Some(loss) => format!("collision loss  {loss:.1}%"),
-                    None => "collision loss  -".to_owned(),
-                })
-                .gauge_style(
-                    Style::default()
-                        .fg(match self.loss_remaining {
-                            Some(0.0) => COLOR_ACCENT,
-                            Some(_) => COLOR_ACTIVE,
-                            None => COLOR_MUTED,
-                        })
-                        .bg(COLOR_TRACK)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            loss_area,
-        );
-        if self.phase == "exploration"
-            && let Some(max_attempts) = self.budget.max_attempts
-        {
-            let attempt = self.attempt.min(max_attempts);
-            frame.render_widget(
-                Gauge::default()
-                    .ratio(attempt as f64 / max_attempts as f64)
-                    .label(format!("attempt  {attempt} / {max_attempts}"))
-                    .gauge_style(
+        let [phase_progress_area, time_area] =
+            Layout::vertical([Constraint::Length(1), Constraint::Length(1)]).areas(progress_area);
+        let phase_progress = match self.phase {
+            "exploration" => self.budget.max_attempts.map(|max_attempts| {
+                let attempt = self.attempt.min(max_attempts);
+                (
+                    attempt as f64 / max_attempts as f64,
+                    format!("attempt  {attempt} / {max_attempts}"),
+                )
+            }),
+            "compression" => self.budget.shrink_range.map(|range| {
+                let shrink_step = self.shrink_step.unwrap_or(range.0);
+                (
+                    shrink_progress(shrink_step, range),
+                    format!(
+                        "shrink step  {:.3}% → {:.3}%",
+                        shrink_step * 100.0,
+                        range.1 * 100.0
+                    ),
+                )
+            }),
+            _ => None,
+        };
+        let time_area = match phase_progress {
+            Some((ratio, label)) => {
+                frame.render_widget(
+                    Gauge::default().ratio(ratio).label(label).gauge_style(
                         Style::default()
                             .fg(COLOR_ACTIVE)
                             .bg(COLOR_TRACK)
                             .add_modifier(Modifier::BOLD),
                     ),
-                attempt_area,
-            );
-        }
+                    phase_progress_area,
+                );
+                time_area
+            }
+            None => phase_progress_area,
+        };
         let time_progress = match self.finished {
             true => 1.0,
             false => elapsed.as_secs_f64() / self.budget.total_duration.as_secs_f64().max(0.001),
@@ -572,6 +576,10 @@ fn report_is_feasible(report: &ReportType) -> bool {
     }
 }
 
+fn shrink_progress(shrink_step: f32, range: (f32, f32)) -> f64 {
+    ((range.0 - shrink_step) / (range.0 - range.1)).clamp(0.0, 1.0) as f64
+}
+
 fn export_final_solution(
     solution: &SPSolution,
     instance: &SPInstance,
@@ -652,6 +660,7 @@ enum Update {
     },
     Phase(OptimizationPhase),
     Separation(SeparationProgress),
+    Compression(f32),
 }
 
 struct TuiListener {
@@ -697,6 +706,10 @@ impl SolutionListener for TuiListener {
 
     fn report_separation_progress(&mut self, progress: SeparationProgress) {
         let _ = self.updates.send(Update::Separation(progress));
+    }
+
+    fn report_compression_progress(&mut self, shrink_step: f32) {
+        let _ = self.updates.send(Update::Compression(shrink_step));
     }
 }
 
@@ -763,6 +776,7 @@ mod tests {
         App::new(SearchBudget {
             total_duration: Duration::ZERO,
             max_attempts: None,
+            shrink_range: None,
         })
     }
 
@@ -826,5 +840,14 @@ mod tests {
         signals.quit.store(true, Ordering::Relaxed);
         terminator.new_timeout(Duration::from_secs(1));
         assert!(terminator.kill());
+    }
+
+    #[test]
+    fn shrink_progress_runs_from_initial_to_final_step() {
+        let range = (0.05, 0.01);
+
+        assert_eq!(shrink_progress(range.0, range), 0.0);
+        assert_eq!(shrink_progress(range.1, range), 1.0);
+        assert!((shrink_progress(0.03, range) - 0.5).abs() < 1e-6);
     }
 }

@@ -7,6 +7,8 @@ pub trait SolutionListener {
     fn report_phase(&mut self, _phase: OptimizationPhase) {}
 
     fn report_separation_progress(&mut self, _progress: SeparationProgress) {}
+
+    fn report_compression_progress(&mut self, _shrink_step: f32) {}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
