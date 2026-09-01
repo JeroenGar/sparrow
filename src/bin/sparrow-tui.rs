@@ -60,14 +60,19 @@ fn main() -> Result<()> {
     init_tui_logger(log_level, Path::new("output/log.txt"), logs_tx)?;
 
     let config = configure(&args)?;
+    let total_duration = config.expl_cfg.time_limit + config.cmpr_cfg.time_limit;
+    let exploration_boundary = (config.expl_cfg.max_conseq_failed_attempts.is_none()
+        && !total_duration.is_zero())
+    .then(|| config.expl_cfg.time_limit.as_secs_f64() / total_duration.as_secs_f64());
     let budget = SearchBudget {
-        total_duration: config.expl_cfg.time_limit + config.cmpr_cfg.time_limit,
+        total_duration,
         max_attempts: config.expl_cfg.max_conseq_failed_attempts,
         shrink_range: matches!(
             config.cmpr_cfg.shrink_decay,
             ShrinkDecayStrategy::FailureBased(_)
         )
         .then_some(config.cmpr_cfg.shrink_range),
+        exploration_boundary,
     };
     let rng = Xoshiro256PlusPlus::seed_from_u64(
         config
@@ -240,6 +245,7 @@ struct SearchBudget {
     total_duration: Duration,
     max_attempts: Option<usize>,
     shrink_range: Option<(f32, f32)>,
+    exploration_boundary: Option<f64>,
 }
 
 struct App {
@@ -516,15 +522,18 @@ impl App {
             false => elapsed.as_secs_f64() / self.budget.total_duration.as_secs_f64().max(0.001),
         }
         .clamp(0.0, 1.0);
+        let time_label = format!(
+            "time  {}s / {}s",
+            elapsed.as_secs(),
+            self.budget.total_duration.as_secs()
+        );
         frame.render_widget(
             Gauge::default()
                 .ratio(time_progress)
-                .label(format!(
-                    "time  {}s / {}s  {:>3.0}%",
-                    elapsed.as_secs(),
-                    self.budget.total_duration.as_secs(),
-                    time_progress * 100.0
-                ))
+                .label(match self.budget.exploration_boundary {
+                    Some(_) => String::new(),
+                    None => time_label.clone(),
+                })
                 .gauge_style(
                     Style::default()
                         .fg(COLOR_ACCENT)
@@ -533,6 +542,31 @@ impl App {
                 ),
             time_area,
         );
+        if let Some(boundary) = self.budget.exploration_boundary
+            && time_area.width > 0
+        {
+            let marker_x = time_area.x
+                + (f64::from(time_area.width.saturating_sub(1)) * boundary).round() as u16;
+            frame.buffer_mut()[(marker_x, time_area.y)]
+                .set_symbol("│")
+                .set_style(
+                    Style::default()
+                        .fg(COLOR_ACTIVE)
+                        .add_modifier(Modifier::BOLD),
+                );
+            let label_width = time_label.len().min(time_area.width.into()) as u16;
+            let label_x = match boundary < 0.5 {
+                true => time_area.right().saturating_sub(label_width),
+                false => time_area.x,
+            };
+            frame.buffer_mut().set_stringn(
+                label_x,
+                time_area.y,
+                time_label,
+                label_width.into(),
+                Style::default().fg(COLOR_TEXT).add_modifier(Modifier::BOLD),
+            );
+        }
     }
 
     fn render_logs(&mut self, frame: &mut Frame, area: Rect) {
@@ -798,6 +832,7 @@ mod tests {
             total_duration: Duration::ZERO,
             max_attempts: None,
             shrink_range: None,
+            exploration_boundary: None,
         })
     }
 
