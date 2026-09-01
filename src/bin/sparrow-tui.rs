@@ -1,31 +1,32 @@
 use anyhow::{Result, anyhow, bail};
 use clap::Parser;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
-use image::{DynamicImage, RgbaImage};
 use jagua_rs::Instant as CdeInstant;
+use jagua_rs::geometry::primitives::SPolygon;
 use jagua_rs::io::import::Importer;
 use jagua_rs::io::svg::s_layout_to_svg;
 use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
-use log::Level;
+use log::{Level, Log, Metadata, Record};
 use rand::SeedableRng;
 use rand::rngs::Xoshiro256PlusPlus;
 use ratatui::layout::{Constraint, Layout};
-use ratatui::widgets::{Block, Paragraph};
+use ratatui::style::{Color, Modifier, Style};
+use ratatui::symbols::Marker;
+use ratatui::text::{Line as TextLine, Span};
+use ratatui::widgets::canvas::{Canvas, Context, Line};
+use ratatui::widgets::{Block, Gauge, Paragraph};
 use ratatui::{DefaultTerminal, Frame};
-use ratatui_image::picker::Picker;
-use ratatui_image::protocol::StatefulProtocol;
-use ratatui_image::{Resize, StatefulImage};
-use resvg::{tiny_skia, usvg};
 use sparrow::EPOCH;
 use sparrow::config::{DEFAULT_SPARROW_CONFIG, ShrinkDecayStrategy, SparrowConfig};
 use sparrow::consts::{
     DEFAULT_COMPRESS_TIME_RATIO, DEFAULT_EXPLORE_TIME_RATIO, DEFAULT_FAIL_DECAY_RATIO_CMPR,
-    DEFAULT_MAX_CONSEQ_FAILS_EXPL, DRAW_OPTIONS,
+    DEFAULT_MAX_CONSEQ_FAILS_EXPL, DRAW_OPTIONS, LOG_LEVEL_FILTER_DEBUG, LOG_LEVEL_FILTER_RELEASE,
 };
 use sparrow::optimizer::optimize;
 use sparrow::util::io::{self, ExtSPOutput, MainCli};
 use sparrow::util::listener::{ReportType, SolutionListener};
 use sparrow::util::terminator::Terminator;
+use std::collections::VecDeque;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
@@ -35,13 +36,22 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 const OUTPUT_DIR: &str = "output";
-const FRAME_INTERVAL: Duration = Duration::from_millis(50);
-const SNAPSHOT_INTERVAL: Duration = Duration::from_millis(250);
-const MAX_RASTER_SIZE: (u32, u32) = (1600, 1000);
+const FRAME_INTERVAL: Duration = Duration::from_millis(100);
+const SNAPSHOT_INTERVAL: Duration = Duration::from_millis(100);
+const MAX_LOG_LINES: usize = 200;
 
 fn main() -> Result<()> {
     let args = MainCli::parse();
+    fs::create_dir_all(OUTPUT_DIR)?;
+    let (logs_tx, logs_rx) = mpsc::sync_channel(512);
+    let log_level = match cfg!(debug_assertions) {
+        true => LOG_LEVEL_FILTER_DEBUG,
+        false => LOG_LEVEL_FILTER_RELEASE,
+    };
+    init_tui_logger(log_level, Path::new("output/log.txt"), logs_tx)?;
+
     let config = configure(&args)?;
+    let total_duration = config.expl_cfg.time_limit + config.cmpr_cfg.time_limit;
     let rng = Xoshiro256PlusPlus::seed_from_u64(
         config
             .rng_seed
@@ -70,12 +80,18 @@ fn main() -> Result<()> {
         updates_tx,
     );
 
-    let picker = Picker::from_query_stdio().unwrap_or_else(|_| Picker::halfblocks());
     let solution = ratatui::run(|terminal| {
-        run_tui(terminal, picker, instance.clone(), updates_rx, worker, stop)
+        run_tui(
+            terminal,
+            instance.clone(),
+            updates_rx,
+            logs_rx,
+            worker,
+            stop,
+            total_duration,
+        )
     })?;
 
-    fs::create_dir_all(OUTPUT_DIR)?;
     let svg_path = format!("{OUTPUT_DIR}/final_{}.svg", ext_instance.name);
     io::write_svg(
         &s_layout_to_svg(&solution.layout_snapshot, &instance, DRAW_OPTIONS, "final"),
@@ -154,17 +170,21 @@ fn start_optimizer(
 
 fn run_tui(
     terminal: &mut DefaultTerminal,
-    picker: Picker,
     instance: SPInstance,
     updates: Receiver<Update>,
+    logs: Receiver<LogEntry>,
     worker: JoinHandle<SPSolution>,
     stop: Arc<AtomicBool>,
+    total_duration: Duration,
 ) -> Result<SPSolution> {
-    let mut app = App::new(picker);
+    let mut app = App::new(total_duration);
     let mut worker = Some(worker);
     let mut solution = None;
 
     loop {
+        for log in logs.try_iter() {
+            app.push_log(log);
+        }
         if let Some(update) = updates.try_iter().last() {
             app.apply(update, &instance);
         }
@@ -199,97 +219,306 @@ fn run_tui(
 }
 
 struct App {
-    picker: Picker,
-    svg_options: usvg::Options<'static>,
-    image: Option<StatefulProtocol>,
+    solution: Option<SPSolution>,
+    report: Option<ReportType>,
     phase: &'static str,
     width: Option<f32>,
     density: Option<f32>,
     started: Instant,
+    total_duration: Duration,
+    n_updates: usize,
+    logs: VecDeque<LogEntry>,
     finished: bool,
     quit_requested: bool,
-    render_error: Option<String>,
 }
 
 impl App {
-    fn new(picker: Picker) -> Self {
+    fn new(total_duration: Duration) -> Self {
         Self {
-            picker,
-            svg_options: svg_options(),
-            image: None,
+            solution: None,
+            report: None,
             phase: "starting",
             width: None,
             density: None,
             started: Instant::now(),
+            total_duration,
+            n_updates: 0,
+            logs: VecDeque::new(),
             finished: false,
             quit_requested: false,
-            render_error: None,
         }
     }
 
     fn apply(&mut self, update: Update, instance: &SPInstance) {
-        self.phase = report_label(&update.report);
-        self.width = Some(update.solution.strip_width());
-        self.density = Some(update.solution.density(instance) * 100.0);
+        let Update { report, solution } = update;
+        self.phase = report_label(&report);
+        self.width = Some(solution.strip_width());
+        self.density = Some(solution.density(instance) * 100.0);
+        self.report = Some(report);
+        self.solution = Some(solution);
+        self.n_updates += 1;
+    }
 
-        let svg = s_layout_to_svg(
-            &update.solution.layout_snapshot,
-            instance,
-            DRAW_OPTIONS,
-            self.phase,
-        );
-        match rasterize_svg(&svg.to_string(), &self.svg_options) {
-            Ok(image) => {
-                self.image = Some(self.picker.new_resize_protocol(image));
-                self.render_error = None;
-            }
-            Err(error) => self.render_error = Some(error.to_string()),
+    fn push_log(&mut self, log: LogEntry) {
+        if self.logs.len() == MAX_LOG_LINES {
+            self.logs.pop_front();
         }
+        self.logs.push_back(log);
     }
 
     fn render(&mut self, frame: &mut Frame) {
-        let [status_area, image_area, help_area] = Layout::vertical([
-            Constraint::Length(3),
-            Constraint::Min(1),
+        let [dashboard_area, canvas_area, logs_area, help_area] = Layout::vertical([
+            Constraint::Length(5),
+            Constraint::Min(5),
+            Constraint::Length(8),
             Constraint::Length(1),
         ])
         .areas(frame.area());
 
-        let status = match (self.width, self.density) {
-            (Some(width), Some(density)) => format!(
-                "{}  |  width {width:.3}  |  density {density:.3}%  |  elapsed {}s",
-                self.phase,
-                self.started.elapsed().as_secs(),
-            ),
-            _ => "Waiting for the initial layout...".to_owned(),
-        };
-        frame.render_widget(
-            Paragraph::new(status).block(Block::bordered().title(" Sparrow ")),
-            status_area,
-        );
-
-        let image_block = Block::bordered().title(" Live layout ");
-        let image_inner = image_block.inner(image_area);
-        frame.render_widget(image_block, image_area);
-        match &mut self.image {
-            Some(image) => frame.render_stateful_widget(
-                StatefulImage::new().resize(Resize::Fit(None)),
-                image_inner,
-                image,
-            ),
-            None => frame.render_widget(
-                Paragraph::new(self.render_error.as_deref().unwrap_or("No layout yet")),
-                image_inner,
-            ),
-        }
+        self.render_dashboard(frame, dashboard_area);
+        self.render_canvas(frame, canvas_area);
+        self.render_logs(frame, logs_area);
 
         let help = match (self.finished, self.quit_requested) {
             (true, _) => "Finished. Press q or Esc to exit.",
             (false, true) => "Stopping optimizer...",
             (false, false) => "q / Esc / Ctrl-C: stop and exit",
         };
-        frame.render_widget(Paragraph::new(help), help_area);
+        frame.render_widget(
+            Paragraph::new(help).style(Style::default().fg(Color::DarkGray)),
+            help_area,
+        );
     }
+
+    fn render_dashboard(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
+        let block = Block::bordered()
+            .title(" Sparrow search ")
+            .border_style(Style::default().fg(Color::Cyan));
+        let inner = block.inner(area);
+        frame.render_widget(block, area);
+        let [metrics_area, progress_area] =
+            Layout::vertical([Constraint::Length(2), Constraint::Length(1)]).areas(inner);
+
+        let (state, state_color) = match self.report.as_ref() {
+            Some(report) if report_is_feasible(report) => ("FEASIBLE", Color::Green),
+            Some(_) => ("INFEASIBLE", Color::Red),
+            None => ("STARTING", Color::Yellow),
+        };
+        let phase_color = match self.report {
+            Some(ReportType::CmprFeas | ReportType::Final) => Color::Magenta,
+            Some(_) => Color::Cyan,
+            None => Color::DarkGray,
+        };
+        let phase = TextLine::from(vec![
+            Span::styled(
+                format!(" {} ", self.phase),
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(phase_color)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw("  "),
+            Span::styled(
+                state,
+                Style::default()
+                    .fg(state_color)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]);
+        let elapsed = self.started.elapsed();
+        let update_rate = self.n_updates as f64 / elapsed.as_secs_f64().max(0.001);
+        let metrics = TextLine::from(vec![
+            Span::styled("width ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                self.width
+                    .map_or("-".to_owned(), |width| format!("{width:.3}")),
+                Style::default().fg(Color::White),
+            ),
+            Span::styled("   density ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                self.density
+                    .map_or("-".to_owned(), |density| format!("{density:.3}%")),
+                Style::default().fg(Color::Green),
+            ),
+            Span::styled("   updates ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                format!("{update_rate:.1}/s"),
+                Style::default().fg(Color::Yellow),
+            ),
+            Span::styled("   elapsed ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                format!("{}s", elapsed.as_secs()),
+                Style::default().fg(Color::White),
+            ),
+        ]);
+        frame.render_widget(Paragraph::new(vec![phase, metrics]), metrics_area);
+
+        let progress = match self.finished {
+            true => 1.0,
+            false => elapsed.as_secs_f64() / self.total_duration.as_secs_f64().max(0.001),
+        }
+        .clamp(0.0, 1.0);
+        frame.render_widget(
+            Gauge::default()
+                .ratio(progress)
+                .label(format!("time budget {:>3.0}%", progress * 100.0))
+                .gauge_style(
+                    Style::default()
+                        .fg(Color::LightCyan)
+                        .bg(Color::DarkGray)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            progress_area,
+        );
+    }
+
+    fn render_canvas(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
+        let Some(solution) = &self.solution else {
+            frame.render_widget(
+                Paragraph::new("Waiting for the initial layout...")
+                    .block(Block::bordered().title(" Live packing ")),
+                area,
+            );
+            return;
+        };
+
+        let snapshot = &solution.layout_snapshot;
+        let container = &snapshot.container;
+        let bbox = container.outer_cd.bbox;
+        let canvas = Canvas::default()
+            .block(
+                Block::bordered()
+                    .title(" Live packing ")
+                    .border_style(Style::default().fg(Color::DarkGray)),
+            )
+            .marker(Marker::Braille)
+            .x_bounds([f64::from(bbox.x_min), f64::from(bbox.x_max)])
+            .y_bounds([f64::from(bbox.y_min), f64::from(bbox.y_max)])
+            .paint(|context| {
+                draw_polygon(context, &container.outer_cd, Color::White);
+                for quality_zone in container.quality_zones.iter().flatten() {
+                    for shape in &quality_zone.shapes_cd {
+                        draw_polygon(context, shape, Color::Red);
+                    }
+                }
+                for (_, item) in &snapshot.placed_items {
+                    draw_polygon(context, &item.shape, item_color(item.item_id));
+                }
+            });
+        frame.render_widget(canvas, area);
+    }
+
+    fn render_logs(&self, frame: &mut Frame, area: ratatui::layout::Rect) {
+        let visible_lines = area.height.saturating_sub(2) as usize;
+        let lines = self
+            .logs
+            .iter()
+            .rev()
+            .take(visible_lines)
+            .rev()
+            .map(|entry| {
+                TextLine::styled(
+                    entry.message.as_str(),
+                    match entry.level {
+                        Level::Error => {
+                            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
+                        }
+                        Level::Warn => Style::default().fg(Color::Yellow),
+                        Level::Info => Style::default().fg(Color::Gray),
+                        Level::Debug | Level::Trace => Style::default().fg(Color::DarkGray),
+                    },
+                )
+            })
+            .collect::<Vec<_>>();
+        frame.render_widget(
+            Paragraph::new(lines).block(
+                Block::bordered()
+                    .title(" Logs ")
+                    .border_style(Style::default().fg(Color::DarkGray)),
+            ),
+            area,
+        );
+    }
+}
+
+fn draw_polygon(context: &mut Context, polygon: &SPolygon, color: Color) {
+    for edge in polygon.edge_iter() {
+        context.draw(&Line::new(
+            f64::from(edge.start.0),
+            f64::from(edge.start.1),
+            f64::from(edge.end.0),
+            f64::from(edge.end.1),
+            color,
+        ));
+    }
+}
+
+fn item_color(item_id: usize) -> Color {
+    const COLORS: [Color; 6] = [
+        Color::Cyan,
+        Color::Green,
+        Color::Yellow,
+        Color::Magenta,
+        Color::LightBlue,
+        Color::LightGreen,
+    ];
+    COLORS[item_id % COLORS.len()]
+}
+
+fn report_is_feasible(report: &ReportType) -> bool {
+    match report {
+        ReportType::ExplFeas | ReportType::CmprFeas | ReportType::Final => true,
+        ReportType::ExplInfeas | ReportType::ExplImproving => false,
+    }
+}
+
+struct LogEntry {
+    level: Level,
+    message: String,
+}
+
+struct TuiLogSink {
+    logs: SyncSender<LogEntry>,
+}
+
+impl Log for TuiLogSink {
+    fn enabled(&self, _metadata: &Metadata) -> bool {
+        true
+    }
+
+    fn log(&self, record: &Record) {
+        let _ = self.logs.try_send(LogEntry {
+            level: record.level(),
+            message: record.args().to_string(),
+        });
+    }
+
+    fn flush(&self) {}
+}
+
+fn init_tui_logger(
+    level: log::LevelFilter,
+    log_file_path: &Path,
+    logs: SyncSender<LogEntry>,
+) -> Result<()> {
+    let _ = fs::remove_file(log_file_path);
+    fern::Dispatch::new()
+        .format(|out, message, record| {
+            let elapsed = EPOCH.elapsed();
+            let seconds = elapsed.as_secs() % 60;
+            let minutes = (elapsed.as_secs() / 60) % 60;
+            let hours = elapsed.as_secs() / 3600;
+            out.finish(format_args!(
+                "[{}] [{hours:02}:{minutes:02}:{seconds:02}] {}",
+                record.level(),
+                message,
+            ));
+        })
+        .level(level)
+        .chain(Box::new(TuiLogSink { logs }) as Box<dyn Log>)
+        .chain(fern::log_file(log_file_path)?)
+        .apply()?;
+    Ok(())
 }
 
 struct Update {
@@ -369,52 +598,43 @@ impl Terminator for TuiTerminator {
 
 fn report_label(report: &ReportType) -> &'static str {
     match report {
-        ReportType::ExplFeas => "exploration / feasible",
-        ReportType::ExplInfeas => "exploration / infeasible",
-        ReportType::ExplImproving => "exploration / improving",
-        ReportType::CmprFeas => "compression / feasible",
+        ReportType::ExplFeas | ReportType::ExplInfeas | ReportType::ExplImproving => "exploration",
+        ReportType::CmprFeas => "compression",
         ReportType::Final => "final",
     }
-}
-
-fn svg_options() -> usvg::Options<'static> {
-    let mut options = usvg::Options::default();
-    options.fontdb_mut().load_system_fonts();
-    options
-}
-
-fn rasterize_svg(svg: &str, options: &usvg::Options) -> Result<DynamicImage> {
-    let tree = usvg::Tree::from_str(svg, options)?;
-    let source = tree.size();
-    let scale =
-        (MAX_RASTER_SIZE.0 as f32 / source.width()).min(MAX_RASTER_SIZE.1 as f32 / source.height());
-    let width = (source.width() * scale).round().max(1.0) as u32;
-    let height = (source.height() * scale).round().max(1.0) as u32;
-    let mut pixmap =
-        tiny_skia::Pixmap::new(width, height).ok_or_else(|| anyhow!("SVG raster is too large"))?;
-    pixmap.fill(tiny_skia::Color::WHITE);
-    resvg::render(
-        &tree,
-        tiny_skia::Transform::from_scale(scale, scale),
-        &mut pixmap.as_mut(),
-    );
-    let pixels = RgbaImage::from_raw(width, height, pixmap.data().to_vec())
-        .ok_or_else(|| anyhow!("invalid SVG raster buffer"))?;
-    Ok(DynamicImage::ImageRgba8(pixels))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jagua_rs::geometry::primitives::Point;
+    use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     #[test]
-    fn rasterizes_svg_with_its_aspect_ratio() {
-        let image = rasterize_svg(
-            r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><rect width="200" height="100" fill="red"/></svg>"#,
-            &svg_options(),
-        )
-        .unwrap();
+    fn draws_an_arbitrary_polygon() {
+        let polygon =
+            SPolygon::new(vec![Point(1.0, 1.0), Point(9.0, 1.0), Point(5.0, 9.0)]).unwrap();
+        let mut terminal = Terminal::new(TestBackend::new(20, 10)).unwrap();
 
-        assert_eq!((image.width(), image.height()), (1600, 800));
+        terminal
+            .draw(|frame| {
+                let canvas = Canvas::default()
+                    .marker(Marker::Braille)
+                    .x_bounds([0.0, 10.0])
+                    .y_bounds([0.0, 10.0])
+                    .paint(|context| draw_polygon(context, &polygon, Color::Cyan));
+                frame.render_widget(canvas, frame.area());
+            })
+            .unwrap();
+
+        assert!(
+            terminal
+                .backend()
+                .buffer()
+                .content
+                .iter()
+                .any(|cell| cell.symbol() != " ")
+        );
     }
 }
