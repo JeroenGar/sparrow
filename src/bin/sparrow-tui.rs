@@ -43,6 +43,8 @@ const SNAPSHOT_INTERVAL: Duration = Duration::from_millis(100);
 const LOGO_WIDTH: u16 = 19;
 const METRICS_WIDTH: u16 = 34;
 const PROGRESS_MAX_WIDTH: u16 = 60;
+const ACTIVITY_INTERVAL: Duration = Duration::from_millis(200);
+const ACTIVITY_FRAMES: &[&str] = &["⠐⠀", "⠺⠂", "⠪⠂", "⠯⠇", "⠅⠅", "⠀⠀"];
 const COLOR_ACCENT: Color = Color::LightGreen;
 const COLOR_ACTIVE: Color = Color::LightYellow;
 const COLOR_LOSS: Color = Color::LightBlue;
@@ -506,10 +508,18 @@ impl App {
         let (state, state_color) = match (&self.report, self.loss_remaining) {
             (Some(ReportType::Final), _) => ("FINISHED", COLOR_ACCENT),
             (_, Some(0.0)) => ("FEASIBLE", COLOR_ACCENT),
-            (_, Some(_)) => ("SEPARATING", COLOR_ACTIVE),
+            (_, Some(_)) => ("NESTING", COLOR_ACTIVE),
             (Some(report), None) if report_is_feasible(report) => ("FEASIBLE", COLOR_ACCENT),
             (Some(_), None) => ("INFEASIBLE", COLOR_FAILURE),
             (None, None) => ("STARTING", COLOR_ACTIVE),
+        };
+        let activity = match self.finished {
+            true => "✓ ",
+            false => {
+                let frame = (self.started.elapsed().as_millis() / ACTIVITY_INTERVAL.as_millis())
+                    % ACTIVITY_FRAMES.len() as u128;
+                ACTIVITY_FRAMES[frame as usize]
+            }
         };
         let phase = TextLine::from(vec![
             Span::styled(
@@ -518,6 +528,17 @@ impl App {
                     .fg(COLOR_ACCENT)
                     .add_modifier(Modifier::BOLD),
             ),
+            Span::styled("[", Style::default().fg(COLOR_MUTED)),
+            Span::styled(
+                activity,
+                Style::default()
+                    .fg(match self.finished {
+                        true => COLOR_ACCENT,
+                        false => COLOR_ACTIVE,
+                    })
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("] ", Style::default().fg(COLOR_MUTED)),
             Span::styled(
                 state,
                 Style::default()
