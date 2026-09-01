@@ -27,7 +27,6 @@ use sparrow::util::listener::{
 };
 use sparrow::util::svg_exporter::SvgExporter;
 use sparrow::util::terminator::Terminator;
-use std::collections::VecDeque;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
@@ -41,7 +40,6 @@ const LIVE_VIEWER_PATH: &str = "data/live/live_viewer.html";
 const LIVE_SVG_PATH: &str = "data/live/.live_solution.svg";
 const FRAME_INTERVAL: Duration = Duration::from_millis(100);
 const SNAPSHOT_INTERVAL: Duration = Duration::from_millis(100);
-const MAX_LOG_LINES: usize = 200;
 const COLOR_ACCENT: Color = Color::LightGreen;
 const COLOR_ACTIVE: Color = Color::LightYellow;
 const COLOR_FAILURE: Color = Color::LightRed;
@@ -61,7 +59,10 @@ fn main() -> Result<()> {
     init_tui_logger(log_level, Path::new("output/log.txt"), logs_tx)?;
 
     let config = configure(&args)?;
-    let total_duration = config.expl_cfg.time_limit + config.cmpr_cfg.time_limit;
+    let budget = SearchBudget {
+        total_duration: config.expl_cfg.time_limit + config.cmpr_cfg.time_limit,
+        max_attempts: config.expl_cfg.max_conseq_failed_attempts,
+    };
     let rng = Xoshiro256PlusPlus::seed_from_u64(
         config
             .rng_seed
@@ -98,7 +99,7 @@ fn main() -> Result<()> {
             worker,
             signals,
             (&instance, &ext_instance),
-            total_duration,
+            budget,
         )
     })?;
 
@@ -171,10 +172,10 @@ fn run_tui(
     worker: JoinHandle<SPSolution>,
     signals: TuiSignals,
     final_output: (&SPInstance, &ExtSPInstance),
-    total_duration: Duration,
+    budget: SearchBudget,
 ) -> Result<SPSolution> {
     let (instance, ext_instance) = final_output;
-    let mut app = App::new(total_duration);
+    let mut app = App::new(budget);
     let mut worker = Some(worker);
     let mut solution = None;
 
@@ -228,6 +229,12 @@ fn run_tui(
     }
 }
 
+#[derive(Clone, Copy)]
+struct SearchBudget {
+    total_duration: Duration,
+    max_attempts: Option<usize>,
+}
+
 struct App {
     report: Option<ReportType>,
     phase: &'static str,
@@ -239,8 +246,8 @@ struct App {
     attempt_initial_loss: Option<f32>,
     loss_remaining: Option<f32>,
     started: Instant,
-    total_duration: Duration,
-    logs: VecDeque<LogEntry>,
+    budget: SearchBudget,
+    logs: Vec<LogEntry>,
     log_scroll: usize,
     log_view_height: usize,
     finished: bool,
@@ -249,7 +256,7 @@ struct App {
 }
 
 impl App {
-    fn new(total_duration: Duration) -> Self {
+    fn new(budget: SearchBudget) -> Self {
         Self {
             report: None,
             phase: "starting",
@@ -261,8 +268,8 @@ impl App {
             attempt_initial_loss: None,
             loss_remaining: None,
             started: Instant::now(),
-            total_duration,
-            logs: VecDeque::new(),
+            budget,
+            logs: Vec::new(),
             log_scroll: 0,
             log_view_height: 1,
             finished: false,
@@ -317,10 +324,7 @@ impl App {
 
     fn push_log(&mut self, log: LogEntry) {
         let keep_position = self.log_scroll > 0;
-        if self.logs.len() == MAX_LOG_LINES {
-            self.logs.pop_front();
-        }
-        self.logs.push_back(log);
+        self.logs.push(log);
         if keep_position {
             self.log_scroll = self.log_scroll.saturating_add(1).min(self.max_log_scroll());
         }
@@ -343,7 +347,7 @@ impl App {
 
     fn render(&mut self, frame: &mut Frame) {
         let [summary_area, logs_area, help_area] = Layout::vertical([
-            Constraint::Length(7),
+            Constraint::Length(6),
             Constraint::Min(5),
             Constraint::Length(1),
         ])
@@ -367,12 +371,16 @@ impl App {
 
     fn render_summary(&self, frame: &mut Frame, area: Rect) {
         let block = Block::bordered()
-            .title(" sparrow search ")
+            .title(" sparrow search overview ")
             .border_style(Style::default().fg(COLOR_ACCENT));
         let inner = block.inner(area);
         frame.render_widget(block, area);
-        let [metrics_area, progress_area] =
-            Layout::vertical([Constraint::Length(4), Constraint::Length(1)]).areas(inner);
+        let [metrics_area, _, progress_area] = Layout::horizontal([
+            Constraint::Percentage(50),
+            Constraint::Length(2),
+            Constraint::Min(20),
+        ])
+        .areas(inner);
 
         let (state, state_color) = match (&self.report, self.loss_remaining) {
             (Some(ReportType::Final), _) => ("FINISHED", COLOR_ACCENT),
@@ -414,20 +422,15 @@ impl App {
                 Style::default().fg(COLOR_ACCENT),
             ),
         ]);
-        let attempt = TextLine::from(vec![
-            Span::styled("attempt ", Style::default().fg(COLOR_MUTED)),
-            Span::styled(self.attempt.to_string(), Style::default().fg(COLOR_ACCENT)),
-            Span::styled(
-                " at this width   iteration ",
-                Style::default().fg(COLOR_MUTED),
-            ),
+        let iteration = TextLine::from(vec![
+            Span::styled("separation iteration ", Style::default().fg(COLOR_MUTED)),
             Span::styled(
                 self.iteration.to_string(),
                 Style::default().fg(COLOR_ACCENT),
             ),
         ]);
         let viewer = TextLine::from(vec![
-            Span::styled("Live solution viewer  ", Style::default().fg(COLOR_MUTED)),
+            Span::styled("viewer  ", Style::default().fg(COLOR_MUTED)),
             Span::styled(
                 LIVE_VIEWER_PATH,
                 Style::default()
@@ -436,35 +439,16 @@ impl App {
             ),
         ]);
         frame.render_widget(
-            Paragraph::new(vec![phase, dimensions, attempt, viewer]),
+            Paragraph::new(vec![phase, dimensions, iteration, viewer]),
             metrics_area,
         );
 
-        let [time_area, loss_area] =
-            Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
-                .areas(progress_area);
-        let time_progress = match self.finished {
-            true => 1.0,
-            false => elapsed.as_secs_f64() / self.total_duration.as_secs_f64().max(0.001),
-        }
-        .clamp(0.0, 1.0);
-        frame.render_widget(
-            Gauge::default()
-                .ratio(time_progress)
-                .label(format!(
-                    "time  {}s / {}s  {:>3.0}%",
-                    elapsed.as_secs(),
-                    self.total_duration.as_secs(),
-                    time_progress * 100.0
-                ))
-                .gauge_style(
-                    Style::default()
-                        .fg(COLOR_ACCENT)
-                        .bg(COLOR_TRACK)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            time_area,
-        );
+        let [loss_area, attempt_area, time_area] = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
+        .areas(progress_area);
         let loss_remaining = self.loss_remaining.unwrap_or(100.0);
         frame.render_widget(
             Gauge::default()
@@ -484,6 +468,45 @@ impl App {
                         .add_modifier(Modifier::BOLD),
                 ),
             loss_area,
+        );
+        if self.phase == "exploration"
+            && let Some(max_attempts) = self.budget.max_attempts
+        {
+            let attempt = self.attempt.min(max_attempts);
+            frame.render_widget(
+                Gauge::default()
+                    .ratio(attempt as f64 / max_attempts as f64)
+                    .label(format!("attempt  {attempt} / {max_attempts}"))
+                    .gauge_style(
+                        Style::default()
+                            .fg(COLOR_ACTIVE)
+                            .bg(COLOR_TRACK)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                attempt_area,
+            );
+        }
+        let time_progress = match self.finished {
+            true => 1.0,
+            false => elapsed.as_secs_f64() / self.budget.total_duration.as_secs_f64().max(0.001),
+        }
+        .clamp(0.0, 1.0);
+        frame.render_widget(
+            Gauge::default()
+                .ratio(time_progress)
+                .label(format!(
+                    "time  {}s / {}s  {:>3.0}%",
+                    elapsed.as_secs(),
+                    self.budget.total_duration.as_secs(),
+                    time_progress * 100.0
+                ))
+                .gauge_style(
+                    Style::default()
+                        .fg(COLOR_ACCENT)
+                        .bg(COLOR_TRACK)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            time_area,
         );
     }
 
@@ -736,9 +759,16 @@ fn phase_label(phase: OptimizationPhase) -> &'static str {
 mod tests {
     use super::*;
 
+    fn app() -> App {
+        App::new(SearchBudget {
+            total_duration: Duration::ZERO,
+            max_attempts: None,
+        })
+    }
+
     #[test]
     fn groups_separation_attempts_by_width() {
-        let mut app = App::new(Duration::ZERO);
+        let mut app = app();
         let progress = |strip_width, iteration, min_loss| {
             Update::Separation(SeparationProgress {
                 strip_width,
@@ -763,7 +793,7 @@ mod tests {
 
     #[test]
     fn keeps_scrolled_logs_in_place_as_new_lines_arrive() {
-        let mut app = App::new(Duration::ZERO);
+        let mut app = app();
         app.log_view_height = 2;
         for line in 0..4 {
             app.push_log(LogEntry {
