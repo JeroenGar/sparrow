@@ -145,7 +145,7 @@ fn sparrow_logo() -> Vec<TextLine<'static>> {
         .collect()
 }
 
-fn main() -> Result<()> {
+pub fn run() -> Result<()> {
     let args = MainCli::parse();
     fs::create_dir_all(OUTPUT_DIR)?;
     let (logs_tx, logs_rx) = mpsc::sync_channel(512);

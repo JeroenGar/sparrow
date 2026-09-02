@@ -13,11 +13,6 @@ path = "src/main.rs"
 name = "bench"
 path = "src/bench.rs"
 
-[[bin]]
-name = "sparrow-tui"
-path = "src/bin/sparrow-tui.rs"
-required-features = ["tui"]
-
 [dependencies]
 jagua-rs = { features = ["spp"], version = "0.8.0" }
 rand = "0.10"
