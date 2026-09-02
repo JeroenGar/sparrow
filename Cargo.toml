@@ -2,6 +2,7 @@
 name = "sparrow"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.90"
 default-run = "sparrow"
 description = "State-of-the-art nesting heuristic for 2D irregular strip packing problems"
 

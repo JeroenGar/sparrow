@@ -43,7 +43,7 @@ This repository accompanies the paper: ["_An open-source heuristic to reboot 2D 
 </p>
 
 ## Requirements
-- [Rust](https://www.rust-lang.org/tools/install) ≥ 1.86
+- [Rust](https://www.rust-lang.org/tools/install) ≥ 1.90
 
 ## Usage
 
