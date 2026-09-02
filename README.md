@@ -16,6 +16,10 @@ This optimization algorithm builds on [`jagua-rs`](https://github.com/JeroenGar/
 
 This repository accompanies the paper: ["_An open-source heuristic to reboot 2D nesting research_"](https://doi.org/10.48550/arXiv.2509.13329).
 
+## `sparrow` in action
+
+![The `sparrow` TUI dashboard running alongside the live solution viewer](data/demo.webp)
+
 > [!TIP]
 > Visit [**sparroWASM**](https://jeroengar.github.io/sparroWASM/) to see `sparrow` running in your browser!
 
@@ -72,18 +76,24 @@ cargo run --release -- \
     -i data/input/swim.json
 ```
 
-## Visualizer
+## Live visualization
 
-This repo contains a simple visualizer to monitor the optimization process live.
-Open [live_viewer.html](data/live/live_viewer.html) in a web browser,
-and build `sparrow` with the `live_svg` feature enabled:
+`sparrow` can show the search in a terminal dashboard alongside a live browser view of the current solution.
+The dashboard reports the current phase, progress, throughput, and logs. It continuously updates the SVG used by
+[live_viewer.html](data/live/live_viewer.html):
+
+```bash
+cargo run --release --features=tui -- \
+    -i data/input/swim.json
+```
+
+For the browser viewer without the dashboard, open
+[live_viewer.html](data/live/live_viewer.html) and enable the `live_svg` feature:
 
 ```bash
 cargo run --release --features=live_svg -- \
     -i data/input/swim.json
 ```
-
-![Demo of the live solution viewer](data/demo.gif)
 
 ## Input
 
