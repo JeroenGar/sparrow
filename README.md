@@ -21,7 +21,7 @@ This repository accompanies the paper: ["_An open-source heuristic to reboot 2D 
 
 ## `sparrow` in action
 
-<!-- Upload the new TUI demo video here. GitHub will insert its hosted video URL. -->
+![The `sparrow` TUI dashboard running alongside the live solution viewer](data/demo.webp)
 
 ## Nested by `sparrow`
 <p align="center">
