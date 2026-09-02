@@ -493,7 +493,10 @@ impl App {
         let progress_area = Rect::new(
             progress_space.x,
             progress_space.y,
-            progress_space.width.min(PROGRESS_MAX_WIDTH),
+            progress_space
+                .width
+                .saturating_sub(2)
+                .min(PROGRESS_MAX_WIDTH),
             progress_space.height,
         );
         frame.render_widget(Paragraph::new(sparrow_logo()), logo_area);
@@ -523,9 +526,9 @@ impl App {
         };
         let phase = TextLine::from(vec![
             Span::styled(
-                format!("{:<18}", self.phase),
+                format!("{state:<18}"),
                 Style::default()
-                    .fg(COLOR_ACCENT)
+                    .fg(state_color)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled("[", Style::default().fg(COLOR_MUTED)),
@@ -540,9 +543,9 @@ impl App {
             ),
             Span::styled("] ", Style::default().fg(COLOR_MUTED)),
             Span::styled(
-                state,
+                self.phase,
                 Style::default()
-                    .fg(state_color)
+                    .fg(COLOR_ACCENT)
                     .add_modifier(Modifier::BOLD),
             ),
         ]);
