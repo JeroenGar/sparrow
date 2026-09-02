@@ -469,11 +469,12 @@ impl App {
             .saturating_sub(self.log_view_height)
     }
 
-    fn separation_progress_color(&self) -> Color {
+    fn separation_result_color(&self) -> Option<Color> {
         match self.last_separation_result {
-            Some((true, reported)) if reported.elapsed() < RESULT_FLASH_DURATION => COLOR_ACCENT,
-            Some((false, reported)) if reported.elapsed() < RESULT_FLASH_DURATION => COLOR_FAILURE,
-            _ => COLOR_LOSS,
+            Some((success, reported)) if reported.elapsed() < RESULT_FLASH_DURATION => {
+                Some(if success { COLOR_ACCENT } else { COLOR_FAILURE })
+            }
+            _ => None,
         }
     }
 
@@ -720,12 +721,25 @@ impl App {
                 })
                 .gauge_style(
                     Style::default()
-                        .fg(self.separation_progress_color())
+                        .fg(COLOR_LOSS)
                         .bg(COLOR_TRACK)
                         .add_modifier(Modifier::BOLD),
                 ),
             loss_area,
         );
+        if let Some(color) = self.separation_result_color() {
+            let border_area = Rect::new(
+                loss_area.x.saturating_sub(1),
+                loss_area.y.saturating_sub(1),
+                loss_area.width.saturating_add(2),
+                loss_area.height.saturating_add(2),
+            );
+            frame.render_widget(
+                Block::bordered()
+                    .border_style(Style::default().fg(color).add_modifier(Modifier::BOLD)),
+                border_area,
+            );
+        }
     }
 
     fn render_logs(&mut self, frame: &mut Frame, area: Rect) {
@@ -1071,13 +1085,13 @@ mod tests {
         let mut app = app();
 
         app.apply(Update::SeparationResult(true));
-        assert_eq!(app.separation_progress_color(), COLOR_ACCENT);
+        assert_eq!(app.separation_result_color(), Some(COLOR_ACCENT));
 
         app.apply(Update::SeparationResult(false));
-        assert_eq!(app.separation_progress_color(), COLOR_FAILURE);
+        assert_eq!(app.separation_result_color(), Some(COLOR_FAILURE));
 
         app.last_separation_result = Some((true, Instant::now() - RESULT_FLASH_DURATION));
-        assert_eq!(app.separation_progress_color(), COLOR_LOSS);
+        assert_eq!(app.separation_result_color(), None);
     }
 
     #[test]
