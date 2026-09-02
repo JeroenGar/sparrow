@@ -614,25 +614,27 @@ impl App {
                     .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
             ),
         ]);
-        let throughput = self.last_separation_result.map_or_else(
-            || "evals/s -  moves/s -  iter/s -".to_owned(),
-            |(result, _)| {
-                format!(
-                    "evals/s {} K  moves/s {}  iter/s {}",
-                    (result.evals_per_second / 1000.0) as usize,
-                    format_rate(result.moves_per_second),
-                    format_rate(result.iterations_per_second),
-                )
-            },
-        );
+        let (evals_per_second, moves_per_second, iterations_per_second) =
+            self.last_separation_result.map_or_else(
+                || ("-".to_owned(), "-".to_owned(), "-".to_owned()),
+                |(result, _)| {
+                    (
+                        format!("{} K", (result.evals_per_second / 1000.0) as usize),
+                        format_rate(result.moves_per_second),
+                        format_rate(result.iterations_per_second),
+                    )
+                },
+            );
+        let throughput = TextLine::from(vec![
+            Span::styled("evals/s ", Style::default().fg(COLOR_MUTED)),
+            Span::styled(evals_per_second, Style::default().fg(COLOR_TEXT)),
+            Span::styled("  moves/s ", Style::default().fg(COLOR_MUTED)),
+            Span::styled(moves_per_second, Style::default().fg(COLOR_TEXT)),
+            Span::styled("  iter/s ", Style::default().fg(COLOR_MUTED)),
+            Span::styled(iterations_per_second, Style::default().fg(COLOR_TEXT)),
+        ]);
         frame.render_widget(
-            Paragraph::new(vec![
-                phase,
-                dimensions,
-                iteration,
-                viewer,
-                TextLine::styled(throughput, Style::default().fg(COLOR_TEXT)),
-            ]),
+            Paragraph::new(vec![phase, dimensions, iteration, viewer, throughput]),
             metrics_area,
         );
 
