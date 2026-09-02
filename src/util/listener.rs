@@ -8,7 +8,7 @@ pub trait SolutionListener {
 
     fn report_separation_progress(&mut self, _progress: SeparationProgress) {}
 
-    fn report_separation_result(&mut self, _success: bool) {}
+    fn report_separation_result(&mut self, _result: SeparationResult) {}
 
     fn report_compression_progress(&mut self, _shrink_step: f32) {}
 }
@@ -27,6 +27,14 @@ pub struct SeparationProgress {
     pub density: f32,
     pub iteration: usize,
     pub min_loss: f32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct SeparationResult {
+    pub success: bool,
+    pub evals_per_second: f32,
+    pub moves_per_second: f32,
+    pub iterations_per_second: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

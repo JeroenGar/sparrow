@@ -7,6 +7,7 @@ use jagua_rs::io::svg::s_layout_to_svg;
 use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
 use jagua_rs::probs::spp::io::ext_repr::ExtSPInstance;
 use log::{Level, Log, Metadata, Record};
+use numfmt::{Formatter, Precision, Scales};
 use rand::SeedableRng;
 use rand::rngs::Xoshiro256PlusPlus;
 use ratatui::buffer::CellWidth;
@@ -24,7 +25,7 @@ use sparrow::consts::{
 use sparrow::optimizer::optimize;
 use sparrow::util::io::{self, ExtSPOutput, MainCli};
 use sparrow::util::listener::{
-    OptimizationPhase, ReportType, SeparationProgress, SolutionListener,
+    OptimizationPhase, ReportType, SeparationProgress, SeparationResult, SolutionListener,
 };
 use sparrow::util::svg_exporter::SvgExporter;
 use sparrow::util::terminator::Terminator;
@@ -43,7 +44,7 @@ const FRAME_INTERVAL: Duration = Duration::from_millis(100);
 const SNAPSHOT_INTERVAL: Duration = Duration::from_millis(100);
 const RESULT_FLASH_DURATION: Duration = Duration::from_millis(100);
 const LOGO_WIDTH: u16 = 19;
-const METRICS_WIDTH: u16 = 34;
+const METRICS_WIDTH: u16 = 44;
 const PROGRESS_MAX_WIDTH: u16 = 60;
 const ACTIVITY_INTERVAL: Duration = Duration::from_millis(180);
 const ACTIVITY_FRAMES: &[&str] = &["⠀⠶⠀", "⠰⣿⠆", "⢾⣉⡷", "⣏⠀⣹", "⡁⠀⢈"];
@@ -353,7 +354,7 @@ struct App {
     iteration: usize,
     attempt_initial_loss: Option<f32>,
     loss_remaining: Option<f32>,
-    last_separation_result: Option<(bool, Instant)>,
+    last_separation_result: Option<(SeparationResult, Instant)>,
     shrink_step: Option<f32>,
     started: Instant,
     budget: SearchBudget,
@@ -411,8 +412,8 @@ impl App {
             }
             Update::Phase(phase) => self.phase = phase_label(phase),
             Update::Separation(progress) => self.apply_separation_progress(progress),
-            Update::SeparationResult(success) => {
-                self.last_separation_result = Some((success, Instant::now()));
+            Update::SeparationResult(result) => {
+                self.last_separation_result = Some((result, Instant::now()));
             }
             Update::Compression(shrink_step) => self.shrink_step = Some(shrink_step),
         }
@@ -473,8 +474,12 @@ impl App {
 
     fn separation_result_color(&self) -> Option<Color> {
         match self.last_separation_result {
-            Some((success, reported)) if reported.elapsed() < RESULT_FLASH_DURATION => {
-                Some(if success { COLOR_ACCENT } else { COLOR_FAILURE })
+            Some((result, reported)) if reported.elapsed() < RESULT_FLASH_DURATION => {
+                Some(if result.success {
+                    COLOR_ACCENT
+                } else {
+                    COLOR_FAILURE
+                })
             }
             _ => None,
         }
@@ -531,7 +536,7 @@ impl App {
 
         let [_, metrics_area, _] = Layout::vertical([
             Constraint::Length(2),
-            Constraint::Length(4),
+            Constraint::Length(5),
             Constraint::Fill(1),
         ])
         .areas(metrics_area);
@@ -609,8 +614,25 @@ impl App {
                     .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
             ),
         ]);
+        let throughput = self.last_separation_result.map_or_else(
+            || "evals/s -  moves/s -  iter/s -".to_owned(),
+            |(result, _)| {
+                format!(
+                    "evals/s {} K  moves/s {}  iter/s {}",
+                    (result.evals_per_second / 1000.0) as usize,
+                    format_rate(result.moves_per_second),
+                    format_rate(result.iterations_per_second),
+                )
+            },
+        );
         frame.render_widget(
-            Paragraph::new(vec![phase, dimensions, iteration, viewer]),
+            Paragraph::new(vec![
+                phase,
+                dimensions,
+                iteration,
+                viewer,
+                TextLine::styled(throughput, Style::default().fg(COLOR_TEXT)),
+            ]),
             metrics_area,
         );
 
@@ -844,6 +866,14 @@ fn shrink_progress(shrink_step: f32, range: (f32, f32)) -> f64 {
     ((range.0 - shrink_step) / (range.0 - range.1)).clamp(0.0, 1.0) as f64
 }
 
+fn format_rate(rate: f32) -> String {
+    Formatter::new()
+        .scales(Scales::short())
+        .precision(Precision::Significance(3))
+        .fmt2(rate)
+        .to_owned()
+}
+
 fn export_final_solution(
     solution: &SPSolution,
     instance: &SPInstance,
@@ -924,7 +954,7 @@ enum Update {
     },
     Phase(OptimizationPhase),
     Separation(SeparationProgress),
-    SeparationResult(bool),
+    SeparationResult(SeparationResult),
     Compression(f32),
 }
 
@@ -973,8 +1003,8 @@ impl SolutionListener for TuiListener {
         let _ = self.updates.send(Update::Separation(progress));
     }
 
-    fn report_separation_result(&mut self, success: bool) {
-        let _ = self.updates.send(Update::SeparationResult(success));
+    fn report_separation_result(&mut self, result: SeparationResult) {
+        let _ = self.updates.send(Update::SeparationResult(result));
     }
 
     fn report_compression_progress(&mut self, shrink_step: f32) {
@@ -1078,14 +1108,20 @@ mod tests {
     #[test]
     fn flashes_separation_results() {
         let mut app = app();
+        let result = |success| SeparationResult {
+            success,
+            evals_per_second: 0.0,
+            moves_per_second: 0.0,
+            iterations_per_second: 0.0,
+        };
 
-        app.apply(Update::SeparationResult(true));
+        app.apply(Update::SeparationResult(result(true)));
         assert_eq!(app.separation_result_color(), Some(COLOR_ACCENT));
 
-        app.apply(Update::SeparationResult(false));
+        app.apply(Update::SeparationResult(result(false)));
         assert_eq!(app.separation_result_color(), Some(COLOR_FAILURE));
 
-        app.last_separation_result = Some((true, Instant::now() - RESULT_FLASH_DURATION));
+        app.last_separation_result = Some((result(true), Instant::now() - RESULT_FLASH_DURATION));
         assert_eq!(app.separation_result_color(), None);
     }
 

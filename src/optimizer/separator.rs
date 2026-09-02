@@ -3,7 +3,7 @@ use crate::optimizer::Terminator;
 use crate::quantify::tracker::{CTSnapshot, CollisionTracker};
 use crate::sample::search::SampleConfig;
 use crate::util::assertions::tracker_matches_layout;
-use crate::util::listener::{ReportType, SeparationProgress, SolutionListener};
+use crate::util::listener::{ReportType, SeparationProgress, SeparationResult, SolutionListener};
 use crate::FMT;
 use itertools::Itertools;
 use jagua_rs::entities::PItemKey;
@@ -138,15 +138,21 @@ impl Separator {
             self.rollback(&min_loss_sol.0, Some(&min_loss_sol.1));
         }
         let secs = start.elapsed().as_secs_f32();
+        let result = SeparationResult {
+            success: min_loss == 0.0,
+            evals_per_second: sep_stats.total_evals as f32 / secs,
+            moves_per_second: sep_stats.total_moves as f32 / secs,
+            iterations_per_second: n_iter as f32 / secs,
+        };
         log!(self.config.log_level, "[SEP] finished, evals/s: {} K, evals/move: {}, moves/s: {}, iter/s: {}, #workers: {}, total {:.3}s",
-            (sep_stats.total_evals as f32/ (1000.0 * secs)) as usize,
+            (result.evals_per_second / 1000.0) as usize,
             FMT().fmt2(sep_stats.total_evals as f32 / sep_stats.total_moves as f32),
-            FMT().fmt2(sep_stats.total_moves as f32 / secs),
-            FMT().fmt2(n_iter as f32 / secs),
+            FMT().fmt2(result.moves_per_second),
+            FMT().fmt2(result.iterations_per_second),
             self.workers.len(),
             FMT().fmt2(secs),
         );
-        sol_listener.report_separation_result(min_loss == 0.0);
+        sol_listener.report_separation_result(result);
 
         // Return the best solution found: a feasible one if separation was successful, otherwise the 'least' infeasible one
         (min_loss_sol.0, min_loss_sol.1)
