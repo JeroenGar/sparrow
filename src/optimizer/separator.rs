@@ -146,6 +146,7 @@ impl Separator {
             self.workers.len(),
             FMT().fmt2(secs),
         );
+        sol_listener.report_separation_result(min_loss == 0.0);
 
         // Return the best solution found: a feasible one if separation was successful, otherwise the 'least' infeasible one
         (min_loss_sol.0, min_loss_sol.1)

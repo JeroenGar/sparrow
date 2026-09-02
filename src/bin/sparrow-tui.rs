@@ -40,6 +40,7 @@ const LIVE_VIEWER_PATH: &str = "data/live/live_viewer.html";
 const LIVE_SVG_PATH: &str = "data/live/.live_solution.svg";
 const FRAME_INTERVAL: Duration = Duration::from_millis(100);
 const SNAPSHOT_INTERVAL: Duration = Duration::from_millis(100);
+const RESULT_FLASH_DURATION: Duration = Duration::from_millis(400);
 const LOGO_WIDTH: u16 = 19;
 const METRICS_WIDTH: u16 = 34;
 const PROGRESS_MAX_WIDTH: u16 = 60;
@@ -349,6 +350,7 @@ struct App {
     iteration: usize,
     attempt_initial_loss: Option<f32>,
     loss_remaining: Option<f32>,
+    last_separation_result: Option<(bool, Instant)>,
     shrink_step: Option<f32>,
     started: Instant,
     budget: SearchBudget,
@@ -372,6 +374,7 @@ impl App {
             iteration: 0,
             attempt_initial_loss: None,
             loss_remaining: None,
+            last_separation_result: None,
             shrink_step: None,
             started: Instant::now(),
             budget,
@@ -403,6 +406,9 @@ impl App {
             }
             Update::Phase(phase) => self.phase = phase_label(phase),
             Update::Separation(progress) => self.apply_separation_progress(progress),
+            Update::SeparationResult(success) => {
+                self.last_separation_result = Some((success, Instant::now()));
+            }
             Update::Compression(shrink_step) => self.shrink_step = Some(shrink_step),
         }
     }
@@ -450,6 +456,14 @@ impl App {
 
     fn max_log_scroll(&self) -> usize {
         self.logs.len().saturating_sub(self.log_view_height)
+    }
+
+    fn separation_progress_color(&self) -> Color {
+        match self.last_separation_result {
+            Some((true, reported)) if reported.elapsed() < RESULT_FLASH_DURATION => COLOR_ACCENT,
+            Some((false, reported)) if reported.elapsed() < RESULT_FLASH_DURATION => COLOR_FAILURE,
+            _ => COLOR_LOSS,
+        }
     }
 
     fn render(&mut self, frame: &mut Frame) {
@@ -526,7 +540,7 @@ impl App {
         };
         let phase = TextLine::from(vec![
             Span::styled(
-                format!("{state:<14}"),
+                format!("{state:<11}"),
                 Style::default()
                     .fg(state_color)
                     .add_modifier(Modifier::BOLD),
@@ -695,7 +709,7 @@ impl App {
                 })
                 .gauge_style(
                     Style::default()
-                        .fg(COLOR_LOSS)
+                        .fg(self.separation_progress_color())
                         .bg(COLOR_TRACK)
                         .add_modifier(Modifier::BOLD),
                 ),
@@ -849,6 +863,7 @@ enum Update {
     },
     Phase(OptimizationPhase),
     Separation(SeparationProgress),
+    SeparationResult(bool),
     Compression(f32),
 }
 
@@ -895,6 +910,10 @@ impl SolutionListener for TuiListener {
 
     fn report_separation_progress(&mut self, progress: SeparationProgress) {
         let _ = self.updates.send(Update::Separation(progress));
+    }
+
+    fn report_separation_result(&mut self, success: bool) {
+        let _ = self.updates.send(Update::SeparationResult(success));
     }
 
     fn report_compression_progress(&mut self, shrink_step: f32) {
@@ -993,6 +1012,20 @@ mod tests {
 
         app.apply(progress(99.0, 0, 12.0));
         assert_eq!(app.attempt, 1);
+    }
+
+    #[test]
+    fn flashes_separation_results() {
+        let mut app = app();
+
+        app.apply(Update::SeparationResult(true));
+        assert_eq!(app.separation_progress_color(), COLOR_ACCENT);
+
+        app.apply(Update::SeparationResult(false));
+        assert_eq!(app.separation_progress_color(), COLOR_FAILURE);
+
+        app.last_separation_result = Some((true, Instant::now() - RESULT_FLASH_DURATION));
+        assert_eq!(app.separation_progress_color(), COLOR_LOSS);
     }
 
     #[test]

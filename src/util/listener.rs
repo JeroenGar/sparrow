@@ -8,6 +8,8 @@ pub trait SolutionListener {
 
     fn report_separation_progress(&mut self, _progress: SeparationProgress) {}
 
+    fn report_separation_result(&mut self, _success: bool) {}
+
     fn report_compression_progress(&mut self, _shrink_step: f32) {}
 }
 
