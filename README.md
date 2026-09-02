@@ -18,7 +18,7 @@ This repository accompanies the paper: ["_An open-source heuristic to reboot 2D 
 
 ## `sparrow` in action
 
-![The `sparrow` TUI dashboard running alongside the live solution viewer](data/demo.webp)
+![The `sparrow` TUI dashboard running alongside the live solution viewer](data/demo.gif)
 
 > [!TIP]
 > Visit [**sparroWASM**](https://jeroengar.github.io/sparroWASM/) to see `sparrow` running in your browser!
