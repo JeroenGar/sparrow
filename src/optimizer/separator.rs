@@ -102,7 +102,8 @@ impl Separator {
                     //All collisions are resolved
                     log!(self.config.log_level,"[SEP] [s:{n_strikes},i:{n_iter}] (S)  min_l: {}",FMT().fmt2(loss));
                     min_loss_sol = (self.prob.save(), self.ct.save());
-                    min_loss = loss;
+                    sol_listener.report_separation_progress(progress(n_iter + 1, loss));
+                    break 'outer;
                 } else if loss < min_loss {
                     //Not all collisions are resolved, but we found a new 'best' solution
                     log!(self.config.log_level,"[SEP] [s:{n_strikes},i:{n_iter}] (*) min_l: {}",FMT().fmt2(loss));
@@ -119,10 +120,6 @@ impl Separator {
                 }
 
                 sol_listener.report_separation_progress(progress(n_iter + 1, min_loss));
-                if loss == 0.0 {
-                    break 'outer;
-                }
-
                 // Update the GLS weights
                 self.ct.update_weights();
                 n_iter += 1;
@@ -138,21 +135,21 @@ impl Separator {
             self.rollback(&min_loss_sol.0, Some(&min_loss_sol.1));
         }
         let secs = start.elapsed().as_secs_f32();
-        let result = SeparationResult {
-            success: min_loss == 0.0,
-            evals_per_second: sep_stats.total_evals as f32 / secs,
-            moves_per_second: sep_stats.total_moves as f32 / secs,
-            iterations_per_second: n_iter as f32 / secs,
-        };
         log!(self.config.log_level, "[SEP] finished, evals/s: {} K, evals/move: {}, moves/s: {}, iter/s: {}, #workers: {}, total {:.3}s",
-            (result.evals_per_second / 1000.0) as usize,
+            (sep_stats.total_evals as f32/ (1000.0 * secs)) as usize,
             FMT().fmt2(sep_stats.total_evals as f32 / sep_stats.total_moves as f32),
-            FMT().fmt2(result.moves_per_second),
-            FMT().fmt2(result.iterations_per_second),
+            FMT().fmt2(sep_stats.total_moves as f32 / secs),
+            FMT().fmt2(n_iter as f32 / secs),
             self.workers.len(),
             FMT().fmt2(secs),
         );
-        sol_listener.report_separation_result(result);
+        sol_listener.report_separation_result(SeparationResult {
+            success: self.ct.get_total_loss() == 0.0,
+            elapsed_seconds: secs,
+            total_evals: sep_stats.total_evals,
+            total_moves: sep_stats.total_moves,
+            iterations: n_iter,
+        });
 
         // Return the best solution found: a feasible one if separation was successful, otherwise the 'least' infeasible one
         (min_loss_sol.0, min_loss_sol.1)

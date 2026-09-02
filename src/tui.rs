@@ -619,9 +619,13 @@ impl App {
                 || ("-".to_owned(), "-".to_owned(), "-".to_owned()),
                 |(result, _)| {
                     (
-                        format!("{} K", (result.evals_per_second / 1000.0) as usize),
-                        format_rate(result.moves_per_second),
-                        format_rate(result.iterations_per_second),
+                        format!(
+                            "{} K",
+                            (result.total_evals as f32 / (1000.0 * result.elapsed_seconds))
+                                as usize
+                        ),
+                        format_rate(result.total_moves as f32 / result.elapsed_seconds),
+                        format_rate(result.iterations as f32 / result.elapsed_seconds),
                     )
                 },
             );
@@ -1112,9 +1116,10 @@ mod tests {
         let mut app = app();
         let result = |success| SeparationResult {
             success,
-            evals_per_second: 0.0,
-            moves_per_second: 0.0,
-            iterations_per_second: 0.0,
+            elapsed_seconds: 1.0,
+            total_evals: 0,
+            total_moves: 0,
+            iterations: 0,
         };
 
         app.apply(Update::SeparationResult(result(true)));

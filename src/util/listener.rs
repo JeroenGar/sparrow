@@ -32,9 +32,10 @@ pub struct SeparationProgress {
 #[derive(Debug, Clone, Copy)]
 pub struct SeparationResult {
     pub success: bool,
-    pub evals_per_second: f32,
-    pub moves_per_second: f32,
-    pub iterations_per_second: f32,
+    pub elapsed_seconds: f32,
+    pub total_evals: usize,
+    pub total_moves: usize,
+    pub iterations: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

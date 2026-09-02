@@ -50,9 +50,6 @@ pub fn compression_phase(
             }
         }
     }
-    if !term.kill() && shrink_step_size(n_failed_attempts) < config.shrink_range.1 {
-        sol_listener.report_compression_progress(config.shrink_range.1);
-    }
     info!("[CMPR] finished, compressed from {:.3}% to {:.3}% (+{:.3}%)", init_sol.density(instance) * 100.0, best_sol.density(instance) * 100.0, (best_sol.density(instance) - init_sol.density(instance)) * 100.0);
     best_sol
 }
