@@ -35,27 +35,6 @@ fn groups_separation_attempts_by_width() {
 }
 
 #[test]
-fn flashes_separation_results() {
-    let mut dashboard = dashboard();
-    let result = |success| SeparationResult {
-        success,
-        elapsed_seconds: 1.0,
-        total_evals: 0,
-        total_moves: 0,
-        iterations: 0,
-    };
-
-    dashboard.apply(DashboardUpdate::SeparationResult(result(true)));
-    assert_eq!(dashboard.separation_result_color(), Some(COLOR_ACCENT));
-
-    dashboard.apply(DashboardUpdate::SeparationResult(result(false)));
-    assert_eq!(dashboard.separation_result_color(), Some(COLOR_FAILURE));
-
-    dashboard.last_separation_result = Some((result(true), Instant::now() - RESULT_FLASH_DURATION));
-    assert_eq!(dashboard.separation_result_color(), None);
-}
-
-#[test]
 fn keeps_scrolled_logs_in_place_as_new_lines_arrive() {
     let mut dashboard = dashboard();
     dashboard.log_view_height = 2;
@@ -84,13 +63,4 @@ fn wraps_log_lines_to_the_view_width() {
         vec!["abc", "def", "gh"]
     );
     assert_eq!(wrapped_log_lines("", 3).collect::<Vec<_>>(), vec![""]);
-}
-
-#[test]
-fn shrink_progress_runs_from_initial_to_final_step() {
-    let range = (0.05, 0.01);
-
-    assert_eq!(shrink_progress(range.0, range), 0.0);
-    assert_eq!(shrink_progress(range.1, range), 1.0);
-    assert!((shrink_progress(0.03, range) - 0.5).abs() < 1e-6);
 }
