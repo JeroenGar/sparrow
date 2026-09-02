@@ -51,6 +51,8 @@ const COLOR_ACCENT: Color = Color::LightGreen;
 const COLOR_ACTIVE: Color = Color::LightYellow;
 const COLOR_LOSS: Color = Color::LightBlue;
 const COLOR_FAILURE: Color = Color::LightRed;
+const COLOR_LOG_SUCCESS: Color = Color::Rgb(205, 220, 205);
+const COLOR_LOG_FAILURE: Color = Color::Rgb(230, 205, 195);
 const COLOR_LINK: Color = Color::LightCyan;
 const COLOR_TEXT: Color = Color::White;
 const COLOR_MUTED: Color = Color::DarkGray;
@@ -809,20 +811,20 @@ fn log_style(entry: &LogEntry) -> Style {
         || entry.message.contains("[CMPR] success at")
     {
         Style::default()
-            .fg(COLOR_ACCENT)
+            .fg(COLOR_LOG_SUCCESS)
             .add_modifier(Modifier::BOLD)
     } else if entry.message.contains("[EXPL] unable to reach feasibility")
         || entry.message.contains("[CMPR] failed at")
     {
         Style::default()
-            .fg(COLOR_FAILURE)
+            .fg(COLOR_LOG_FAILURE)
             .add_modifier(Modifier::BOLD)
     } else if entry.message.contains("[SEP] finished") {
         Style::default().fg(COLOR_TEXT).add_modifier(Modifier::BOLD)
     } else {
         match entry.level {
             Level::Error => Style::default()
-                .fg(COLOR_FAILURE)
+                .fg(COLOR_LOG_FAILURE)
                 .add_modifier(Modifier::BOLD),
             Level::Warn => Style::default().fg(COLOR_ACTIVE),
             Level::Info => Style::default().fg(COLOR_TEXT),
