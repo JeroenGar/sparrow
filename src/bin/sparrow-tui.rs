@@ -563,7 +563,7 @@ impl App {
                 Style::default()
                     .fg(match self.finished {
                         true => COLOR_ACCENT,
-                        false => COLOR_ACTIVE,
+                        false => COLOR_TEXT,
                     })
                     .add_modifier(Modifier::BOLD),
             ),
@@ -712,13 +712,19 @@ impl App {
                 );
         }
         let collision_progress = self.loss_remaining.map(|loss| 100.0 - loss);
+        let separation_label = match collision_progress {
+            Some(progress) => format!("separation progress  {progress:.1}%"),
+            None => "separation progress  -".to_owned(),
+        };
+        let separation_label = Span::styled(
+            separation_label,
+            self.separation_result_color()
+                .map_or(Style::default(), |color| Style::default().fg(color)),
+        );
         frame.render_widget(
             Gauge::default()
                 .ratio((collision_progress.unwrap_or(0.0) / 100.0) as f64)
-                .label(match collision_progress {
-                    Some(progress) => format!("separation progress  {progress:.1}%"),
-                    None => "separation progress  -".to_owned(),
-                })
+                .label(separation_label)
                 .gauge_style(
                     Style::default()
                         .fg(COLOR_LOSS)
@@ -727,19 +733,6 @@ impl App {
                 ),
             loss_area,
         );
-        if let Some(color) = self.separation_result_color() {
-            let border_area = Rect::new(
-                loss_area.x.saturating_sub(1),
-                loss_area.y.saturating_sub(1),
-                loss_area.width.saturating_add(2),
-                loss_area.height.saturating_add(2),
-            );
-            frame.render_widget(
-                Block::bordered()
-                    .border_style(Style::default().fg(color).add_modifier(Modifier::BOLD)),
-                border_area,
-            );
-        }
     }
 
     fn render_logs(&mut self, frame: &mut Frame, area: Rect) {
