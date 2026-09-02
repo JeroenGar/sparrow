@@ -526,7 +526,7 @@ impl App {
         };
         let phase = TextLine::from(vec![
             Span::styled(
-                format!("{state:<18}"),
+                format!("{state:<14}"),
                 Style::default()
                     .fg(state_color)
                     .add_modifier(Modifier::BOLD),
@@ -541,7 +541,7 @@ impl App {
                     })
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled("] ", Style::default().fg(COLOR_MUTED)),
+            Span::styled("]  ", Style::default().fg(COLOR_MUTED)),
             Span::styled(
                 self.phase,
                 Style::default()
@@ -587,14 +587,14 @@ impl App {
         );
 
         let phase_progress = match self.phase {
-            "exploration" => self.budget.max_attempts.map(|max_attempts| {
+            "exploring" => self.budget.max_attempts.map(|max_attempts| {
                 let attempt = self.attempt.min(max_attempts);
                 (
                     attempt as f64 / max_attempts as f64,
                     format!("attempt  {attempt} / {max_attempts}"),
                 )
             }),
-            "compression" => self.budget.shrink_range.map(|range| {
+            "compressing" => self.budget.shrink_range.map(|range| {
                 let shrink_step = self.shrink_step.unwrap_or(range.0);
                 (
                     shrink_progress(shrink_step, range),
@@ -952,8 +952,8 @@ impl TuiSignals {
 
 fn phase_label(phase: OptimizationPhase) -> &'static str {
     match phase {
-        OptimizationPhase::Exploration => "exploration",
-        OptimizationPhase::Compression => "compression",
+        OptimizationPhase::Exploration => "exploring",
+        OptimizationPhase::Compression => "compressing",
     }
 }
 
