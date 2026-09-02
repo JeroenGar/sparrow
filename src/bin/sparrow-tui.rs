@@ -9,6 +9,7 @@ use jagua_rs::probs::spp::io::ext_repr::ExtSPInstance;
 use log::{Level, Log, Metadata, Record};
 use rand::SeedableRng;
 use rand::rngs::Xoshiro256PlusPlus;
+use ratatui::buffer::CellWidth;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line as TextLine, Span};
@@ -357,6 +358,7 @@ struct App {
     logs: Vec<LogEntry>,
     log_scroll: usize,
     log_view_height: usize,
+    log_view_width: u16,
     finished: bool,
     finished_elapsed: Option<Duration>,
     quit_requested: bool,
@@ -381,6 +383,7 @@ impl App {
             logs: Vec::new(),
             log_scroll: 0,
             log_view_height: 1,
+            log_view_width: u16::MAX,
             finished: false,
             finished_elapsed: None,
             quit_requested: false,
@@ -437,9 +440,13 @@ impl App {
 
     fn push_log(&mut self, log: LogEntry) {
         let keep_position = self.log_scroll > 0;
+        let new_lines = wrapped_log_lines(&log.message, self.log_view_width).count();
         self.logs.push(log);
         if keep_position {
-            self.log_scroll = self.log_scroll.saturating_add(1).min(self.max_log_scroll());
+            self.log_scroll = self
+                .log_scroll
+                .saturating_add(new_lines)
+                .min(self.max_log_scroll());
         }
     }
 
@@ -455,7 +462,11 @@ impl App {
     }
 
     fn max_log_scroll(&self) -> usize {
-        self.logs.len().saturating_sub(self.log_view_height)
+        self.logs
+            .iter()
+            .map(|entry| wrapped_log_lines(&entry.message, self.log_view_width).count())
+            .sum::<usize>()
+            .saturating_sub(self.log_view_height)
     }
 
     fn separation_progress_color(&self) -> Color {
@@ -720,15 +731,24 @@ impl App {
     fn render_logs(&mut self, frame: &mut Frame, area: Rect) {
         let visible_lines = area.height.saturating_sub(2) as usize;
         self.log_view_height = visible_lines.max(1);
-        self.log_scroll = self.log_scroll.min(self.max_log_scroll());
+        self.log_view_width = area.width.saturating_sub(2).max(1);
         let lines = self
             .logs
             .iter()
+            .flat_map(|entry| {
+                wrapped_log_lines(&entry.message, self.log_view_width)
+                    .map(|line| TextLine::styled(line, log_style(entry)))
+            })
+            .collect::<Vec<_>>();
+        self.log_scroll = self
+            .log_scroll
+            .min(lines.len().saturating_sub(self.log_view_height));
+        let lines = lines
+            .into_iter()
             .rev()
             .skip(self.log_scroll)
             .take(visible_lines)
             .rev()
-            .map(|entry| TextLine::styled(entry.message.as_str(), log_style(entry)))
             .collect::<Vec<_>>();
         let title = match self.log_scroll {
             0 => " Logs ".to_owned(),
@@ -743,6 +763,38 @@ impl App {
             area,
         );
     }
+}
+
+fn wrapped_log_lines(message: &str, width: u16) -> impl Iterator<Item = &str> {
+    let width = width.max(1);
+    let mut remaining = Some(message);
+
+    std::iter::from_fn(move || {
+        let message = remaining?;
+        if message.is_empty() {
+            remaining = None;
+            return Some("");
+        }
+
+        let mut line_width = 0;
+        let split = message
+            .char_indices()
+            .find_map(|(index, character)| {
+                let mut encoded = [0; 4];
+                let character_width = character.encode_utf8(&mut encoded).cell_width();
+                match line_width > 0 && line_width + character_width > width {
+                    true => Some(index),
+                    false => {
+                        line_width += character_width;
+                        None
+                    }
+                }
+            })
+            .unwrap_or(message.len());
+        let (line, rest) = message.split_at(split);
+        remaining = (!rest.is_empty()).then_some(rest);
+        Some(line)
+    })
 }
 
 fn log_style(entry: &LogEntry) -> Style {
@@ -1048,6 +1100,15 @@ mod tests {
         assert_eq!(app.log_scroll, 3);
         app.scroll_logs_down(usize::MAX);
         assert_eq!(app.log_scroll, 0);
+    }
+
+    #[test]
+    fn wraps_log_lines_to_the_view_width() {
+        assert_eq!(
+            wrapped_log_lines("abcdefgh", 3).collect::<Vec<_>>(),
+            vec!["abc", "def", "gh"]
+        );
+        assert_eq!(wrapped_log_lines("", 3).collect::<Vec<_>>(), vec![""]);
     }
 
     #[test]
