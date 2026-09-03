@@ -65,6 +65,7 @@ impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
         self.collector.clear();
         // Mark the moving item's existing hazard as already collected so traversal skips it.
         self.collector.insert(self.current_hazard.0, self.current_hazard.1);
+        let n_ignored_hazards = self.collector.len();
         self.loss_evaluator.reload(loss_bound, shape);
 
         let mut should_stop = |hazard| self.loss_evaluator.add(hazard, shape);
@@ -85,7 +86,9 @@ impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
 
                 match stopped_during_precise_check {
                     true => SampleEval::Invalid,
-                    false if self.collector.len() == 1 => SampleEval::Clear { loss: 0.0 },
+                    false if self.collector.len() == n_ignored_hazards => {
+                        SampleEval::Clear { loss: 0.0 }
+                    }
                     false => SampleEval::Collision {
                         loss: self.loss_evaluator.loss(),
                     },
