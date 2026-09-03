@@ -437,12 +437,22 @@ impl Dashboard {
                 let label_width = time_label.len();
                 let space_left = usize::from(marker_offset);
                 let space_right = usize::from(time_area.width.saturating_sub(marker_offset + 1));
-                match (space_left >= label_width, space_right >= label_width) {
-                    (true, _) => (
+                let centered_label_start =
+                    usize::from(time_area.width).saturating_sub(label_width) / 2;
+                let marker_overlaps_label = (centered_label_start
+                    ..centered_label_start + label_width)
+                    .contains(&space_left);
+                match (
+                    marker_overlaps_label,
+                    space_left >= label_width,
+                    space_right >= label_width,
+                ) {
+                    (false, _, _) => (time_label, Some(time_area.x + marker_offset)),
+                    (true, true, _) => (
                         format!("{time_label:<width$}", width = time_area.width.into()),
                         Some(time_area.x + marker_offset),
                     ),
-                    (_, true) => (
+                    (true, _, true) => (
                         format!("{time_label:>width$}", width = time_area.width.into()),
                         Some(time_area.x + marker_offset),
                     ),
