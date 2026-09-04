@@ -15,7 +15,7 @@ name = "bench"
 path = "src/bench.rs"
 
 [dependencies]
-jagua-rs = { features = ["spp"], version = "0.8.0" }
+jagua-rs = { features = ["spp"], version = "0.8.1" }
 rand = "0.10"
 rand_distr = "0.6"
 svg = "0.18"
