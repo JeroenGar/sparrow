@@ -16,12 +16,14 @@ This optimization algorithm builds on [`jagua-rs`](https://github.com/JeroenGar/
 
 This repository accompanies the paper: ["_An open-source heuristic to reboot 2D nesting research_"](https://doi.org/10.48550/arXiv.2509.13329).
 
+> [!TIP]
+> **Try [Sparrow Studio](https://sparrowstudio.app/) in your browser.**
+>
+> Import SVG, DXF or instance JSON, configure the nesting job, watch the search live and download the result. It runs locally on your device, with no installation.
+
 ## `sparrow` in action
 
 ![The `sparrow` TUI dashboard running alongside the live solution viewer](data/demo.gif)
-
-> [!TIP]
-> Visit [**sparroWASM**](https://jeroengar.github.io/sparroWASM/) to see `sparrow` running in your browser!
 
 ## Nested by `sparrow`
 <p align="center">
@@ -165,8 +167,8 @@ The accompanying [README](data/experiments/README.md) details how to perform an 
 
 ## Related Projects
 
+- [Sparrow Studio](https://github.com/JeroenGar/sparrow-studio): an interactive browser interface for `sparrow`
 - [`spyrrow`](https://github.com/PaulDL-RS/spyrrow): a Python wrapper of `sparrow`
-- [`sparroWASM`](https://github.com/JeroenGar/sparroWASM): solve 2D nesting problems in the browser with WebAssembly
 - [`sparrow-3d`](https://github.com/JonasTollenaere/sparrow-3d): a 3D adaptation of `sparrow`
 
 ## Development
