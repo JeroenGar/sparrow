@@ -17,7 +17,7 @@ This optimization algorithm builds on [`jagua-rs`](https://github.com/JeroenGar/
 This repository accompanies the paper: ["_An open-source heuristic to reboot 2D nesting research_"](https://doi.org/10.48550/arXiv.2509.13329).
 
 > [!TIP]
-> **Try [Sparrow Studio](https://sparrowstudio.app/) in your browser.**
+> **Try [sparrow/studio](https://sparrowstudio.app/) in your browser.**
 >
 > Import SVG, DXF or instance JSON, configure the nesting job, watch the search live and download the result. It runs locally on your device, with no installation.
 
