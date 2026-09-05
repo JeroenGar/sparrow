@@ -21,7 +21,9 @@ This repository accompanies the paper: ["_An open-source heuristic to reboot 2D 
 ![The `sparrow` TUI dashboard running alongside the live solution viewer](data/demo.gif)
 
 > [!TIP]
-> Visit [**sparroWASM**](https://jeroengar.github.io/sparroWASM/) to see `sparrow` running in your browser!
+> **Try [Sparrow Studio](https://sparrowstudio.app/) in your browser.**
+>
+> Import SVG, DXF or instance JSON, configure the nesting job, watch the search live and download the result. It runs locally on your device, with no installation.
 
 ## Nested by `sparrow`
 <p align="center">
@@ -166,7 +168,6 @@ The accompanying [README](data/experiments/README.md) details how to perform an 
 ## Related Projects
 
 - [`spyrrow`](https://github.com/PaulDL-RS/spyrrow): a Python wrapper of `sparrow`
-- [`sparroWASM`](https://github.com/JeroenGar/sparroWASM): solve 2D nesting problems in the browser with WebAssembly
 - [`sparrow-3d`](https://github.com/JonasTollenaere/sparrow-3d): a 3D adaptation of `sparrow`
 
 ## Development
