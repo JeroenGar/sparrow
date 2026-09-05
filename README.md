@@ -20,6 +20,8 @@ This repository accompanies the paper: ["_An open-source heuristic to reboot 2D 
 > **Try [sparrow/studio](https://sparrowstudio.app/) in your browser.**
 >
 > Import SVG, DXF or instance JSON, configure the nesting job, watch the search live and download the result. It runs locally on your device, with no installation.
+>
+> [<img width="500" alt="image" src="https://github.com/user-attachments/assets/4d84bb67-ff98-4310-82de-5350baa02427" />](https://sparrowstudio.app/)
 
 ## `sparrow` in action
 
