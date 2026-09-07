@@ -14,17 +14,13 @@ use rand::rngs::Xoshiro256PlusPlus;
 /// The initial-placement heuristic could not construct a solution.
 /// This is not a proof that the instance is infeasible.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ConstructionError {
-    WidthLimitReached { item_id: usize },
-    InvalidWidthGrowth { item_id: usize },
+pub struct ConstructionError {
+    pub item_id: usize,
 }
 
 impl std::fmt::Display for ConstructionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::WidthLimitReached { item_id } => write!(f, "could not construct an initial placement for item {item_id} within the strip growth limit"),
-            Self::InvalidWidthGrowth { item_id } => write!(f, "could not construct an initial placement for item {item_id}: strip growth is non-finite or makes no progress"),
-        }
+        write!(f, "could not construct an initial placement for item {}", self.item_id)
     }
 }
 
@@ -94,14 +90,14 @@ impl LBFBuilder {
             let width = self.prob.strip_width();
             let next_width = width * 1.2;
             if !next_width.is_finite() || next_width <= width {
-                return Err(ConstructionError::InvalidWidthGrowth { item_id });
+                return Err(ConstructionError { item_id });
             }
             // Retain the existing heuristic ceiling, without treating it as infeasibility.
             let width_limit = 2.0 * self.instance.items.iter()
                 .map(|(item, qty)| item.shape_cd.diameter * *qty as f32)
                 .sum::<f32>();
             if next_width >= width_limit {
-                return Err(ConstructionError::WidthLimitReached { item_id });
+                return Err(ConstructionError { item_id });
             }
             debug!("[CONSTR] failed to place item with id {}, expanding strip width", item_id);
             self.prob.change_strip_width(next_width);
