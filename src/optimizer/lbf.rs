@@ -51,7 +51,7 @@ impl LBFBuilder {
 
     /// Builds a complete initial placement.
     ///
-    /// Returns an error if strip growth reaches the heuristic limit or cannot progress.
+    /// Returns an error if strip growth reaches the heuristic limit.
     pub fn construct(mut self) -> Result<Self, ConstructionError> {
         let start = Instant::now();
         let n_items = self.instance.items.len();
@@ -87,11 +87,7 @@ impl LBFBuilder {
                 return Ok(());
             }
 
-            let width = self.prob.strip_width();
-            let next_width = width * 1.2;
-            if !next_width.is_finite() || next_width <= width {
-                return Err(ConstructionError { item_id });
-            }
+            let next_width = self.prob.strip_width() * 1.2;
             // Retain the existing heuristic ceiling, without treating it as infeasibility.
             let width_limit = 2.0 * self.instance.items.iter()
                 .map(|(item, qty)| item.shape_cd.diameter * *qty as f32)
