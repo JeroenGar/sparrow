@@ -114,7 +114,7 @@ pub fn run() -> Result<()>{
         &config.expl_cfg,
         &config.cmpr_cfg,
         initial_solution.as_ref()
-    );
+    )?;
 
     let json_path = format!("{OUTPUT_DIR}/final_{}.json", ext_instance.name);
     let json_output = ExtSPOutput {

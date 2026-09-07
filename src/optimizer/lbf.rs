@@ -1,7 +1,6 @@
 use crate::eval::lbf_evaluator::LBFEvaluator;
 use crate::eval::sample_eval::SampleEval;
 use crate::sample::search::{search_placement, SampleConfig};
-use crate::util::assertions;
 use itertools::Itertools;
 use jagua_rs::entities::Instance;
 use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem};
@@ -11,6 +10,25 @@ use ordered_float::OrderedFloat;
 use std::cmp::Reverse;
 use std::iter;
 use rand::rngs::Xoshiro256PlusPlus;
+
+/// The initial-placement heuristic could not construct a solution.
+/// This is not a proof that the instance is infeasible.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ConstructionError {
+    WidthLimitReached { item_id: usize },
+    InvalidWidthGrowth { item_id: usize },
+}
+
+impl std::fmt::Display for ConstructionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::WidthLimitReached { item_id } => write!(f, "could not construct an initial placement for item {item_id} within the strip growth limit"),
+            Self::InvalidWidthGrowth { item_id } => write!(f, "could not construct an initial placement for item {item_id}: strip growth is non-finite or makes no progress"),
+        }
+    }
+}
+
+impl std::error::Error for ConstructionError {}
 
 pub struct LBFBuilder {
     pub instance: SPInstance,
@@ -35,7 +53,10 @@ impl LBFBuilder {
         }
     }
 
-    pub fn construct(mut self) -> Self {
+    /// Builds a complete initial placement.
+    ///
+    /// Returns an error if strip growth reaches the heuristic limit or cannot progress.
+    pub fn construct(mut self) -> Result<Self, ConstructionError> {
         let start = Instant::now();
         let n_items = self.instance.items.len();
         let sorted_item_indices = (0..n_items)
@@ -54,26 +75,36 @@ impl LBFBuilder {
         debug!("[CONSTR] placing items in order: {:?}",sorted_item_indices);
 
         for item_id in sorted_item_indices {
-            self.place_item(item_id);
+            self.place_item(item_id)?;
         }
 
         self.prob.fit_strip();
         debug!("[CONSTR] placed all items in width: {:.3} (in {:?})",self.prob.strip_width(), start.elapsed());
-        self
+        Ok(self)
     }
 
-    fn place_item(&mut self, item_id: usize) {
-        match self.find_placement(item_id) {
-            Some(p_opt) => {
-                self.prob.place_item(p_opt);
-                debug!("[CONSTR] placing item {}/{} with id {} at [{}]",self.prob.layout.placed_items.len(),self.instance.total_item_qty(),p_opt.item_id,p_opt.d_transf);
+    fn place_item(&mut self, item_id: usize) -> Result<(), ConstructionError> {
+        loop {
+            if let Some(placement) = self.find_placement(item_id) {
+                self.prob.place_item(placement);
+                debug!("[CONSTR] placing item {}/{} with id {} at [{}]", self.prob.layout.placed_items.len(), self.instance.total_item_qty(), placement.item_id, placement.d_transf);
+                return Ok(());
             }
-            None => {
-                debug!("[CONSTR] failed to place item with id {}, expanding strip width",item_id);
-                self.prob.change_strip_width(self.prob.strip_width() * 1.2);
-                assert!(assertions::strip_width_is_in_check(&self.prob), "strip-width is running away (>{:.3}), item {item_id} does not seem to fit into the strip", self.prob.strip_width());          
-                self.place_item(item_id);
+
+            let width = self.prob.strip_width();
+            let next_width = width * 1.2;
+            if !next_width.is_finite() || next_width <= width {
+                return Err(ConstructionError::InvalidWidthGrowth { item_id });
             }
+            // Retain the existing heuristic ceiling, without treating it as infeasibility.
+            let width_limit = 2.0 * self.instance.items.iter()
+                .map(|(item, qty)| item.shape_cd.diameter * *qty as f32)
+                .sum::<f32>();
+            if next_width >= width_limit {
+                return Err(ConstructionError::WidthLimitReached { item_id });
+            }
+            debug!("[CONSTR] failed to place item with id {}, expanding strip width", item_id);
+            self.prob.change_strip_width(next_width);
         }
     }
 

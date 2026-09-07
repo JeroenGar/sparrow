@@ -20,7 +20,7 @@ rand = "0.10"
 rand_distr = "0.6"
 svg = "0.18"
 itertools = "0.15"
-log = { version = "0.4", features = ["release_max_level_info"] }
+log = "0.4"
 fern = "0.7"
 serde = "1.0"
 serde_json = "1.0"

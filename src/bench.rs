@@ -85,7 +85,13 @@ fn main() -> Result<()> {
 
                 s.spawn(move |_| {
                     let mut next_rng = || Xoshiro256PlusPlus::seed_from_u64(rng.next_u64());
-                    let builder = LBFBuilder::new(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG).construct();
+                    let builder = match LBFBuilder::new(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG).construct() {
+                        Ok(builder) => builder,
+                        Err(error) => {
+                            *sol_slice = Some(Err(error));
+                            return;
+                        }
+                    };
                     let mut expl_separator = Separator::new(builder.instance, builder.prob, next_rng(), config.expl_cfg.separator_config);
 
                     terminator.new_timeout(config.expl_cfg.time_limit);
@@ -112,11 +118,13 @@ fn main() -> Result<()> {
                         log::Level::Info,
                     ).unwrap_or_else(|_| panic!("could not write svg output of bench {}", bench_idx));
 
-                    *sol_slice = Some(cmpr_sol);
+                    *sol_slice = Some(Ok(cmpr_sol));
                 })
             }
         });
-        final_solutions.extend(iter_solutions.into_iter().flatten());
+        for result in iter_solutions {
+            final_solutions.push(result.expect("benchmark worker did not return a result")?);
+        }
     }
 
     //print statistics about the solutions, print best, worst, median and average

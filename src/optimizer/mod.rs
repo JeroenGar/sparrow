@@ -2,7 +2,7 @@ use crate::config::*;
 use crate::consts::LBF_SAMPLE_CONFIG;
 use crate::optimizer::compress::compression_phase;
 use crate::optimizer::explore::exploration_phase;
-use crate::optimizer::lbf::LBFBuilder;
+use crate::optimizer::lbf::{ConstructionError, LBFBuilder};
 use crate::optimizer::separator::Separator;
 use crate::util::listener::{OptimizationPhase, ReportType, SolutionListener};
 use crate::util::terminator::Terminator;
@@ -18,7 +18,10 @@ mod worker;
 pub mod explore;
 pub mod compress;
 
-///Algorithm 11 from https://doi.org/10.48550/arXiv.2509.13329
+/// Algorithm 11 from https://doi.org/10.48550/arXiv.2509.13329
+///
+/// Returns a construction error if no initial solution is supplied and the
+/// initial-placement heuristic cannot build one within its strip growth limit.
 pub fn optimize(
     instance: SPInstance,
     mut rng: Xoshiro256PlusPlus,
@@ -27,13 +30,13 @@ pub fn optimize(
     expl_config: &ExplorationConfig,
     cmpr_config: &CompressionConfig,
     initial_solution: Option<&SPSolution>
-) -> SPSolution {
+) -> Result<SPSolution, ConstructionError> {
     let mut next_rng = || Xoshiro256PlusPlus::seed_from_u64(rng.next_u64());
     
     // First build an initial solution if none is provided
     let start_prob = match initial_solution {
         None => {
-            let builder = LBFBuilder::new(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG).construct();
+            let builder = LBFBuilder::new(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG).construct()?;
             builder.prob
         }
         Some(init_sol) => {
@@ -73,5 +76,5 @@ pub fn optimize(
     sol_listener.report(ReportType::Final, &cmpr_sol, &instance);
 
     // Return the final compressed solution
-    cmpr_sol
+    Ok(cmpr_sol)
 }
