@@ -56,15 +56,10 @@ impl UniformBBoxSampler {
                 let cont_y_range = (container_bbox.y_min - r_shape_bbox.y_min)..(container_bbox.y_max - r_shape_bbox.y_max);
 
                 //intersect with the sample bbox
-                let x_range = intersect_range(&cont_x_range, &sample_x_range);
-                let y_range = intersect_range(&cont_y_range, &sample_y_range);
+                let x_range = intersect_range(&cont_x_range, &sample_x_range)?;
+                let y_range = intersect_range(&cont_y_range, &sample_y_range)?;
 
-                //make sure the ranges are not empty
-                if x_range.is_empty() || y_range.is_empty() {
-                    None
-                } else {
-                    Some(RotEntry { r, x_range, y_range })
-                }
+                Some(RotEntry { r, x_range, y_range })
             }).collect_vec();
 
         match rot_entries.is_empty() {
@@ -79,17 +74,30 @@ impl UniformBBoxSampler {
 
         // sample a random x and y value within the valid range
         let r = r_entry.r;
-        let x_sample = rng.random_range(r_entry.x_range.clone());
-        let y_sample = rng.random_range(r_entry.y_range.clone());
+        let x_sample = sample_axis(&r_entry.x_range, rng);
+        let y_sample = sample_axis(&r_entry.y_range, rng);
 
         DTransformation::new(r, (x_sample, y_sample))
     }
 }
 
-fn intersect_range(a: &Range<f32>, b: &Range<f32>) -> Range<f32> {
-    let min = f32::max(a.start, b.start);
-    let max = f32::min(a.end, b.end);
-    min..max
+// Equal endpoints describe one candidate coordinate. Collision checks still decide
+// whether that candidate is a valid placement.
+fn sample_axis(range: &Range<f32>, rng: &mut impl Rng) -> f32 {
+    if range.start == range.end {
+        range.start
+    } else {
+        rng.random_range(range.clone())
+    }
+}
+
+fn intersect_range(a: &Range<f32>, b: &Range<f32>) -> Option<Range<f32>> {
+    if [a, b].iter().any(|r| !r.start.is_finite() || !r.end.is_finite() || r.start > r.end) {
+        return None;
+    }
+    let start = a.start.max(b.start);
+    let end = a.end.min(b.end);
+    (start <= end).then_some(start..end)
 }
 
 /// Converts a sample transformation to the closest feasible transformation. (for now just mapping rotation to the closest allowed one)

@@ -14,6 +14,7 @@ use sparrow::EPOCH;
 use sparrow::config::SparrowConfig;
 use sparrow::consts::DRAW_OPTIONS;
 use sparrow::optimizer::optimize;
+use sparrow::optimizer::lbf::ConstructionError;
 use sparrow::util::io::{self, ExtSPOutput};
 use sparrow::util::listener::{
     OptimizationPhase, ReportType, SeparationProgress, SeparationResult, SolutionListener,
@@ -71,7 +72,7 @@ fn start_optimizer(
     rng: Xoshiro256PlusPlus,
     signals: TuiSignals,
     updates: Sender<DashboardUpdate>,
-) -> JoinHandle<SPSolution> {
+) -> JoinHandle<Result<SPSolution, ConstructionError>> {
     thread::Builder::new()
         .name("optimizer".into())
         .spawn(move || {
@@ -92,7 +93,7 @@ fn run_dashboard(
     terminal: &mut DefaultTerminal,
     updates: Receiver<DashboardUpdate>,
     logs: Receiver<LogEntry>,
-    worker: JoinHandle<SPSolution>,
+    worker: JoinHandle<Result<SPSolution, ConstructionError>>,
     signals: TuiSignals,
     final_output: (&SPInstance, &ExtSPInstance),
     budget: SearchBudget,
@@ -114,7 +115,7 @@ fn run_dashboard(
                 .take()
                 .unwrap()
                 .join()
-                .map_err(|_| anyhow!("optimizer thread panicked"))?;
+                .map_err(|_| anyhow!("optimizer thread panicked"))??;
             export_final_solution(&final_solution, instance, ext_instance)?;
             solution = Some(final_solution);
             dashboard.finish();
