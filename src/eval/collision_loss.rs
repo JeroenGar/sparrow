@@ -42,7 +42,12 @@ impl<'a> CollisionLossEvaluator<'a> {
     }
 
     pub(super) fn add(&mut self, hazard: HazardEntity, shape: &SPolygon) -> bool {
-        let remaining = self.loss_bound - self.loss;
+        // An unbounded evaluation stays unbounded even if accumulated loss overflows.
+        let remaining = if self.loss_bound == f32::INFINITY {
+            f32::INFINITY
+        } else {
+            self.loss_bound - self.loss
+        };
         let Some(extra_loss) = self.calc_weighted_loss_bounded(hazard, shape, remaining) else {
             return true;
         };
