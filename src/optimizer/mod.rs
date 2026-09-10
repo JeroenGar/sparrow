@@ -6,7 +6,10 @@ use crate::optimizer::lbf::{ConstructionError, LBFBuilder};
 use crate::optimizer::separator::Separator;
 use crate::util::listener::{OptimizationPhase, ReportType, SolutionListener};
 use crate::util::terminator::Terminator;
-use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
+use jagua_rs::geometry::geo_enums::RotationRange;
+use jagua_rs::geometry::geo_traits::TransformableFrom;
+use jagua_rs::geometry::Transformation;
+use jagua_rs::probs::spp::entities::{SPInstance, SPProblem, SPSolution};
 use log::info;
 use rand::{Rng, SeedableRng};
 use std::time::Duration;
@@ -77,4 +80,36 @@ pub fn optimize(
 
     // Return the final compressed solution
     Ok(cmpr_sol)
+}
+
+/// Necessary width for the collision geometry, including the container's inset.
+/// Leave relative slack for f32 rotation and bounding-box rounding near exact fits.
+fn minimum_strip_width(prob: &SPProblem) -> f32 {
+    const REL_TOL: f32 = 1e-6;
+    let container = prob.layout.container.outer_cd.bbox;
+    let width_inset = prob.strip_width() - container.width();
+    let area: f64 = prob.instance.items.iter()
+        .map(|(item, qty)| f64::from(item.shape_cd.area) * *qty as f64)
+        .sum();
+    let mut min_width = (area / f64::from(container.height())) as f32 * (1.0 - REL_TOL);
+
+    for (item, _) in &prob.instance.items {
+        let rotations = match &item.allowed_rotation {
+            RotationRange::None => &[0.0][..],
+            RotationRange::Discrete(rotations) => rotations.as_slice(),
+            // ponytail: continuous rotations use only the area bound; add exact rotational bounds if this is too weak.
+            RotationRange::Continuous => continue,
+        };
+        let tolerance = item.shape_cd.diameter * REL_TOL;
+        let mut shape = item.shape_cd.as_ref().clone();
+        let item_width = rotations.iter()
+            .filter_map(|&rotation| {
+                let bbox = shape.transform_from(item.shape_cd.as_ref(), &Transformation::from_rotation(rotation)).bbox;
+                (bbox.height() <= container.height() + tolerance)
+                    .then_some((bbox.width() - tolerance).max(0.0))
+            })
+            .fold(f32::INFINITY, f32::min);
+        min_width = min_width.max(item_width);
+    }
+    min_width + width_inset
 }

@@ -19,6 +19,7 @@ use std::cmp::Reverse;
 
 /// Algorithm 12 from https://doi.org/10.48550/arXiv.2509.13329
 pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listener: &mut impl SolutionListener, term: &impl Terminator, config: &ExplorationConfig) -> Vec<SPSolution> {
+    let min_width = super::minimum_strip_width(&sep.prob);
     let mut current_width = sep.prob.strip_width();
     let mut best_width = current_width;
 
@@ -44,6 +45,10 @@ pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listene
             }
             // Shrink the strip width and clear the infeasible solution pool
             let next_width = current_width * (1.0 - config.shrink_step);
+            if next_width < min_width || next_width >= current_width {
+                info!("[EXPL] stopping at minimum strip width: {:.3}", min_width);
+                break;
+            }
             info!("[EXPL] shrinking strip by {}%: {:.3} -> {:.3}", config.shrink_step * 100.0, current_width, next_width);
             sep.change_strip_width(next_width, None);
             current_width = next_width;
