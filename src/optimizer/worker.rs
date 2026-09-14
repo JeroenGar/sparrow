@@ -75,7 +75,7 @@ impl SeparatorWorker {
 
         // First removing the item and subsequently place it in its new position
         let old_placement = self.prob.remove_item(pk);
-        let new_placement = SPPlacement { d_transf, item_id: old_placement.item_id };
+        let new_placement = SPPlacement { d_transf, item_idx: old_placement.item_idx };
         let new_pk = self.prob.place_item(new_placement);
 
         // Update the collision tracker to reflect the changes

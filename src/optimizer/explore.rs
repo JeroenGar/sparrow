@@ -134,7 +134,7 @@ fn disrupt_solution(sep: &mut Separator, config: &ExplorationConfig) {
         cumulative_ch_area += item_ch_area * (*quantity as f32);
         if cumulative_ch_area > cutoff_threshold_area {
             ch_area_cutoff = item_ch_area;
-            debug!("[DSRP] cutoff ch area: {}, for item id: {}, bbox: {:?}",ch_area_cutoff, item.idx, item.shape_cd.bbox);
+            debug!("[DSRP] cutoff ch area: {}, for item idx: {}, bbox: {:?}",ch_area_cutoff, item.idx, item.shape_cd.bbox);
             break;
         }
     }
