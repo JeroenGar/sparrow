@@ -5,7 +5,7 @@ use crate::sample::search::SampleConfig;
 use crate::util::assertions::tracker_matches_layout;
 use crate::FMT;
 use itertools::Itertools;
-use jagua_rs::entities::{Instance, PItemKey};
+use jagua_rs::entities::PItemKey;
 use jagua_rs::geometry::DTransformation;
 use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem, SPSolution};
 use log::debug;
@@ -79,7 +79,7 @@ impl SeparatorWorker {
 
         // First removing the item and subsequently place it in its new position
         let old_placement = self.prob.remove_item(pk);
-        let new_placement = SPPlacement { d_transf, item_id: item.id };
+        let new_placement = SPPlacement { d_transf, item_id: item.idx };
         let new_pk = self.prob.place_item(new_placement);
 
         // Update the collision tracker to reflect the changes

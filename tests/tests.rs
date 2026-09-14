@@ -29,9 +29,12 @@ mod integration_tests {
     fn simulate_optimization(path: &str) -> Result<()> {
         let config = DEFAULT_SPARROW_CONFIG;
         let input_file_path = format!("{INSTANCE_BASE_PATH}/{path}");
-        let (json_instance, _) = io::read_spp_input(Path::new(&input_file_path))?;
+        let (mut json_instance, _) = io::read_spp_input(Path::new(&input_file_path))?;
 
-        let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.min_item_separation, config.narrow_concavity_cutoff_ratio);
+        for (idx, item) in json_instance.items.iter_mut().enumerate() {
+            item.base.id = 100 + idx as u64 * 7;
+        }
+        let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.narrow_concavity_cutoff_ratio);
         let instance = jagua_rs::probs::spp::io::import_instance(&importer, &json_instance)?;
 
         println!("[TEST] loaded instance: {}", json_instance.name);
@@ -53,6 +56,10 @@ mod integration_tests {
         terminator.new_timeout(EXPLORE_TIMEOUT);
 
         let builder = LBFBuilder::new(instance.clone(), rng, LBF_SAMPLE_CONFIG).construct()?;
+        let exported = jagua_rs::probs::spp::io::export(&instance, &builder.prob.save(), *sparrow::EPOCH);
+        let restored = jagua_rs::probs::spp::io::import_solution(&instance, &exported)?;
+        assert!(jagua_rs::entities::Layout::from_snapshot(&restored.layout_snapshot).is_feasible());
+        assert_eq!(restored.layout_snapshot.placed_items.len(), instance.total_item_qty());
         let mut separator = Separator::new(builder.instance, builder.prob, builder.rng, config.expl_cfg.separator_config);
 
         let sols = exploration_phase(&instance, &mut separator, &mut sol_listener, &terminator, &config.expl_cfg);

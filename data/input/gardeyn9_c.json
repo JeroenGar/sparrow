@@ -4,6 +4,7 @@
     {
       "id": 0,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -386,6 +387,7 @@
     {
       "id": 1,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -492,6 +494,7 @@
     {
       "id": 2,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -790,6 +793,7 @@
     {
       "id": 3,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -1372,6 +1376,7 @@
     {
       "id": 4,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -1526,6 +1531,7 @@
     {
       "id": 5,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -1884,6 +1890,7 @@
     {
       "id": 6,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -1934,6 +1941,7 @@
     {
       "id": 7,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -2172,6 +2180,7 @@
     {
       "id": 8,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -2398,6 +2407,7 @@
     {
       "id": 9,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -2664,6 +2674,7 @@
     {
       "id": 10,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -2982,6 +2993,7 @@
     {
       "id": 11,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -3236,6 +3248,7 @@
     {
       "id": 12,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -3434,6 +3447,7 @@
     {
       "id": 13,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -3592,6 +3606,7 @@
     {
       "id": 14,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -3894,6 +3909,7 @@
     {
       "id": 15,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -3984,6 +4000,7 @@
     {
       "id": 16,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -4526,6 +4543,7 @@
     {
       "id": 17,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -4564,6 +4582,7 @@
     {
       "id": 18,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -4742,6 +4761,7 @@
     {
       "id": 19,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -5512,6 +5532,7 @@
     {
       "id": 20,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -5614,6 +5635,7 @@
     {
       "id": 21,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -6140,6 +6162,7 @@
     {
       "id": 22,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -6598,6 +6621,7 @@
     {
       "id": 23,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -7264,6 +7288,7 @@
     {
       "id": 24,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -7794,6 +7819,7 @@
     {
       "id": 25,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -8568,6 +8594,7 @@
     {
       "id": 26,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -8606,6 +8633,7 @@
     {
       "id": 27,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -9316,6 +9344,7 @@
     {
       "id": 28,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -9598,6 +9627,7 @@
     {
       "id": 29,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -9932,6 +9962,7 @@
     {
       "id": 30,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -10450,6 +10481,7 @@
     {
       "id": 31,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -11392,6 +11424,7 @@
     {
       "id": 32,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -11930,6 +11963,7 @@
     {
       "id": 33,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -12772,6 +12806,7 @@
     {
       "id": 34,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -13242,6 +13277,7 @@
     {
       "id": 35,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -13776,6 +13812,7 @@
     {
       "id": 36,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -14658,6 +14695,7 @@
     {
       "id": 37,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -15788,6 +15826,7 @@
     {
       "id": 38,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -16506,6 +16545,7 @@
     {
       "id": 39,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -17020,6 +17060,7 @@
     {
       "id": 40,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -17774,6 +17815,7 @@
     {
       "id": 41,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -18392,6 +18434,7 @@
     {
       "id": 42,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -19258,6 +19301,7 @@
     {
       "id": 43,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -19948,6 +19992,7 @@
     {
       "id": 44,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -20618,6 +20663,7 @@
     {
       "id": 45,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",
@@ -21308,6 +21354,7 @@
     {
       "id": 46,
       "demand": 1,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "zones": [],
       "shape": {
         "type": "simple_polygon",

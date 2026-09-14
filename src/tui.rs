@@ -41,12 +41,11 @@ pub fn run() -> Result<()> {
     let importer = Importer::new(
         config.cde_config,
         config.poly_simpl_tolerance,
-        config.min_item_separation,
         config.narrow_concavity_cutoff_ratio,
     );
     let instance = jagua_rs::probs::spp::io::import_instance(&importer, &ext_instance)?;
     let initial_solution = ext_solution
-        .map(|solution| jagua_rs::probs::spp::io::import_solution(&instance, &solution));
+        .map(|solution| jagua_rs::probs::spp::io::import_solution(&instance, &solution)).transpose()?;
 
     let solution = runtime::run(
         instance.clone(),

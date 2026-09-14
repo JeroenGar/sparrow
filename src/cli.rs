@@ -75,12 +75,12 @@ pub fn run() -> Result<()>{
 
     let (ext_instance, ext_solution) = io::read_spp_input(Path::new(&input_file_path))?;
 
-    let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.min_item_separation, config.narrow_concavity_cutoff_ratio);
+    let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.narrow_concavity_cutoff_ratio);
     let instance = jagua_rs::probs::spp::io::import_instance(&importer, &ext_instance)?;
 
     let initial_solution = ext_solution.map(|e|
         jagua_rs::probs::spp::io::import_solution(&instance, &e)
-    );
+    ).transpose()?;
 
     info!("[MAIN] loaded instance {} with #{} items", ext_instance.name, instance.total_item_qty());
     
