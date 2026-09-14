@@ -66,7 +66,7 @@ fn main() -> Result<()> {
         ext_instance.name, n_batches, n_runs_per_iter, num_cpus::get_physical(), time_limit
     );
 
-    let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.min_item_separation, config.narrow_concavity_cutoff_ratio);
+    let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.narrow_concavity_cutoff_ratio);
     let instance = jagua_rs::probs::spp::io::import_instance(&importer, &ext_instance)?;
 
     let mut final_solutions = vec![];
@@ -113,7 +113,7 @@ fn main() -> Result<()> {
                     );
 
                     io::write_svg(
-                        &s_layout_to_svg(&cmpr_sol.layout_snapshot, &instance, DRAW_OPTIONS, &format!("final_bench_{}", bench_idx)),
+                        &s_layout_to_svg(&cmpr_sol.layout_snapshot, |idx| instance.item(idx), DRAW_OPTIONS, &format!("final_bench_{}", bench_idx)),
                         Path::new(&format!("{OUTPUT_DIR}/final_bench_{}.svg", bench_idx)),
                         log::Level::Info,
                     ).unwrap_or_else(|_| panic!("could not write svg output of bench {}", bench_idx));
@@ -132,7 +132,7 @@ fn main() -> Result<()> {
         .iter()
         .map(|s| {
             let width = s.strip_width();
-            let usage = s.layout_snapshot.density(&instance);
+            let usage = s.layout_snapshot.density(|idx| instance.item(idx));
             (width, usage * 100.0)
         })
         .unzip();
@@ -140,7 +140,7 @@ fn main() -> Result<()> {
     let best_final_solution = final_solutions.iter().max_by_key(|s| OrderedFloat(s.density(&instance))).unwrap();
 
     io::write_svg(
-        &s_layout_to_svg(&best_final_solution.layout_snapshot, &instance, DRAW_OPTIONS, "final_best"),
+        &s_layout_to_svg(&best_final_solution.layout_snapshot, |idx| instance.item(idx), DRAW_OPTIONS, "final_best"),
         Path::new(format!("{OUTPUT_DIR}/final_best_{}.svg", ext_instance.name).as_str()),
         log::Level::Info,
     )?;

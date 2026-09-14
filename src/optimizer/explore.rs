@@ -8,7 +8,7 @@ use float_cmp::approx_eq;
 use itertools::Itertools;
 use jagua_rs::collision_detection::hazards::collector::BasicHazardCollector;
 use jagua_rs::collision_detection::hazards::HazardEntity;
-use jagua_rs::entities::{Instance, Layout, PItemKey};
+use jagua_rs::entities::{Layout, PItemKey};
 use jagua_rs::geometry::geo_traits::CollidesWith;
 use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
 use log::{debug, info, warn};
@@ -134,7 +134,7 @@ fn disrupt_solution(sep: &mut Separator, config: &ExplorationConfig) {
         cumulative_ch_area += item_ch_area * (*quantity as f32);
         if cumulative_ch_area > cutoff_threshold_area {
             ch_area_cutoff = item_ch_area;
-            debug!("[DSRP] cutoff ch area: {}, for item id: {}, bbox: {:?}",ch_area_cutoff, item.id, item.shape_cd.bbox);
+            debug!("[DSRP] cutoff ch area: {}, for item id: {}, bbox: {:?}",ch_area_cutoff, item.idx, item.shape_cd.bbox);
             break;
         }
     }

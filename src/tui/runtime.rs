@@ -159,7 +159,7 @@ fn export_final_solution(
 ) -> Result<()> {
     let svg_path = format!("{OUTPUT_DIR}/final_{}.svg", ext_instance.name);
     io::write_svg(
-        &s_layout_to_svg(&solution.layout_snapshot, instance, DRAW_OPTIONS, "final"),
+        &s_layout_to_svg(&solution.layout_snapshot, |idx| instance.item(idx), DRAW_OPTIONS, "final"),
         Path::new(&svg_path),
         Level::Info,
     )?;
