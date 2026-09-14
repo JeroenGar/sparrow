@@ -169,7 +169,7 @@ The accompanying [README](data/experiments/README.md) details how to perform an 
 
 ## Related Projects
 
-- [Sparrow Studio](https://github.com/JeroenGar/sparrow-studio): an interactive browser interface for `sparrow`
+- [`sparrow/studio`](https://github.com/JeroenGar/sparrow-studio): an interactive browser interface for `sparrow`
 - [`spyrrow`](https://github.com/PaulDL-RS/spyrrow): a Python wrapper of `sparrow`
 - [`sparrow-3d`](https://github.com/JonasTollenaere/sparrow-3d): a 3D adaptation of `sparrow`
 
