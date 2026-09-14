@@ -10,7 +10,7 @@ use jagua_rs::collision_detection::hazards::collector::BasicHazardCollector;
 use jagua_rs::collision_detection::hazards::HazardEntity;
 use jagua_rs::entities::{Layout, PItemKey};
 use jagua_rs::geometry::geo_traits::CollidesWith;
-use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
+use jagua_rs::probs::spp::entities::SPSolution;
 use log::{debug, info, warn};
 use ordered_float::OrderedFloat;
 use rand::prelude::{Distribution, IteratorRandom};
@@ -18,14 +18,14 @@ use rand_distr::Normal;
 use std::cmp::Reverse;
 
 /// Algorithm 12 from https://doi.org/10.48550/arXiv.2509.13329
-pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listener: &mut impl SolutionListener, term: &impl Terminator, config: &ExplorationConfig) -> Vec<SPSolution> {
+pub fn exploration_phase(sep: &mut Separator, sol_listener: &mut impl SolutionListener, term: &impl Terminator, config: &ExplorationConfig) -> Vec<SPSolution> {
     let min_width = super::minimum_strip_width(&sep.prob);
     let mut current_width = sep.prob.strip_width();
     let mut best_width = current_width;
 
     let mut feasible_sols = vec![sep.prob.save()];
 
-    sol_listener.report(ReportType::ExplFeas, &feasible_sols[0], instance);
+    sol_listener.report(ReportType::ExplFeas, &feasible_sols[0]);
     info!("[EXPL] starting optimization with initial width: {:.3} ({:.3}%)",current_width,sep.prob.density() * 100.0);
 
     let mut infeas_sol_pool: Vec<(SPSolution, f32)> = vec![];
@@ -41,7 +41,7 @@ pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listene
                 info!("[EXPL] feasible solution found! (width: {:.3}, dens: {:.3}%)",current_width,sep.prob.density() * 100.0);
                 best_width = current_width;
                 feasible_sols.push(local_best.0.clone());
-                sol_listener.report(ReportType::ExplFeas, &local_best.0, instance);
+                sol_listener.report(ReportType::ExplFeas, &local_best.0);
             }
             // Shrink the strip width and clear the infeasible solution pool
             let next_width = current_width * (1.0 - config.shrink_step);
@@ -55,7 +55,7 @@ pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listene
             infeas_sol_pool.clear();
         } else {
             info!("[EXPL] unable to reach feasibility (width: {:.3}, dens: {:.3}%, min loss: {})", current_width, sep.prob.density() * 100.0, FMT().fmt2(total_loss));
-            sol_listener.report(ReportType::ExplInfeas, &local_best.0, instance);
+            sol_listener.report(ReportType::ExplInfeas, &local_best.0);
 
             // Separation was not successful add it to the pool of infeasible solutions
             match infeas_sol_pool.binary_search_by(|(_, o)| o.partial_cmp(&total_loss).unwrap()) {
@@ -86,7 +86,7 @@ pub fn exploration_phase(instance: &SPInstance, sep: &mut Separator, sol_listene
         }
     }
 
-    info!("[EXPL] finished, best feasible solution: width: {:.3} ({:.3}%)",best_width,feasible_sols.last().unwrap().density(instance) * 100.0);
+    info!("[EXPL] finished, best feasible solution: width: {:.3} ({:.3}%)",best_width,feasible_sols.last().unwrap().density() * 100.0);
 
     feasible_sols
 }
@@ -169,10 +169,10 @@ fn disrupt_solution(sep: &mut Separator, config: &ExplorationConfig) {
     let dt2_old = pi2.d_transf;
 
     // Make sure the swaps do not violate feasibility (rotation).
-    let dt1_new = convert_sample_to_closest_feasible(dt2_old, sep.prob.instance.item(pi1.item_id));
-    let dt2_new = convert_sample_to_closest_feasible(dt1_old, sep.prob.instance.item(pi2.item_id));
+    let dt1_new = convert_sample_to_closest_feasible(dt2_old, &pi1.item);
+    let dt2_new = convert_sample_to_closest_feasible(dt1_old, &pi2.item);
 
-    info!("[EXPL] disrupting by swapping two large items (id: {} <-> {})", pi1.item_id, pi2.item_id);
+    info!("[EXPL] disrupting by swapping two large items (id: {} <-> {})", pi1.item.idx, pi2.item.idx);
 
     let pk1 = sep.move_item(pk1, dt1_new);
     let pk2 = sep.move_item(pk2, dt2_new);
@@ -196,7 +196,7 @@ fn disrupt_solution(sep: &mut Separator, config: &ExplorationConfig) {
                 .decompose();
 
             //Ensure the sure the new position is feasible
-            let new_feasible_dt = convert_sample_to_closest_feasible(new_dt, sep.prob.instance.item(c1_pi.item_id));
+            let new_feasible_dt = convert_sample_to_closest_feasible(new_dt, &c1_pi.item);
             sep.move_item(c1_pk, new_feasible_dt);
         }
     }
@@ -214,7 +214,7 @@ fn disrupt_solution(sep: &mut Separator, config: &ExplorationConfig) {
                 .decompose();
 
             //make sure the new position is feasible
-            let new_feasible_dt = convert_sample_to_closest_feasible(new_dt, sep.prob.instance.item(c2_pi.item_id));
+            let new_feasible_dt = convert_sample_to_closest_feasible(new_dt, &c2_pi.item);
             sep.move_item(c2_pk, new_feasible_dt);
         }
     }
