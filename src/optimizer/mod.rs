@@ -39,12 +39,12 @@ pub fn optimize(
     // First build an initial solution if none is provided
     let start_prob = match initial_solution {
         None => {
-            let builder = LBFBuilder::new(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG).construct()?;
+            let builder = LBFBuilder::new(instance, next_rng(), LBF_SAMPLE_CONFIG).construct()?;
             builder.prob
         }
         Some(init_sol) => {
             info!("[OPT] warm starting from provided initial solution");
-            let mut prob = jagua_rs::probs::spp::entities::SPProblem::new(instance.clone());
+            let mut prob = jagua_rs::probs::spp::entities::SPProblem::new(instance);
             prob.restore(init_sol);
             prob
         }
@@ -53,22 +53,20 @@ pub fn optimize(
     // Begin by executing the exploration phase
     sol_listener.report_phase(OptimizationPhase::Exploration);
     terminator.new_timeout(expl_config.time_limit);
-    let mut expl_separator = Separator::new(instance.clone(), start_prob, next_rng(), expl_config.separator_config);
+    let mut expl_separator = Separator::new(start_prob, next_rng(), expl_config.separator_config);
     let solutions = exploration_phase(
-        &instance,
         &mut expl_separator,
         sol_listener,
         terminator,
         expl_config,
     );
-    let final_explore_sol = solutions.last().unwrap().clone();
+    let final_explore_sol = solutions.into_iter().last().unwrap();
 
     // Start the compression phase from the final solution from the exploration phase
     sol_listener.report_phase(OptimizationPhase::Compression);
     terminator.new_timeout(cmpr_config.time_limit);
-    let mut cmpr_separator = Separator::new(expl_separator.instance, expl_separator.prob, next_rng(), cmpr_config.separator_config);
+    let mut cmpr_separator = Separator::new(expl_separator.prob, next_rng(), cmpr_config.separator_config);
     let cmpr_sol = compression_phase(
-        &instance,
         &mut cmpr_separator,
         &final_explore_sol,
         sol_listener,
@@ -76,7 +74,7 @@ pub fn optimize(
         cmpr_config,
     );
 
-    sol_listener.report(ReportType::Final, &cmpr_sol, &instance);
+    sol_listener.report(ReportType::Final, &cmpr_sol);
 
     // Return the final compressed solution
     Ok(cmpr_sol)

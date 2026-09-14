@@ -48,7 +48,7 @@ pub fn run() -> Result<()> {
         .map(|solution| jagua_rs::probs::spp::io::import_solution(&instance, &solution)).transpose()?;
 
     let solution = runtime::run(
-        instance.clone(),
+        instance,
         &ext_instance,
         initial_solution,
         config,
@@ -62,7 +62,7 @@ pub fn run() -> Result<()> {
     println!(
         "Finished at width {:.3}, density {:.3}%\n{svg_path}\n{json_path}",
         solution.strip_width(),
-        solution.density(&instance) * 100.0,
+        solution.density() * 100.0,
     );
     Ok(())
 }

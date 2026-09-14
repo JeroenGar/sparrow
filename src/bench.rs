@@ -85,35 +85,35 @@ fn main() -> Result<()> {
 
                 s.spawn(move |_| {
                     let mut next_rng = || Xoshiro256PlusPlus::seed_from_u64(rng.next_u64());
-                    let builder = match LBFBuilder::new(instance.clone(), next_rng(), LBF_SAMPLE_CONFIG).construct() {
+                    let builder = match LBFBuilder::new(instance, next_rng(), LBF_SAMPLE_CONFIG).construct() {
                         Ok(builder) => builder,
                         Err(error) => {
                             *sol_slice = Some(Err(error));
                             return;
                         }
                     };
-                    let mut expl_separator = Separator::new(builder.instance, builder.prob, next_rng(), config.expl_cfg.separator_config);
+                    let mut expl_separator = Separator::new(builder.prob, next_rng(), config.expl_cfg.separator_config);
 
                     terminator.new_timeout(config.expl_cfg.time_limit);
-                    let solutions = exploration_phase(&instance, &mut expl_separator, &mut DummySolListener, &terminator, &config.expl_cfg);
+                    let solutions = exploration_phase(&mut expl_separator, &mut DummySolListener, &terminator, &config.expl_cfg);
                     let final_explore_sol = solutions.last().expect("no solutions found during exploration");
 
                     let start_comp = Instant::now();
 
                     terminator.new_timeout(config.cmpr_cfg.time_limit);
-                    let mut cmpr_separator = Separator::new(expl_separator.instance, expl_separator.prob, next_rng(), config.cmpr_cfg.separator_config);
-                    let cmpr_sol = compression_phase(&instance, &mut cmpr_separator, final_explore_sol, &mut DummySolListener, &terminator, &config.cmpr_cfg);
+                    let mut cmpr_separator = Separator::new(expl_separator.prob, next_rng(), config.cmpr_cfg.separator_config);
+                    let cmpr_sol = compression_phase(&mut cmpr_separator, final_explore_sol, &mut DummySolListener, &terminator, &config.cmpr_cfg);
 
                     println!("[BENCH] [id:{:>3}] finished, expl: {:.3}% ({}s), cmpr: {:.3}% (+{:.3}%) ({}s)",
                              bench_idx,
-                             final_explore_sol.density(&instance) * 100.0, time_limit.mul_f32(DEFAULT_EXPLORE_TIME_RATIO).as_secs(),
-                             cmpr_sol.density(&instance) * 100.0,
-                             cmpr_sol.density(&instance) * 100.0 - final_explore_sol.density(&instance) * 100.0,
+                             final_explore_sol.density() * 100.0, time_limit.mul_f32(DEFAULT_EXPLORE_TIME_RATIO).as_secs(),
+                             cmpr_sol.density() * 100.0,
+                             cmpr_sol.density() * 100.0 - final_explore_sol.density() * 100.0,
                              start_comp.elapsed().as_secs()
                     );
 
                     io::write_svg(
-                        &s_layout_to_svg(&cmpr_sol.layout_snapshot, |idx| instance.item(idx), DRAW_OPTIONS, &format!("final_bench_{}", bench_idx)),
+                        &s_layout_to_svg(&cmpr_sol.layout_snapshot, DRAW_OPTIONS, &format!("final_bench_{}", bench_idx)),
                         Path::new(&format!("{OUTPUT_DIR}/final_bench_{}.svg", bench_idx)),
                         log::Level::Info,
                     ).unwrap_or_else(|_| panic!("could not write svg output of bench {}", bench_idx));
@@ -132,15 +132,15 @@ fn main() -> Result<()> {
         .iter()
         .map(|s| {
             let width = s.strip_width();
-            let usage = s.layout_snapshot.density(|idx| instance.item(idx));
+            let usage = s.layout_snapshot.density();
             (width, usage * 100.0)
         })
         .unzip();
 
-    let best_final_solution = final_solutions.iter().max_by_key(|s| OrderedFloat(s.density(&instance))).unwrap();
+    let best_final_solution = final_solutions.iter().max_by_key(|s| OrderedFloat(s.density())).unwrap();
 
     io::write_svg(
-        &s_layout_to_svg(&best_final_solution.layout_snapshot, |idx| instance.item(idx), DRAW_OPTIONS, "final_best"),
+        &s_layout_to_svg(&best_final_solution.layout_snapshot, DRAW_OPTIONS, "final_best"),
         Path::new(format!("{OUTPUT_DIR}/final_best_{}.svg", ext_instance.name).as_str()),
         log::Level::Info,
     )?;

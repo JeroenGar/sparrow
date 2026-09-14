@@ -2,7 +2,7 @@ use crate::consts::DRAW_OPTIONS;
 use crate::util::io;
 use crate::util::listener::{ReportType, SolutionListener};
 use jagua_rs::io::svg::s_layout_to_svg;
-use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
+use jagua_rs::probs::spp::entities::SPSolution;
 use log::Level;
 use std::path::Path;
 pub struct SvgExporter {
@@ -37,7 +37,7 @@ impl SvgExporter {
 }
 
 impl SolutionListener for SvgExporter{
-    fn report(&mut self, report_type: ReportType, solution: &SPSolution, instance: &SPInstance) {
+    fn report(&mut self, report_type: ReportType, solution: &SPSolution) {
         let suffix = match report_type {
             ReportType::CmprFeas => "cmpr",
             ReportType::ExplInfeas => "expl_nf",
@@ -47,18 +47,18 @@ impl SolutionListener for SvgExporter{
         };
         let file_name = format!("{}_{:.3}_{}", self.svg_counter, solution.strip_width(), suffix);
         if let Some(live_path) = &self.live_path {
-            let svg = s_layout_to_svg(&solution.layout_snapshot, |idx| instance.item(idx), DRAW_OPTIONS, file_name.as_str());
+            let svg = s_layout_to_svg(&solution.layout_snapshot, DRAW_OPTIONS, file_name.as_str());
             io::write_svg(&svg, Path::new(live_path), Level::Trace).expect("failed to write live svg");
         }
         if let Some(intermediate_dir) = &self.intermediate_dir && report_type != ReportType::ExplImproving {
-            let svg = s_layout_to_svg(&solution.layout_snapshot, |idx| instance.item(idx), DRAW_OPTIONS, file_name.as_str());
+            let svg = s_layout_to_svg(&solution.layout_snapshot, DRAW_OPTIONS, file_name.as_str());
             let file_path = &*format!("{intermediate_dir}/{file_name}.svg");
             io::write_svg(&svg, Path::new(file_path), Level::Trace).expect("failed to write intermediate svg");
             self.svg_counter += 1;
         }
         if let Some(final_path) = &self.final_path && report_type == ReportType::Final {
             let stem = Path::new(final_path).file_stem().unwrap();
-            let svg = s_layout_to_svg(&solution.layout_snapshot, |idx| instance.item(idx), DRAW_OPTIONS, stem.to_str().unwrap());
+            let svg = s_layout_to_svg(&solution.layout_snapshot, DRAW_OPTIONS, stem.to_str().unwrap());
             io::write_svg(&svg, Path::new(final_path), Level::Info).expect("failed to write final svg");
         }
     }
