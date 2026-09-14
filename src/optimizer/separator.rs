@@ -206,7 +206,7 @@ impl Separator {
     pub fn move_item(&mut self, pk: PItemKey, d_transf: DTransformation) -> PItemKey {
         debug_assert!(tracker_matches_layout(&self.ct, &self.prob.layout));
 
-        let item_id = self.prob.layout.placed_items[pk].item.idx;
+        let item_idx = self.prob.layout.placed_items[pk].item.idx;
 
         let old_loss = self.ct.get_loss(pk);
         let old_weighted_loss = self.ct.get_weighted_loss(pk);
@@ -215,7 +215,7 @@ impl Separator {
         self.prob.remove_item(pk);
 
         //Place the item again but with a new transformation
-        let new_pk = self.prob.place_item(SPPlacement{d_transf,item_id});
+        let new_pk = self.prob.place_item(SPPlacement{d_transf,item_idx});
 
         self.ct.register_item_move(&self.prob.layout, pk, new_pk);
 
@@ -223,7 +223,7 @@ impl Separator {
         let new_weighted_loss = self.ct.get_weighted_loss(new_pk);
 
         debug!("[MV] moved item {} from from l: {}, wl: {} to l+1: {}, wl+1: {}"
-            ,item_id,FMT().fmt2(old_loss),FMT().fmt2(old_weighted_loss),FMT().fmt2(new_loss),FMT().fmt2(new_weighted_loss));
+            ,item_idx,FMT().fmt2(old_loss),FMT().fmt2(old_weighted_loss),FMT().fmt2(new_loss),FMT().fmt2(new_weighted_loss));
 
         debug_assert!(tracker_matches_layout(&self.ct, &self.prob.layout));
 
