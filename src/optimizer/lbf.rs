@@ -37,21 +37,21 @@ impl LBFBuilder {
         instance: SPInstance,
         rng: Xoshiro256PlusPlus,
         sample_config: SampleConfig,
-    ) -> Self {
-        let prob = SPProblem::new(instance.clone());
+    ) -> anyhow::Result<Self> {
+        let prob = SPProblem::new(instance.clone())?;
 
-        Self {
+        Ok(Self {
             instance,
             prob,
             rng,
             sample_config,
-        }
+        })
     }
 
     /// Builds a complete initial placement.
     ///
     /// Returns an error if strip growth reaches the heuristic limit.
-    pub fn construct(mut self) -> Result<Self, ConstructionError> {
+    pub fn construct(mut self) -> anyhow::Result<Self> {
         let start = Instant::now();
         let n_items = self.instance.items.len();
         let sorted_item_indices = (0..n_items)
@@ -73,12 +73,12 @@ impl LBFBuilder {
             self.place_item(item_idx)?;
         }
 
-        self.prob.fit_strip();
+        self.prob.fit_strip()?;
         debug!("[CONSTR] placed all items in width: {:.3} (in {:?})",self.prob.strip_width(), start.elapsed());
         Ok(self)
     }
 
-    fn place_item(&mut self, item_idx: usize) -> Result<(), ConstructionError> {
+    fn place_item(&mut self, item_idx: usize) -> anyhow::Result<()> {
         loop {
             if let Some(placement) = self.find_placement(item_idx) {
                 self.prob.place_item(placement);
@@ -92,10 +92,10 @@ impl LBFBuilder {
                 .map(|(item, qty)| item.shape_cd.diameter * *qty as f32)
                 .sum::<f32>();
             if next_width >= width_limit {
-                return Err(ConstructionError { item_idx });
+                return Err(ConstructionError { item_idx }.into());
             }
             debug!("[CONSTR] failed to place item with idx {}, expanding strip width", item_idx);
-            self.prob.change_strip_width(next_width);
+            self.prob.change_strip_width(next_width)?;
         }
     }
 
