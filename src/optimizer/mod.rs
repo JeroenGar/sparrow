@@ -2,7 +2,7 @@ use crate::config::*;
 use crate::consts::LBF_SAMPLE_CONFIG;
 use crate::optimizer::compress::compression_phase;
 use crate::optimizer::explore::exploration_phase;
-use crate::optimizer::lbf::{ConstructionError, LBFBuilder};
+use crate::optimizer::lbf::LBFBuilder;
 use crate::optimizer::separator::Separator;
 use crate::util::listener::{OptimizationPhase, ReportType, SolutionListener};
 use crate::util::terminator::Terminator;
@@ -33,18 +33,18 @@ pub fn optimize(
     expl_config: &ExplorationConfig,
     cmpr_config: &CompressionConfig,
     initial_solution: Option<&SPSolution>
-) -> Result<SPSolution, ConstructionError> {
+) -> anyhow::Result<SPSolution> {
     let mut next_rng = || Xoshiro256PlusPlus::seed_from_u64(rng.next_u64());
     
     // First build an initial solution if none is provided
     let start_prob = match initial_solution {
         None => {
-            let builder = LBFBuilder::new(instance, next_rng(), LBF_SAMPLE_CONFIG).construct()?;
+            let builder = LBFBuilder::new(instance, next_rng(), LBF_SAMPLE_CONFIG)?.construct()?;
             builder.prob
         }
         Some(init_sol) => {
             info!("[OPT] warm starting from provided initial solution");
-            let mut prob = jagua_rs::probs::spp::entities::SPProblem::new(instance);
+            let mut prob = jagua_rs::probs::spp::entities::SPProblem::new(instance)?;
             prob.restore(init_sol);
             prob
         }

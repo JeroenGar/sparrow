@@ -75,7 +75,7 @@ fn main() -> Result<()> {
     for i in 0..n_batches {
         println!("[BENCH] batch {}/{}", i + 1, n_batches);
         println!("[BENCH] system time: {}", jiff::Timestamp::now());
-        let mut iter_solutions = vec![None; n_runs_per_iter];
+        let mut iter_solutions = (0..n_runs_per_iter).map(|_| None).collect::<Vec<_>>();
         rayon::scope(|s| {
             for (j, sol_slice) in iter_solutions.iter_mut().enumerate() {
                 let bench_idx = i * n_runs_per_iter + j;
@@ -85,7 +85,7 @@ fn main() -> Result<()> {
 
                 s.spawn(move |_| {
                     let mut next_rng = || Xoshiro256PlusPlus::seed_from_u64(rng.next_u64());
-                    let builder = match LBFBuilder::new(instance, next_rng(), LBF_SAMPLE_CONFIG).construct() {
+                    let builder = match LBFBuilder::new(instance, next_rng(), LBF_SAMPLE_CONFIG).and_then(LBFBuilder::construct) {
                         Ok(builder) => builder,
                         Err(error) => {
                             *sol_slice = Some(Err(error));

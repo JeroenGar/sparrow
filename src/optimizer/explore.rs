@@ -50,7 +50,10 @@ pub fn exploration_phase(sep: &mut Separator, sol_listener: &mut impl SolutionLi
                 break;
             }
             info!("[EXPL] shrinking strip by {}%: {:.3} -> {:.3}", config.shrink_step * 100.0, current_width, next_width);
-            sep.change_strip_width(next_width, None);
+            if let Err(error) = sep.change_strip_width(next_width, None) {
+                info!("[EXPL] stopping: {error}");
+                break;
+            }
             current_width = next_width;
             infeas_sol_pool.clear();
         } else {

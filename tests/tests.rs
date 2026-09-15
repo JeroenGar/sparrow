@@ -55,7 +55,7 @@ mod integration_tests {
         let mut sol_listener = DummySolListener;
         terminator.new_timeout(EXPLORE_TIMEOUT);
 
-        let builder = LBFBuilder::new(instance.clone(), rng, LBF_SAMPLE_CONFIG).construct()?;
+        let builder = LBFBuilder::new(instance.clone(), rng, LBF_SAMPLE_CONFIG)?.construct()?;
         let exported = jagua_rs::probs::spp::io::export(&builder.prob.save(), *sparrow::EPOCH);
         let restored = jagua_rs::probs::spp::io::import_solution(&instance, &exported)?;
         assert!(jagua_rs::entities::Layout::from_snapshot(&restored.layout_snapshot).is_feasible());

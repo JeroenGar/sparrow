@@ -230,10 +230,13 @@ impl Separator {
         new_pk
     }
 
-    pub fn change_strip_width(&mut self, new_width: f32, split_position: Option<f32>) {
+    pub fn change_strip_width(&mut self, new_width: f32, split_position: Option<f32>) -> anyhow::Result<()> {
         //if no split position is provided, use the center of the strip
         let split_position = split_position.unwrap_or(self.prob.strip_width() / 2.0);
         let delta = new_width - self.prob.strip_width();
+        let mut strip = self.prob.strip;
+        strip.width = new_width;
+        let container = strip.try_into()?;
 
         //shift all items right of the split position
         let items_to_shift = self.prob.layout.placed_items.iter()
@@ -247,7 +250,8 @@ impl Separator {
             self.move_item(pik, new_transf.decompose());
         }
 
-        self.prob.change_strip_width(new_width);
+        self.prob.layout.swap_container(container);
+        self.prob.strip = strip;
 
         //rebuild the collision tracker
         self.ct = CollisionTracker::new(&self.prob.layout);
@@ -262,5 +266,6 @@ impl Separator {
             };
         });
         debug!("[SEP] changed strip width to {:.3}", new_width);
+        Ok(())
     }
 }
