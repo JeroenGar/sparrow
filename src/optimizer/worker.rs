@@ -5,9 +5,9 @@ use crate::sample::search::SampleConfig;
 use crate::util::assertions::tracker_matches_layout;
 use crate::FMT;
 use itertools::Itertools;
-use jagua_rs::entities::{Instance, PItemKey};
+use jagua_rs::entities::PItemKey;
 use jagua_rs::geometry::DTransformation;
-use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem, SPSolution};
+use jagua_rs::probs::spp::entities::{SPPlacement, SPProblem, SPSolution};
 use log::debug;
 use rand::prelude::SliceRandom;
 use std::iter::Sum;
@@ -16,7 +16,6 @@ use rand::rngs::Xoshiro256PlusPlus;
 use tap::Tap;
 
 pub struct SeparatorWorker {
-    pub instance: SPInstance,
     pub prob: SPProblem,
     pub ct: CollisionTracker,
     pub rng: Xoshiro256PlusPlus,
@@ -46,8 +45,7 @@ impl SeparatorWorker {
         for &pk in candidates.iter() {
             // First check if the item is still colliding
             if self.ct.get_loss(pk) > 0.0 {
-                let item_id = self.prob.layout.placed_items[pk].item_id;
-                let item = self.instance.item(item_id);
+                let item = &self.prob.layout.placed_items[pk].item;
 
                 // Create an 'evaluator' to perform collision detection and collision quantification of the samples during the search
                 let evaluator = SeparationEvaluator::new(&self.prob.layout, item, pk, &self.ct);
@@ -70,8 +68,6 @@ impl SeparatorWorker {
     pub fn move_item(&mut self, pk: PItemKey, d_transf: DTransformation) -> PItemKey {
         debug_assert!(tracker_matches_layout(&self.ct, &self.prob.layout));
 
-        let item = self.instance.item(self.prob.layout.placed_items[pk].item_id);
-
         let (old_l, old_w_l) = (self.ct.get_loss(pk), self.ct.get_weighted_loss(pk));
 
         debug_assert!(old_l > 0.0, "Item with key {:?} should be colliding, but has no loss: {}", pk, FMT().fmt2(old_l));
@@ -79,7 +75,7 @@ impl SeparatorWorker {
 
         // First removing the item and subsequently place it in its new position
         let old_placement = self.prob.remove_item(pk);
-        let new_placement = SPPlacement { d_transf, item_id: item.id };
+        let new_placement = SPPlacement { d_transf, item_idx: old_placement.item_idx };
         let new_pk = self.prob.place_item(new_placement);
 
         // Update the collision tracker to reflect the changes

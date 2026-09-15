@@ -5,10 +5,7 @@
       "id": 0,
       "demand": 2,
       "dxf": "dxf/i_0.dxf",
-      "allowed_orientations": [
-        0.0,
-        180.0
-      ],
+      "orientation": {"rotation": {"mode":"discrete","angles":[0,180]}},
       "shape": {
         "type": "simple_polygon",
         "data": [
@@ -79,10 +76,7 @@
       "id": 1,
       "demand": 2,
       "dxf": "dxf/i_1.dxf",
-      "allowed_orientations": [
-        0.0,
-        180.0
-      ],
+      "orientation": {"rotation": {"mode":"discrete","angles":[0,180]}},
       "shape": {
         "type": "simple_polygon",
         "data": [
@@ -113,10 +107,7 @@
       "id": 2,
       "demand": 4,
       "dxf": "dxf/i_2.dxf",
-      "allowed_orientations": [
-        0.0,
-        180.0
-      ],
+      "orientation": {"rotation": {"mode":"discrete","angles":[0,180]}},
       "shape": {
         "type": "simple_polygon",
         "data": [
@@ -155,10 +146,7 @@
       "id": 3,
       "demand": 4,
       "dxf": "dxf/i_3.dxf",
-      "allowed_orientations": [
-        0.0,
-        180.0
-      ],
+      "orientation": {"rotation": {"mode":"discrete","angles":[0,180]}},
       "shape": {
         "type": "simple_polygon",
         "data": [
@@ -197,10 +185,7 @@
       "id": 4,
       "demand": 4,
       "dxf": "dxf/i_4.dxf",
-      "allowed_orientations": [
-        0.0,
-        180.0
-      ],
+      "orientation": {"rotation": {"mode":"discrete","angles":[0,180]}},
       "shape": {
         "type": "simple_polygon",
         "data": [
@@ -247,10 +232,7 @@
       "id": 5,
       "demand": 4,
       "dxf": "dxf/i_5.dxf",
-      "allowed_orientations": [
-        0.0,
-        180.0
-      ],
+      "orientation": {"rotation": {"mode":"discrete","angles":[0,180]}},
       "shape": {
         "type": "simple_polygon",
         "data": [
@@ -281,10 +263,7 @@
       "id": 6,
       "demand": 2,
       "dxf": "dxf/i_6.dxf",
-      "allowed_orientations": [
-        0.0,
-        180.0
-      ],
+      "orientation": {"rotation": {"mode":"discrete","angles":[0,180]}},
       "shape": {
         "type": "simple_polygon",
         "data": [
@@ -331,10 +310,7 @@
       "id": 7,
       "demand": 2,
       "dxf": "dxf/i_7.dxf",
-      "allowed_orientations": [
-        0.0,
-        180.0
-      ],
+      "orientation": {"rotation": {"mode":"discrete","angles":[0,180]}},
       "shape": {
         "type": "simple_polygon",
         "data": [

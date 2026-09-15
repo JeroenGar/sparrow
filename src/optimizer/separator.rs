@@ -8,7 +8,7 @@ use crate::FMT;
 use itertools::Itertools;
 use jagua_rs::entities::PItemKey;
 use jagua_rs::geometry::DTransformation;
-use jagua_rs::probs::spp::entities::{SPInstance, SPPlacement, SPProblem, SPSolution};
+use jagua_rs::probs::spp::entities::{SPPlacement, SPProblem, SPSolution};
 use jagua_rs::Instant;
 use log::{debug, log, Level};
 use ordered_float::OrderedFloat;
@@ -28,7 +28,6 @@ pub struct SeparatorConfig {
 }
 
 pub struct Separator {
-    pub instance: SPInstance,
     pub rng: Xoshiro256PlusPlus,
     pub prob: SPProblem,
     pub ct: CollisionTracker,
@@ -38,11 +37,10 @@ pub struct Separator {
 }
 
 impl Separator {
-    pub fn new(instance: SPInstance, prob: SPProblem, mut rng: Xoshiro256PlusPlus, config: SeparatorConfig) -> Self {
+    pub fn new(prob: SPProblem, mut rng: Xoshiro256PlusPlus, config: SeparatorConfig) -> Self {
         let ct = CollisionTracker::new(&prob.layout);
         let workers = (0..config.n_workers).map(|_|
             SeparatorWorker {
-                instance: instance.clone(),
                 prob: prob.clone(),
                 ct: ct.clone(),
                 rng: Xoshiro256PlusPlus::seed_from_u64(rng.random()),
@@ -59,7 +57,6 @@ impl Separator {
 
         Self {
             prob,
-            instance,
             rng,
             ct,
             workers,
@@ -107,7 +104,7 @@ impl Separator {
                 } else if loss < min_loss {
                     //Not all collisions are resolved, but we found a new 'best' solution
                     log!(self.config.log_level,"[SEP] [s:{n_strikes},i:{n_iter}] (*) min_l: {}",FMT().fmt2(loss));
-                    sol_listener.report(ReportType::ExplImproving, &self.prob.save(), &self.instance);
+                    sol_listener.report(ReportType::ExplImproving, &self.prob.save());
                     if loss < min_loss * 0.98 {
                         //Reset the `iter_no_improvement` counter if the best solution is a substantial improvement
                         n_iter_no_improvement = 0;
@@ -209,7 +206,7 @@ impl Separator {
     pub fn move_item(&mut self, pk: PItemKey, d_transf: DTransformation) -> PItemKey {
         debug_assert!(tracker_matches_layout(&self.ct, &self.prob.layout));
 
-        let item_id = self.prob.layout.placed_items[pk].item_id;
+        let item_idx = self.prob.layout.placed_items[pk].item.idx;
 
         let old_loss = self.ct.get_loss(pk);
         let old_weighted_loss = self.ct.get_weighted_loss(pk);
@@ -218,7 +215,7 @@ impl Separator {
         self.prob.remove_item(pk);
 
         //Place the item again but with a new transformation
-        let new_pk = self.prob.place_item(SPPlacement{d_transf,item_id});
+        let new_pk = self.prob.place_item(SPPlacement{d_transf,item_idx});
 
         self.ct.register_item_move(&self.prob.layout, pk, new_pk);
 
@@ -226,17 +223,20 @@ impl Separator {
         let new_weighted_loss = self.ct.get_weighted_loss(new_pk);
 
         debug!("[MV] moved item {} from from l: {}, wl: {} to l+1: {}, wl+1: {}"
-            ,item_id,FMT().fmt2(old_loss),FMT().fmt2(old_weighted_loss),FMT().fmt2(new_loss),FMT().fmt2(new_weighted_loss));
+            ,item_idx,FMT().fmt2(old_loss),FMT().fmt2(old_weighted_loss),FMT().fmt2(new_loss),FMT().fmt2(new_weighted_loss));
 
         debug_assert!(tracker_matches_layout(&self.ct, &self.prob.layout));
 
         new_pk
     }
 
-    pub fn change_strip_width(&mut self, new_width: f32, split_position: Option<f32>) {
+    pub fn change_strip_width(&mut self, new_width: f32, split_position: Option<f32>) -> anyhow::Result<()> {
         //if no split position is provided, use the center of the strip
         let split_position = split_position.unwrap_or(self.prob.strip_width() / 2.0);
         let delta = new_width - self.prob.strip_width();
+        let mut strip = self.prob.strip;
+        strip.width = new_width;
+        let container = strip.try_into()?;
 
         //shift all items right of the split position
         let items_to_shift = self.prob.layout.placed_items.iter()
@@ -250,7 +250,8 @@ impl Separator {
             self.move_item(pik, new_transf.decompose());
         }
 
-        self.prob.change_strip_width(new_width);
+        self.prob.layout.swap_container(container);
+        self.prob.strip = strip;
 
         //rebuild the collision tracker
         self.ct = CollisionTracker::new(&self.prob.layout);
@@ -258,7 +259,6 @@ impl Separator {
         //rebuild the workers
         self.workers.iter_mut().for_each(|opt| {
             *opt = SeparatorWorker {
-                instance: self.instance.clone(),
                 prob: self.prob.clone(),
                 ct: self.ct.clone(),
                 rng: Xoshiro256PlusPlus::seed_from_u64(self.rng.random()),
@@ -266,5 +266,6 @@ impl Separator {
             };
         });
         debug!("[SEP] changed strip width to {:.3}", new_width);
+        Ok(())
     }
 }

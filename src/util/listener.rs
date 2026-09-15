@@ -1,8 +1,8 @@
-use jagua_rs::probs::spp::entities::{SPInstance, SPSolution};
+use jagua_rs::probs::spp::entities::SPSolution;
 
 /// Trait for listeners that can receive solutions during the optimization process
 pub trait SolutionListener {
-    fn report(&mut self, report: ReportType, solution: &SPSolution, instance: &SPInstance);
+    fn report(&mut self, report: ReportType, solution: &SPSolution);
 
     fn report_phase(&mut self, _phase: OptimizationPhase) {}
 
@@ -56,7 +56,7 @@ pub enum ReportType {
 pub struct DummySolListener;
 
 impl SolutionListener for DummySolListener {
-    fn report(&mut self, _report: ReportType, _solution: &SPSolution, _instance: &SPInstance) {
+    fn report(&mut self, _report: ReportType, _solution: &SPSolution) {
         // Do nothing
     }
 }

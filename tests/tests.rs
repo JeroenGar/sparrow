@@ -29,9 +29,12 @@ mod integration_tests {
     fn simulate_optimization(path: &str) -> Result<()> {
         let config = DEFAULT_SPARROW_CONFIG;
         let input_file_path = format!("{INSTANCE_BASE_PATH}/{path}");
-        let (json_instance, _) = io::read_spp_input(Path::new(&input_file_path))?;
+        let (mut json_instance, _) = io::read_spp_input(Path::new(&input_file_path))?;
 
-        let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.min_item_separation, config.narrow_concavity_cutoff_ratio);
+        for (idx, item) in json_instance.items.iter_mut().enumerate() {
+            item.base.id = 100 + idx as u64 * 7;
+        }
+        let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.narrow_concavity_cutoff_ratio);
         let instance = jagua_rs::probs::spp::io::import_instance(&importer, &json_instance)?;
 
         println!("[TEST] loaded instance: {}", json_instance.name);
@@ -52,14 +55,18 @@ mod integration_tests {
         let mut sol_listener = DummySolListener;
         terminator.new_timeout(EXPLORE_TIMEOUT);
 
-        let builder = LBFBuilder::new(instance.clone(), rng, LBF_SAMPLE_CONFIG).construct()?;
-        let mut separator = Separator::new(builder.instance, builder.prob, builder.rng, config.expl_cfg.separator_config);
+        let builder = LBFBuilder::new(instance.clone(), rng, LBF_SAMPLE_CONFIG)?.construct()?;
+        let exported = jagua_rs::probs::spp::io::export(&builder.prob.save(), *sparrow::EPOCH);
+        let restored = jagua_rs::probs::spp::io::import_solution(&instance, &exported)?;
+        assert!(jagua_rs::entities::Layout::from_snapshot(&restored.layout_snapshot).is_feasible());
+        assert_eq!(restored.layout_snapshot.placed_items.len(), instance.total_item_qty());
+        let mut separator = Separator::new(builder.prob, builder.rng, config.expl_cfg.separator_config);
 
-        let sols = exploration_phase(&instance, &mut separator, &mut sol_listener, &terminator, &config.expl_cfg);
+        let sols = exploration_phase(&mut separator, &mut sol_listener, &terminator, &config.expl_cfg);
         let final_explore_sol = sols.last().expect("no solutions found during exploration");
 
         terminator.new_timeout(COMPRESS_TIMEOUT);
-        compression_phase(&instance, &mut separator, final_explore_sol, &mut sol_listener, &terminator, &config.cmpr_cfg);
+        compression_phase(&mut separator, final_explore_sol, &mut sol_listener, &terminator, &config.cmpr_cfg);
         Ok(())
     }
 }
