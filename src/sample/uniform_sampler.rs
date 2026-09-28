@@ -28,7 +28,7 @@ struct RotEntry {
 
 impl UniformBBoxSampler {
     pub fn new(sample_bbox: Rect, item: &Item, container_bbox: Rect) -> Option<Self> {
-        let rotations = match &item.allowed_rotation {
+        let rotations = match item.allowed_orientations.rotations(false).unwrap() {
             RotationRange::None => &vec![0.0],
             RotationRange::Discrete(r) => r,
             RotationRange::Continuous => {
@@ -102,7 +102,7 @@ fn intersect_range(a: &Range<f32>, b: &Range<f32>) -> Option<Range<f32>> {
 
 /// Converts a sample transformation to the closest feasible transformation. (for now just mapping rotation to the closest allowed one)
 pub fn convert_sample_to_closest_feasible(dt: DTransformation, item: &Item) -> DTransformation {
-    let feasible_rotation = match &item.allowed_rotation {
+    let feasible_rotation = match item.allowed_orientations.rotations(false).unwrap() {
         RotationRange::None => 0.0,
         RotationRange::Discrete(v) => {
             // find the closest rotation in the discrete set

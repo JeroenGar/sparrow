@@ -92,7 +92,7 @@ fn minimum_strip_width(prob: &SPProblem) -> f32 {
     let mut min_width = (area / f64::from(container.height())) as f32 * (1.0 - REL_TOL);
 
     for (item, _) in &prob.instance.items {
-        let rotations = match &item.allowed_rotation {
+        let rotations = match item.allowed_orientations.rotations(false).unwrap() {
             RotationRange::None => &[0.0][..],
             RotationRange::Discrete(rotations) => rotations.as_slice(),
             // ponytail: continuous rotations use only the area bound; add exact rotational bounds if this is too weak.
