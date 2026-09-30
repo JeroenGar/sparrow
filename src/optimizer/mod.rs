@@ -84,25 +84,25 @@ pub fn optimize(
 /// Leave relative slack for f32 rotation and bounding-box rounding near exact fits.
 fn minimum_strip_width(prob: &SPProblem) -> f32 {
     const REL_TOL: f32 = 1e-6;
-    let container = prob.layout.container.outer_cd.bbox;
+    let container = prob.layout().container().outer_cd().bbox();
     let width_inset = prob.strip_width() - container.width();
-    let area: f64 = prob.instance.items.iter()
-        .map(|(item, qty)| f64::from(item.shape_cd.area) * *qty as f64)
+    let area: f64 = prob.instance().items.iter()
+        .map(|(item, qty)| f64::from(item.shape_cd().area()) * *qty as f64)
         .sum();
     let mut min_width = (area / f64::from(container.height())) as f32 * (1.0 - REL_TOL);
 
-    for (item, _) in &prob.instance.items {
-        let rotations = match item.allowed_orientations.rotations(false).unwrap() {
+    for (item, _) in &prob.instance().items {
+        let rotations = match item.allowed_orientations().rotations(false).unwrap() {
             RotationRange::None => &[0.0][..],
             RotationRange::Discrete(rotations) => rotations.as_slice(),
             // ponytail: continuous rotations use only the area bound; add exact rotational bounds if this is too weak.
             RotationRange::Continuous => continue,
         };
-        let tolerance = item.shape_cd.diameter * REL_TOL;
-        let mut shape = item.shape_cd.as_ref().clone();
+        let tolerance = item.shape_cd().diameter() * REL_TOL;
+        let mut shape = item.shape_cd().as_ref().clone();
         let item_width = rotations.iter()
             .filter_map(|&rotation| {
-                let bbox = shape.transform_from(item.shape_cd.as_ref(), &Transformation::from_rotation(rotation)).bbox;
+                let bbox = shape.transform_from(item.shape_cd().as_ref(), &Transformation::from_rotation(rotation)).bbox();
                 (bbox.height() <= container.height() + tolerance)
                     .then_some((bbox.width() - tolerance).max(0.0))
             })

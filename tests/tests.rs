@@ -58,8 +58,8 @@ mod integration_tests {
         let builder = LBFBuilder::new(instance.clone(), rng, LBF_SAMPLE_CONFIG)?.construct()?;
         let exported = jagua_rs::probs::spp::io::export(&builder.prob.save(), *sparrow::EPOCH);
         let restored = jagua_rs::probs::spp::io::import_solution(&instance, &exported)?;
-        assert!(jagua_rs::entities::Layout::from_snapshot(&restored.layout_snapshot).is_feasible());
-        assert_eq!(restored.layout_snapshot.placed_items.len(), instance.total_item_qty());
+        assert!(jagua_rs::entities::Layout::from_snapshot(restored.layout_snapshot()).is_collision_free());
+        assert_eq!(restored.layout_snapshot().placed_items().len(), instance.total_item_qty());
         let mut separator = Separator::new(builder.prob, builder.rng, config.expl_cfg.separator_config);
 
         let sols = exploration_phase(&mut separator, &mut sol_listener, &terminator, &config.expl_cfg);

@@ -22,12 +22,12 @@ pub type CTSnapshot = CollisionTracker;
 
 impl CollisionTracker {
     pub fn new(l: &Layout) -> Self {
-        let size = l.placed_items.len();
+        let size = l.placed_items().len();
 
         // Create the tracker
         let mut ot = Self {
             size,
-            pk_idx_map: l.placed_items.keys().enumerate()
+            pk_idx_map: l.placed_items().keys().enumerate()
                 .map(|(i, pk)| (pk, i))
                 .collect(),
             pair_collisions: PairMatrix::new(size),
@@ -35,7 +35,7 @@ impl CollisionTracker {
         };
 
         // Recompute the loss for all items
-        l.placed_items.keys().for_each(|pk| {
+        l.placed_items().keys().for_each(|pk| {
             ot.recompute_loss_for_item(pk, l)
         });
 
@@ -46,8 +46,8 @@ impl CollisionTracker {
 
     fn recompute_loss_for_item(&mut self, pk: PItemKey, l: &Layout) {
         let idx = self.pk_idx_map[pk];
-        let pi = &l.placed_items[pk];
-        let shape = &pi.shape;
+        let pi = &l.placed_items()[pk];
+        let shape = pi.shape();
 
         // Reset all current loss values for the item
         for i in 0..self.size {
@@ -56,7 +56,7 @@ impl CollisionTracker {
         self.container_collisions[idx].loss = 0.0;
 
         // Compute which hazards are currently colliding with the item
-        let mut collector = BasicHazardCollector::with_capacity(l.placed_items.len() + 1);
+        let mut collector = BasicHazardCollector::with_capacity(l.placed_items().len() + 1);
         l.cde().collect_poly_collisions(shape, &mut collector);
         // Remove the item itself from the detector
         collector.remove_by_entity(&HazardEntity::from((pk, pi)));
@@ -65,7 +65,7 @@ impl CollisionTracker {
         for (_, haz) in collector.iter() {
             match haz {
                 HazardEntity::PlacedItem { pk: other_pk, .. } => {
-                    let shape_other = &l.placed_items[*other_pk].shape;
+                    let shape_other = l.placed_items()[*other_pk].shape();
                     let idx_other = self.pk_idx_map[*other_pk];
 
                     let loss = quantify_collision_poly_poly(shape, shape_other);
@@ -73,7 +73,7 @@ impl CollisionTracker {
                     self.pair_collisions[(idx, idx_other)].loss = loss;
                 }
                 HazardEntity::Exterior => {
-                    let loss = quantify_collision_poly_container(shape, l.container.outer_cd.bbox);
+                    let loss = quantify_collision_poly_container(shape, l.container().outer_cd().bbox());
                     assert!(loss > 0.0, "loss for a collision should be > 0.0");
                     self.container_collisions[idx].loss = loss;
                 }

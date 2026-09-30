@@ -14,11 +14,11 @@ pub struct SparrowConfig {
     pub cde_config: CDEConfig,
     /// Defines the polygon simplification tolerance: maximum allowable inflation of items when simplifying their shape.
     /// Disabled if `None`.
-    /// See [`jagua_rs::io::parser::Parser::new`] for more details.
+    /// See [`jagua_rs::io::import::Importer::new`] for more details.
     pub poly_simpl_tolerance: Option<f32>,
     /// Defines a maximum distance and area of a concavity to be considered "narrow" (which will be closed).
     /// Disabled if `None`.
-    /// See [`jagua_rs::io::parser::Parser::new`] for more details.
+    /// See [`jagua_rs::io::import::Importer::new`] for more details.
     pub narrow_concavity_cutoff_ratio: Option<(f32, f32)>,
 }
 

@@ -38,7 +38,7 @@ pub struct Separator {
 
 impl Separator {
     pub fn new(prob: SPProblem, mut rng: Xoshiro256PlusPlus, config: SeparatorConfig) -> Self {
-        let ct = CollisionTracker::new(&prob.layout);
+        let ct = CollisionTracker::new(prob.layout());
         let workers = (0..config.n_workers).map(|_|
             SeparatorWorker {
                 prob: prob.clone(),
@@ -194,19 +194,19 @@ impl Separator {
         match ots {
             Some(ots) => {
                 //if a snapshot of the tracker was provided, restore it
-                self.ct.restore_but_keep_weights(ots, &self.prob.layout);
+                self.ct.restore_but_keep_weights(ots, self.prob.layout());
             }
             None => {
                 //otherwise, rebuild it
-                self.ct = CollisionTracker::new(&self.prob.layout);
+                self.ct = CollisionTracker::new(self.prob.layout());
             }
         }
     }
 
     pub fn move_item(&mut self, pk: PItemKey, d_transf: DTransformation) -> PItemKey {
-        debug_assert!(tracker_matches_layout(&self.ct, &self.prob.layout));
+        debug_assert!(tracker_matches_layout(&self.ct, self.prob.layout()));
 
-        let item_idx = self.prob.layout.placed_items[pk].item.idx;
+        let item_idx = self.prob.layout().placed_items()[pk].item().idx();
 
         let old_loss = self.ct.get_loss(pk);
         let old_weighted_loss = self.ct.get_weighted_loss(pk);
@@ -217,7 +217,7 @@ impl Separator {
         //Place the item again but with a new transformation
         let new_pk = self.prob.place_item(SPPlacement{d_transf,item_idx});
 
-        self.ct.register_item_move(&self.prob.layout, pk, new_pk);
+        self.ct.register_item_move(self.prob.layout(), pk, new_pk);
 
         let new_loss = self.ct.get_loss(new_pk);
         let new_weighted_loss = self.ct.get_weighted_loss(new_pk);
@@ -225,7 +225,7 @@ impl Separator {
         debug!("[MV] moved item {} from from l: {}, wl: {} to l+1: {}, wl+1: {}"
             ,item_idx,FMT().fmt2(old_loss),FMT().fmt2(old_weighted_loss),FMT().fmt2(new_loss),FMT().fmt2(new_weighted_loss));
 
-        debug_assert!(tracker_matches_layout(&self.ct, &self.prob.layout));
+        debug_assert!(tracker_matches_layout(&self.ct, self.prob.layout()));
 
         new_pk
     }
@@ -234,14 +234,14 @@ impl Separator {
         //if no split position is provided, use the center of the strip
         let split_position = split_position.unwrap_or(self.prob.strip_width() / 2.0);
         let delta = new_width - self.prob.strip_width();
-        let mut strip = self.prob.strip;
+        let mut strip = *self.prob.strip();
         strip.width = new_width;
-        let container = strip.try_into()?;
+        let _: jagua_rs::entities::Container = strip.try_into()?;
 
         //shift all items right of the split position
-        let items_to_shift = self.prob.layout.placed_items.iter()
-            .filter(|(_, pi)| pi.shape.centroid().0 > split_position)
-            .map(|(k, pi)| (k, pi.d_transf))
+        let items_to_shift = self.prob.layout().placed_items().iter()
+            .filter(|(_, pi)| pi.shape().centroid().0 > split_position)
+            .map(|(k, pi)| (k, pi.d_transf()))
             .collect_vec();
 
         for (pik, dtransf) in items_to_shift {
@@ -250,11 +250,10 @@ impl Separator {
             self.move_item(pik, new_transf.decompose());
         }
 
-        self.prob.layout.swap_container(container);
-        self.prob.strip = strip;
+        self.prob.change_strip_width(new_width)?;
 
         //rebuild the collision tracker
-        self.ct = CollisionTracker::new(&self.prob.layout);
+        self.ct = CollisionTracker::new(self.prob.layout());
 
         //rebuild the workers
         self.workers.iter_mut().for_each(|opt| {

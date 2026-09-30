@@ -31,16 +31,18 @@ impl<'a> SeparationEvaluator<'a> {
             .expect("placed item should be registered in the CDE");
         let current_hazard = (
             current_haz_key,
-            layout.cde().hazards_map[current_haz_key].entity,
+            layout.cde().hazard(current_haz_key)
+                .expect("placed item should be registered in the CDE")
+                .entity,
         );
 
         Self {
             layout,
             item,
-            collector: BasicHazardCollector::with_capacity(layout.placed_items.len() + 1),
+            collector: BasicHazardCollector::with_capacity(layout.placed_items().len() + 1),
             current_hazard,
             loss_evaluator: CollisionLossEvaluator::new(layout, ct, current_pk),
-            shape_buff: item.shape_cd.as_ref().clone(),
+            shape_buff: item.shape_cd().as_ref().clone(),
             n_evals: 0,
         }
     }
@@ -61,7 +63,7 @@ impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
         };
         let shape = self
             .shape_buff
-            .transform_from(self.item.shape_cd.as_ref(), &dt.compose());
+            .transform_from(self.item.shape_cd().as_ref(), &dt.compose());
         self.collector.clear();
         // Mark the moving item's existing hazard as already collected so traversal skips it.
         self.collector.insert(self.current_hazard.0, self.current_hazard.1);

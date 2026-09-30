@@ -105,13 +105,13 @@ cargo run --release --features=live_svg -- \
 
 This repository uses the same JSON format as [`jagua-rs`](https://github.com/JeroenGar/jagua-rs) to represent instances.
 
-This branch targets the upcoming jagua-rs 0.9.0 contract through its
-`jg-container-identity` branch. Every item requires `orientation.rotation`:
+This branch targets the jagua-rs 1.0.0 contract through its
+`jg-library-state-access` branch until the release is published. Every item requires `orientation.rotation`:
 `{"mode":"discrete","angles":[0,180]}`, `{"mode":"stepped","step":90}`, or
 `{"mode":"continuous"}`. Item IDs may be non-consecutive and are preserved in output.
 Set `min_item_separation` on the input instance; omission means zero. The CLI and
 solver configuration no longer override it. Legacy orientation fields and item
-holes are rejected. See the [0.9 migration guide](https://github.com/JeroenGar/jagua-rs/blob/jg-container-identity/notes/v0.9-migration.md).
+holes are rejected. See the [1.0.0 release notes](https://github.com/JeroenGar/jagua-rs/blob/jg-library-state-access/docs/releases/1.0.0.md).
 These are also available in Oscar Oliveira's [OR-Datasets repository](https://github.com/Oscar-Oliveira/OR-Datasets/tree/master/Cutting-and-Packing/2D-Irregular).
 
 See [`jagua-rs` README](https://github.com/JeroenGar/jagua-rs?tab=readme-ov-file#input) for details on the input format.

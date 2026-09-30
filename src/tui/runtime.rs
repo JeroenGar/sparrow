@@ -14,7 +14,6 @@ use sparrow::EPOCH;
 use sparrow::config::SparrowConfig;
 use sparrow::consts::DRAW_OPTIONS;
 use sparrow::optimizer::optimize;
-use sparrow::optimizer::lbf::ConstructionError;
 use sparrow::util::io::{self, ExtSPOutput};
 use sparrow::util::listener::{
     OptimizationPhase, ReportType, SeparationProgress, SeparationResult, SolutionListener,
@@ -72,7 +71,7 @@ fn start_optimizer(
     rng: Xoshiro256PlusPlus,
     signals: TuiSignals,
     updates: Sender<DashboardUpdate>,
-) -> JoinHandle<Result<SPSolution, ConstructionError>> {
+) -> JoinHandle<Result<SPSolution>> {
     thread::Builder::new()
         .name("optimizer".into())
         .spawn(move || {
@@ -93,7 +92,7 @@ fn run_dashboard(
     terminal: &mut DefaultTerminal,
     updates: Receiver<DashboardUpdate>,
     logs: Receiver<LogEntry>,
-    worker: JoinHandle<Result<SPSolution, ConstructionError>>,
+    worker: JoinHandle<Result<SPSolution>>,
     signals: TuiSignals,
     ext_instance: &ExtSPInstance,
     budget: SearchBudget,
@@ -157,7 +156,7 @@ fn export_final_solution(
 ) -> Result<()> {
     let svg_path = format!("{OUTPUT_DIR}/final_{}.svg", ext_instance.name);
     io::write_svg(
-        &s_layout_to_svg(&solution.layout_snapshot, DRAW_OPTIONS, "final"),
+        &s_layout_to_svg(solution.layout_snapshot(), DRAW_OPTIONS, "final"),
         Path::new(&svg_path),
         Level::Info,
     )?;
