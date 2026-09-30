@@ -31,6 +31,7 @@ pub struct Separator {
     pub rng: Xoshiro256PlusPlus,
     pub prob: SPProblem,
     pub ct: CollisionTracker,
+    pub total_evals: usize,
     pub workers: Vec<SeparatorWorker>,
     pub config: SeparatorConfig,
     pub thread_pool: Option<ThreadPool>,
@@ -59,6 +60,7 @@ impl Separator {
             prob,
             rng,
             ct,
+            total_evals: 0,
             workers,
             config,
             thread_pool: pool,
@@ -132,6 +134,7 @@ impl Separator {
             self.rollback(&min_loss_sol.0, Some(&min_loss_sol.1));
         }
         let secs = start.elapsed().as_secs_f32();
+        self.total_evals += sep_stats.total_evals;
         log!(self.config.log_level, "[SEP] finished, evals/s: {} K, evals/move: {}, moves/s: {}, iter/s: {}, #workers: {}, total {:.3}s",
             (sep_stats.total_evals as f32/ (1000.0 * secs)) as usize,
             FMT().fmt2(sep_stats.total_evals as f32 / sep_stats.total_moves as f32),

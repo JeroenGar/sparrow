@@ -19,6 +19,7 @@ use std::cmp::Reverse;
 
 /// Algorithm 12 from https://doi.org/10.48550/arXiv.2509.13329
 pub fn exploration_phase(sep: &mut Separator, sol_listener: &mut impl SolutionListener, term: &impl Terminator, config: &ExplorationConfig) -> Vec<SPSolution> {
+    let initial_eval_count = sep.total_evals;
     let min_width = super::minimum_strip_width(&sep.prob);
     let mut current_width = sep.prob.strip_width();
     let mut best_width = current_width;
@@ -89,7 +90,7 @@ pub fn exploration_phase(sep: &mut Separator, sol_listener: &mut impl SolutionLi
         }
     }
 
-    info!("[EXPL] finished, best feasible solution: width: {:.3} ({:.3}%)",best_width,feasible_sols.last().unwrap().density() * 100.0);
+    info!("[EXPL] finished, best feasible solution: width: {:.3} ({:.3}%), total evals: {}",best_width,feasible_sols.last().unwrap().density() * 100.0, sep.total_evals - initial_eval_count);
 
     feasible_sols
 }
