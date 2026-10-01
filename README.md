@@ -1,6 +1,8 @@
 # sparrow 🪶 
 [![DOI](https://zenodo.org/badge/DOI/10.48550/arXiv.2509.13329.svg)](https://doi.org/10.48550/arXiv.2509.13329)
 [![CI](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml/badge.svg?branch=main)](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml) 
+[![Unique clones](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JeroenGar/sparrow/traffic/clones.json)](https://github.com/JeroenGar/sparrow/tree/traffic)
+[![Unique views](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JeroenGar/sparrow/traffic/views.json)](https://github.com/JeroenGar/sparrow/tree/traffic)
 
 <p>
     <img src="data/sparrow.jpeg" align="right" alt="logo" height=80>

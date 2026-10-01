@@ -1,0 +1,47 @@
+name: Traffic stats
+
+# GitHub only keeps 14 days of traffic data, so this job archives it daily
+# on the `traffic` branch and writes shields.io endpoint files for the README badges.
+# Requires a `TRAFFIC_TOKEN` secret: a fine-grained PAT with "Administration: read" on this repo.
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: traffic
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Switch to traffic branch
+        run: git fetch origin traffic && git switch traffic || git switch --orphan traffic
+      - name: Fetch and merge traffic data
+        env:
+          GH_TOKEN: ${{ secrets.TRAFFIC_TOKEN }}
+        run: |
+          for kind in clones views; do
+            gh api "repos/${{ github.repository }}/traffic/$kind" --jq ".$kind" > new.json
+            [ -f "$kind-history.json" ] || echo '[]' > "$kind-history.json"
+            # newer entries overwrite older ones for the same day (today's count is still partial)
+            jq -s '.[0] + .[1] | group_by(.timestamp) | map(.[-1])' "$kind-history.json" new.json > merged.json
+            mv merged.json "$kind-history.json"
+            jq --arg label "unique $kind" \
+              '{schemaVersion: 1, label: $label, message: (map(.uniques) | add // 0 | tostring), color: "blue"}' \
+              "$kind-history.json" > "$kind.json"
+          done
+          rm new.json
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add clones*.json views*.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Update traffic stats"
+            git push origin traffic
+          fi
