@@ -11,6 +11,7 @@ use jagua_rs::collision_detection::hazards::HazardEntity;
 use jagua_rs::entities::{Layout, PItemKey};
 use jagua_rs::geometry::geo_traits::CollidesWith;
 use jagua_rs::probs::spp::entities::SPSolution;
+use jagua_rs::Instant;
 use log::{debug, info, warn};
 use ordered_float::OrderedFloat;
 use rand::prelude::{Distribution, IteratorRandom};
@@ -19,6 +20,7 @@ use std::cmp::Reverse;
 
 /// Algorithm 12 from https://doi.org/10.48550/arXiv.2509.13329
 pub fn exploration_phase(sep: &mut Separator, sol_listener: &mut impl SolutionListener, term: &impl Terminator, config: &ExplorationConfig) -> Vec<SPSolution> {
+    let start = Instant::now();
     let initial_eval_count = sep.total_evals;
     let width_lower_bound = super::strip_width_lower_bound(&sep.prob);
     let mut current_width = sep.prob.strip_width();
@@ -89,7 +91,9 @@ pub fn exploration_phase(sep: &mut Separator, sol_listener: &mut impl SolutionLi
         }
     }
 
-    info!("[EXPL] finished, best feasible solution: width: {:.3} ({:.3}%), total evals: {}",best_width,feasible_sols.last().unwrap().density() * 100.0, sep.total_evals - initial_eval_count);
+    let elapsed_seconds = start.elapsed().as_secs_f64();
+    let total_evals = sep.total_evals - initial_eval_count;
+    info!("[EXPL] finished, best feasible solution: width: {:.3} ({:.3}%), evals/s: {}, elapsed: {:.3}s",best_width,feasible_sols.last().unwrap().density() * 100.0, FMT().fmt2(total_evals as f64 / elapsed_seconds), elapsed_seconds);
 
     feasible_sols
 }
