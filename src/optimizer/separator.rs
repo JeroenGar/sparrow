@@ -237,9 +237,6 @@ impl Separator {
         //if no split position is provided, use the center of the strip
         let split_position = split_position.unwrap_or(self.prob.strip_width() / 2.0);
         let delta = new_width - self.prob.strip_width();
-        let mut strip = *self.prob.strip();
-        strip.width = new_width;
-        let _: jagua_rs::entities::Container = strip.try_into()?;
 
         //shift all items right of the split position
         let items_to_shift = self.prob.layout().placed_items().iter()
@@ -247,13 +244,18 @@ impl Separator {
             .map(|(k, pi)| (k, pi.d_transf()))
             .collect_vec();
 
+        self.prob.change_strip_width(new_width)?;
+
+        // The tracker still describes the old container; rebuild it after all shifts.
         for (pik, dtransf) in items_to_shift {
             let existing_transf = dtransf.compose();
             let new_transf = existing_transf.translate((delta, 0.0));
-            self.move_item(pik, new_transf.decompose());
+            let placement = self.prob.remove_item(pik);
+            self.prob.place_item(SPPlacement {
+                item_idx: placement.item_idx,
+                d_transf: new_transf.decompose(),
+            });
         }
-
-        self.prob.change_strip_width(new_width)?;
 
         //rebuild the collision tracker
         self.ct = CollisionTracker::new(self.prob.layout());
