@@ -11,7 +11,7 @@ use jagua_rs::collision_detection::hazards::HazardEntity;
 use jagua_rs::entities::{Layout, PItemKey};
 use jagua_rs::geometry::geo_traits::CollidesWith;
 use jagua_rs::probs::spp::entities::SPSolution;
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use ordered_float::OrderedFloat;
 use rand::prelude::{Distribution, IteratorRandom};
 use rand_distr::Normal;
@@ -20,7 +20,7 @@ use std::cmp::Reverse;
 /// Algorithm 12 from https://doi.org/10.48550/arXiv.2509.13329
 pub fn exploration_phase(sep: &mut Separator, sol_listener: &mut impl SolutionListener, term: &impl Terminator, config: &ExplorationConfig) -> Vec<SPSolution> {
     let initial_eval_count = sep.total_evals;
-    let min_width = super::minimum_strip_width(&sep.prob);
+    let width_lower_bound = super::strip_width_lower_bound(&sep.prob);
     let mut current_width = sep.prob.strip_width();
     let mut best_width = current_width;
 
@@ -46,13 +46,12 @@ pub fn exploration_phase(sep: &mut Separator, sol_listener: &mut impl SolutionLi
             }
             // Shrink the strip width and clear the infeasible solution pool
             let next_width = current_width * (1.0 - config.shrink_step);
-            if next_width < min_width || next_width >= current_width {
-                info!("[EXPL] stopping at minimum strip width: {:.3}", min_width);
+            if next_width < width_lower_bound || next_width >= current_width {
+                info!("[EXPL] stopping at strip width lower bound: {:.3}", width_lower_bound);
                 break;
             }
             info!("[EXPL] shrinking strip by {}%: {:.3} -> {:.3}", config.shrink_step * 100.0, current_width, next_width);
-            if let Err(error) = sep.change_strip_width(next_width, None) {
-                error!("[EXPL] unexpected resize failure at width {next_width:.3}; stopping exploration: {error:#}");
+            if sep.change_strip_width(next_width, None).is_err() {
                 break;
             }
             current_width = next_width;

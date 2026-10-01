@@ -15,7 +15,7 @@ pub fn compression_phase(
     term: &impl Terminator,
     config: &CompressionConfig
 ) -> SPSolution {
-    let min_width = super::minimum_strip_width(&sep.prob);
+    let width_lower_bound = super::strip_width_lower_bound(&sep.prob);
     let mut best_sol = init_sol.clone();
     let start = Instant::now();
     let mut n_failed_attempts = 0;
@@ -39,8 +39,8 @@ pub fn compression_phase(
     while !term.kill() && let step = shrink_step_size(n_failed_attempts) && step >= config.shrink_range.1 {
         let width = best_sol.strip_width();
         let next_width = width * (1.0 - step);
-        if next_width < min_width || next_width >= width {
-            info!("[CMPR] stopping at minimum strip width: {:.3}", min_width);
+        if next_width < width_lower_bound || next_width >= width {
+            info!("[CMPR] stopping at strip width lower bound: {:.3}", width_lower_bound);
             break;
         }
         sol_listener.report_compression_progress(step);

@@ -10,7 +10,7 @@ use jagua_rs::entities::PItemKey;
 use jagua_rs::geometry::DTransformation;
 use jagua_rs::probs::spp::entities::{SPPlacement, SPProblem, SPSolution};
 use jagua_rs::Instant;
-use log::{debug, log, Level};
+use log::{debug, error, log, Level};
 use ordered_float::OrderedFloat;
 use rand::{Rng, RngExt, SeedableRng};
 use rand::rngs::Xoshiro256PlusPlus;
@@ -244,7 +244,8 @@ impl Separator {
             .map(|(k, pi)| (k, pi.d_transf()))
             .collect_vec();
 
-        self.prob.change_strip_width(new_width)?;
+        self.prob.change_strip_width(new_width)
+            .inspect_err(|error| error!("[SEP] unexpected resize failure at width {new_width:.3}: {error:#}"))?;
 
         // The tracker still describes the old container; rebuild it after all shifts.
         for (pik, dtransf) in items_to_shift {
