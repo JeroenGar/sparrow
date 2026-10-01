@@ -4,6 +4,7 @@
     {
       "id": 0,
       "demand": 15,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "shape": {
         "type": "simple_polygon",
         "data": [
@@ -41,6 +42,7 @@
     {
       "id": 1,
       "demand": 15,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "shape": {
         "type": "simple_polygon",
         "data": [
@@ -3374,6 +3376,7 @@
     {
       "id": 2,
       "demand": 15,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "shape": {
         "type": "simple_polygon",
         "data": [
@@ -7559,6 +7562,7 @@
     {
       "id": 3,
       "demand": 15,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "shape": {
         "type": "simple_polygon",
         "data": [
@@ -7620,6 +7624,7 @@
     {
       "id": 4,
       "demand": 20,
+      "orientation": {"rotation": {"mode": "continuous"}},
       "shape": {
         "type": "simple_polygon",
         "data": [
