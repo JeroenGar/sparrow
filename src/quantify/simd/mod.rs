@@ -22,7 +22,7 @@ pub fn quantify_collision_poly_poly_simd_bounded(
     poles2: &CirclesSoA,
     max_loss: f32,
 ) -> Option<f32> {
-    let epsilon = f32::max(s1.diameter, s2.diameter) * OVERLAP_PROXY_EPSILON_DIAM_RATIO;
+    let epsilon = f32::max(s1.diameter(), s2.diameter()) * OVERLAP_PROXY_EPSILON_DIAM_RATIO;
     let epsilon_sq = epsilon * epsilon;
     let penalty = calc_shape_penalty(s1, s2);
     let max_unscaled_overlap = {

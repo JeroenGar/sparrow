@@ -71,7 +71,6 @@ Pressing 'Ctrl + C' immediately moves the algorithm to the next phase, or termin
 -c, --compression <COMPRESSION>  Set the compression phase time limit (in seconds)
 -x, --early-termination          Enable early termination of the optimization process
 -s, --rng-seed <RNG_SEED>        Fixed seed for the random number generator
---min-item-separation <MIN_ITEM_SEPARATION> Minimum distance between items and other hazards
 --workers <WORKERS>           Number of worker threads used by the separator
 -h, --help                       Print help
 ```
@@ -104,6 +103,14 @@ cargo run --release --features=live_svg -- \
 ## Input
 
 This repository uses the same JSON format as [`jagua-rs`](https://github.com/JeroenGar/jagua-rs) to represent instances.
+
+sparrow 0.3.0 uses jagua-rs 1.0.0 from crates.io. This release changes the input
+format: every item requires `orientation.rotation`:
+`{"mode":"discrete","angles":[0,180]}`, `{"mode":"stepped","step":90}`, or
+`{"mode":"continuous"}`. Item IDs may be non-consecutive and are preserved in output.
+Set `min_item_separation` on the input instance; omission means zero. The CLI and
+solver configuration no longer override it. Legacy orientation fields and item
+holes are rejected. See the [1.0.0 release notes](https://github.com/JeroenGar/jagua-rs/blob/v1.0.0/docs/releases/1.0.0.md).
 These are also available in Oscar Oliveira's [OR-Datasets repository](https://github.com/Oscar-Oliveira/OR-Datasets/tree/master/Cutting-and-Packing/2D-Irregular).
 
 See [`jagua-rs` README](https://github.com/JeroenGar/jagua-rs?tab=readme-ov-file#input) for details on the input format.

@@ -24,7 +24,7 @@ impl<'a> LBFEvaluator<'a> {
         Self {
             layout,
             item,
-            shape_buff: item.shape_cd.as_ref().clone(),
+            shape_buff: item.shape_cd().as_ref().clone(),
             n_evals: 0
         }
     }
@@ -35,16 +35,16 @@ impl<'a> SampleEvaluator for LBFEvaluator<'a> {
         self.n_evals += 1;
         let cde = self.layout.cde();
         let transf = dt.into();
-        match cde.detect_surrogate_collision(self.item.shape_cd.surrogate(), &transf, &NoFilter) {
+        match cde.detect_surrogate_collision(self.item.shape_cd().surrogate(), &transf, &NoFilter) {
             true => SampleEval::Invalid, // Surrogate collides with something
             false => {
-                self.shape_buff.transform_from(&self.item.shape_cd, &transf);
+                self.shape_buff.transform_from(self.item.shape_cd(), &transf);
                 match cde.detect_poly_collision(&self.shape_buff, &NoFilter) {
                     true => SampleEval::Invalid, // Exact shape collides with something
                     false => {
                         // No collisions
-                        let poi = self.shape_buff.poi.center;
-                        let bbox_corner = self.shape_buff.bbox.corners()[0];
+                        let poi = self.shape_buff.poi().center;
+                        let bbox_corner = self.shape_buff.bbox().corners()[0];
                         let loss = X_MULTIPLIER * (poi.0 + bbox_corner.0) + Y_MULTIPLIER * (poi.1 + bbox_corner.1);
                         SampleEval::Clear{loss}
                     }

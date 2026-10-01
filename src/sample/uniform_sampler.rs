@@ -28,7 +28,7 @@ struct RotEntry {
 
 impl UniformBBoxSampler {
     pub fn new(sample_bbox: Rect, item: &Item, container_bbox: Rect) -> Option<Self> {
-        let rotations = match &item.allowed_rotation {
+        let rotations = match item.allowed_orientations().rotations() {
             RotationRange::None => &vec![0.0],
             RotationRange::Discrete(r) => r,
             RotationRange::Continuous => {
@@ -40,7 +40,7 @@ impl UniformBBoxSampler {
             }
         };
 
-        let mut shape_buffer = item.shape_cd.as_ref().clone();
+        let mut shape_buffer = item.shape_cd().as_ref().clone();
 
         let sample_x_range = sample_bbox.x_min..sample_bbox.x_max;
         let sample_y_range = sample_bbox.y_min..sample_bbox.y_max;
@@ -49,7 +49,7 @@ impl UniformBBoxSampler {
         // where the item resides fully inside the container and is within the sample bounding box
         let rot_entries = rotations.iter()
             .filter_map(|&r| {
-                let r_shape_bbox = shape_buffer.transform_from(item.shape_cd.as_ref(), &Transformation::from_rotation(r)).bbox;
+                let r_shape_bbox = shape_buffer.transform_from(item.shape_cd().as_ref(), &Transformation::from_rotation(r)).bbox();
 
                 //narrow the container range to account for the rotated shape
                 let cont_x_range = (container_bbox.x_min - r_shape_bbox.x_min)..(container_bbox.x_max - r_shape_bbox.x_max);
@@ -102,7 +102,7 @@ fn intersect_range(a: &Range<f32>, b: &Range<f32>) -> Option<Range<f32>> {
 
 /// Converts a sample transformation to the closest feasible transformation. (for now just mapping rotation to the closest allowed one)
 pub fn convert_sample_to_closest_feasible(dt: DTransformation, item: &Item) -> DTransformation {
-    let feasible_rotation = match &item.allowed_rotation {
+    let feasible_rotation = match item.allowed_orientations().rotations() {
         RotationRange::None => 0.0,
         RotationRange::Discrete(v) => {
             // find the closest rotation in the discrete set

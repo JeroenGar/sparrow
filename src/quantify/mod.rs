@@ -13,7 +13,7 @@ pub mod simd;
 /// Algorithm 4 from https://doi.org/10.48550/arXiv.2509.13329
 #[inline(always)]
 pub fn quantify_collision_poly_poly(s1: &SPolygon, s2: &SPolygon) -> f32 {
-    let epsilon = f32::max(s1.diameter, s2.diameter) * OVERLAP_PROXY_EPSILON_DIAM_RATIO;
+    let epsilon = f32::max(s1.diameter(), s2.diameter()) * OVERLAP_PROXY_EPSILON_DIAM_RATIO;
 
     let overlap_proxy = overlap_area_proxy(s1.surrogate(), s2.surrogate(), epsilon) + epsilon.powi(2);
 
@@ -34,7 +34,7 @@ pub fn calc_shape_penalty(s1: &SPolygon, s2: &SPolygon) -> f32 {
 /// Quantifies a collision between a simple polygon and the exterior of the container.
 #[inline(always)]
 pub fn quantify_collision_poly_container(s: &SPolygon, c_bbox: Rect) -> f32 {
-    let s_bbox = s.bbox;
+    let s_bbox = s.bbox();
     let overlap = match Rect::intersection(s_bbox, c_bbox) {
         Some(r) => {
             //intersection exist, calculate the area of the intersection (+ a small value to ensure it is never zero)

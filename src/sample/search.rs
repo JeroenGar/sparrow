@@ -18,7 +18,7 @@ pub struct SampleConfig {
 
 /// Algorithm 6 and Figure 7 from https://doi.org/10.48550/arXiv.2509.13329
 pub fn search_placement(l: &Layout, item: &Item, ref_pk: Option<PItemKey>, mut evaluator: impl SampleEvaluator, sample_config: SampleConfig, rng: &mut impl Rng) -> (Option<(DTransformation, SampleEval)>, usize) {
-    let item_min_dim = f32::min(item.shape_cd.bbox.width(), item.shape_cd.bbox.height());
+    let item_min_dim = f32::min(item.shape_cd().bbox().width(), item.shape_cd().bbox().height());
 
     let mut best_samples = BestSamples::new(sample_config.n_coord_descents, item_min_dim * UNIQUE_SAMPLE_THRESHOLD);
 
@@ -26,19 +26,19 @@ pub fn search_placement(l: &Layout, item: &Item, ref_pk: Option<PItemKey>, mut e
     let focussed_sampler = match ref_pk {
         Some(ref_pk) => {
             //Add the current placement (and evaluation) as a candidate
-            let dt = l.placed_items[ref_pk].d_transf;
+            let dt = l.placed_items()[ref_pk].d_transf();
             let eval = evaluator.evaluate_sample(dt, Some(best_samples.upper_bound()));
 
             debug!("[S] Starting from: {:?}", (dt, eval));
             best_samples.report(dt, eval);
 
             //Create a uniform sampler focussed around the current placement
-            let pi_bbox = l.placed_items[ref_pk].shape.bbox;
-            UniformBBoxSampler::new(pi_bbox, item, l.container.outer_cd.bbox)
+            let pi_bbox = l.placed_items()[ref_pk].shape().bbox();
+            UniformBBoxSampler::new(pi_bbox, item, l.container().outer_cd().bbox())
         }
         None => None,
     };
-    let container_sampler = UniformBBoxSampler::new(l.container.outer_cd.bbox, item, l.container.outer_cd.bbox);
+    let container_sampler = UniformBBoxSampler::new(l.container().outer_cd().bbox(), item, l.container().outer_cd().bbox());
 
     //Perform the focussed sampling
     if let Some(focussed_sampler) = focussed_sampler {
@@ -77,8 +77,8 @@ pub fn search_placement(l: &Layout, item: &Item, ref_pk: Option<PItemKey>, mut e
 }
 
 fn prerefine_cd_config(item: &Item) -> CDConfig {
-    let item_min_dim = f32::min(item.shape_cd.bbox.width(), item.shape_cd.bbox.height());
-    let wiggle = item.allowed_rotation == RotationRange::Continuous;
+    let item_min_dim = f32::min(item.shape_cd().bbox().width(), item.shape_cd().bbox().height());
+    let wiggle = item.allowed_orientations().rotations() == &RotationRange::Continuous;
     CDConfig {
         t_step_init: item_min_dim * PRE_REFINE_CD_TL_RATIOS.0,
         t_step_limit: item_min_dim * PRE_REFINE_CD_TL_RATIOS.1,
@@ -89,8 +89,8 @@ fn prerefine_cd_config(item: &Item) -> CDConfig {
 }
 
 fn final_refine_cd_config(item: &Item) -> CDConfig {
-    let item_min_dim = f32::min(item.shape_cd.bbox.width(), item.shape_cd.bbox.height());
-    let wiggle = item.allowed_rotation == RotationRange::Continuous;
+    let item_min_dim = f32::min(item.shape_cd().bbox().width(), item.shape_cd().bbox().height());
+    let wiggle = item.allowed_orientations().rotations() == &RotationRange::Continuous;
     CDConfig {
         t_step_init: item_min_dim * SND_REFINE_CD_TL_RATIOS.0,
         t_step_limit: item_min_dim * SND_REFINE_CD_TL_RATIOS.1,

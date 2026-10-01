@@ -67,7 +67,7 @@ impl<'a> CollisionLossEvaluator<'a> {
     ) -> Option<f32> {
         match hazard {
             HazardEntity::PlacedItem { pk: other_pk, .. } => {
-                let other_shape = &self.layout.placed_items[other_pk].shape;
+                let other_shape = self.layout.placed_items()[other_pk].shape();
                 let weight = self.ct.get_pair_weight(self.current_pk, other_pk);
 
                 #[cfg(feature = "simd")]
@@ -88,7 +88,7 @@ impl<'a> CollisionLossEvaluator<'a> {
                 }
             }
             HazardEntity::Exterior => Some(
-                quantify_collision_poly_container(shape, self.layout.container.outer_cd.bbox)
+                quantify_collision_poly_container(shape, self.layout.container().outer_cd().bbox())
                     * self.ct.get_container_weight(self.current_pk),
             ),
             _ => unimplemented!("unsupported hazard entity"),

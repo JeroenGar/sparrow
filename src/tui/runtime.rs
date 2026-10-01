@@ -14,7 +14,6 @@ use sparrow::EPOCH;
 use sparrow::config::SparrowConfig;
 use sparrow::consts::DRAW_OPTIONS;
 use sparrow::optimizer::optimize;
-use sparrow::optimizer::lbf::ConstructionError;
 use sparrow::util::io::{self, ExtSPOutput};
 use sparrow::util::listener::{
     OptimizationPhase, ReportType, SeparationProgress, SeparationResult, SolutionListener,
@@ -44,7 +43,7 @@ pub(super) fn run(
     let signals = TuiSignals::new();
     let (updates_tx, updates_rx) = mpsc::channel();
     let worker = start_optimizer(
-        instance.clone(),
+        instance,
         initial_solution,
         config,
         rng,
@@ -59,7 +58,7 @@ pub(super) fn run(
             logs,
             worker,
             signals,
-            (&instance, ext_instance),
+            ext_instance,
             budget,
         )
     })
@@ -72,7 +71,7 @@ fn start_optimizer(
     rng: Xoshiro256PlusPlus,
     signals: TuiSignals,
     updates: Sender<DashboardUpdate>,
-) -> JoinHandle<Result<SPSolution, ConstructionError>> {
+) -> JoinHandle<Result<SPSolution>> {
     thread::Builder::new()
         .name("optimizer".into())
         .spawn(move || {
@@ -93,12 +92,11 @@ fn run_dashboard(
     terminal: &mut DefaultTerminal,
     updates: Receiver<DashboardUpdate>,
     logs: Receiver<LogEntry>,
-    worker: JoinHandle<Result<SPSolution, ConstructionError>>,
+    worker: JoinHandle<Result<SPSolution>>,
     signals: TuiSignals,
-    final_output: (&SPInstance, &ExtSPInstance),
+    ext_instance: &ExtSPInstance,
     budget: SearchBudget,
 ) -> Result<SPSolution> {
-    let (instance, ext_instance) = final_output;
     let mut dashboard = Dashboard::new(budget);
     let mut worker = Some(worker);
     let mut solution = None;
@@ -116,7 +114,7 @@ fn run_dashboard(
                 .unwrap()
                 .join()
                 .map_err(|_| anyhow!("optimizer thread panicked"))??;
-            export_final_solution(&final_solution, instance, ext_instance)?;
+            export_final_solution(&final_solution, ext_instance)?;
             solution = Some(final_solution);
             dashboard.finish();
         }
@@ -154,12 +152,11 @@ fn run_dashboard(
 
 fn export_final_solution(
     solution: &SPSolution,
-    instance: &SPInstance,
     ext_instance: &ExtSPInstance,
 ) -> Result<()> {
     let svg_path = format!("{OUTPUT_DIR}/final_{}.svg", ext_instance.name);
     io::write_svg(
-        &s_layout_to_svg(&solution.layout_snapshot, instance, DRAW_OPTIONS, "final"),
+        &s_layout_to_svg(solution.layout_snapshot(), DRAW_OPTIONS, "final"),
         Path::new(&svg_path),
         Level::Info,
     )?;
@@ -168,7 +165,7 @@ fn export_final_solution(
     io::write_json(
         &ExtSPOutput {
             instance: ext_instance.clone(),
-            solution: jagua_rs::probs::spp::io::export(instance, solution, *EPOCH),
+            solution: jagua_rs::probs::spp::io::export(solution, *EPOCH),
         },
         Path::new(&json_path),
         Level::Info,
@@ -192,7 +189,7 @@ impl TuiListener {
 }
 
 impl SolutionListener for TuiListener {
-    fn report(&mut self, report: ReportType, solution: &SPSolution, instance: &SPInstance) {
+    fn report(&mut self, report: ReportType, solution: &SPSolution) {
         let now = Instant::now();
         if report != ReportType::Final
             && self
@@ -202,12 +199,12 @@ impl SolutionListener for TuiListener {
             return;
         }
 
-        self.live_svg.report(report.clone(), solution, instance);
+        self.live_svg.report(report.clone(), solution);
         self.last_snapshot = Some(now);
         let update = DashboardUpdate::Solution {
             report: report.clone(),
             width: solution.strip_width(),
-            density: solution.density(instance) * 100.0,
+            density: solution.density() * 100.0,
         };
         let _ = self.updates.send(update);
     }
