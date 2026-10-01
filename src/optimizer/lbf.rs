@@ -14,12 +14,13 @@ use rand::rngs::Xoshiro256PlusPlus;
 /// This is not a proof that the instance is infeasible.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ConstructionError {
-    pub item_idx: usize,
+    /// The item's ID in the input instance.
+    pub external_id: u64,
 }
 
 impl std::fmt::Display for ConstructionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "could not construct an initial placement for item {}", self.item_idx)
+        write!(f, "could not construct an initial placement for item {}", self.external_id)
     }
 }
 
@@ -92,7 +93,8 @@ impl LBFBuilder {
                 .map(|(item, qty)| item.shape_cd().diameter() * *qty as f32)
                 .sum::<f32>();
             if next_width >= width_limit {
-                return Err(ConstructionError { item_idx }.into());
+                let external_id = self.instance.item(item_idx).external_id();
+                return Err(ConstructionError { external_id }.into());
             }
             debug!("[CONSTR] failed to place item with idx {}, expanding strip width", item_idx);
             self.prob.change_strip_width(next_width)?;
