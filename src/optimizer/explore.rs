@@ -11,7 +11,7 @@ use jagua_rs::collision_detection::hazards::HazardEntity;
 use jagua_rs::entities::{Layout, PItemKey};
 use jagua_rs::geometry::geo_traits::CollidesWith;
 use jagua_rs::probs::spp::entities::SPSolution;
-use log::{debug, info, warn};
+use log::{debug, error, info, warn};
 use ordered_float::OrderedFloat;
 use rand::prelude::{Distribution, IteratorRandom};
 use rand_distr::Normal;
@@ -52,7 +52,7 @@ pub fn exploration_phase(sep: &mut Separator, sol_listener: &mut impl SolutionLi
             }
             info!("[EXPL] shrinking strip by {}%: {:.3} -> {:.3}", config.shrink_step * 100.0, current_width, next_width);
             if let Err(error) = sep.change_strip_width(next_width, None) {
-                info!("[EXPL] stopping: {error}");
+                error!("[EXPL] unexpected resize failure at width {next_width:.3}; stopping exploration: {error:#}");
                 break;
             }
             current_width = next_width;
