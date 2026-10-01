@@ -78,7 +78,7 @@ pub fn search_placement(l: &Layout, item: &Item, ref_pk: Option<PItemKey>, mut e
 
 fn prerefine_cd_config(item: &Item) -> CDConfig {
     let item_min_dim = f32::min(item.shape_cd().bbox().width(), item.shape_cd().bbox().height());
-    let wiggle = item.allowed_orientations().rotations(false) == Some(&RotationRange::Continuous);
+    let wiggle = item.allowed_orientations().rotations() == &RotationRange::Continuous;
     CDConfig {
         t_step_init: item_min_dim * PRE_REFINE_CD_TL_RATIOS.0,
         t_step_limit: item_min_dim * PRE_REFINE_CD_TL_RATIOS.1,
@@ -90,7 +90,7 @@ fn prerefine_cd_config(item: &Item) -> CDConfig {
 
 fn final_refine_cd_config(item: &Item) -> CDConfig {
     let item_min_dim = f32::min(item.shape_cd().bbox().width(), item.shape_cd().bbox().height());
-    let wiggle = item.allowed_orientations().rotations(false) == Some(&RotationRange::Continuous);
+    let wiggle = item.allowed_orientations().rotations() == &RotationRange::Continuous;
     CDConfig {
         t_step_init: item_min_dim * SND_REFINE_CD_TL_RATIOS.0,
         t_step_limit: item_min_dim * SND_REFINE_CD_TL_RATIOS.1,
