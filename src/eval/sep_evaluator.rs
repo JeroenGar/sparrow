@@ -2,7 +2,8 @@ use crate::eval::collision_loss::CollisionLossEvaluator;
 use crate::eval::sample_eval::{SampleEval, SampleEvaluator};
 use crate::quantify::tracker::CollisionTracker;
 use jagua_rs::collision_detection::hazards::collector::BasicHazardCollector;
-use jagua_rs::collision_detection::hazards::{HazKey, HazardEntity};
+use jagua_rs::collision_detection::hazards::filter::NoFilter;
+use jagua_rs::collision_detection::hazards::{BasicHazardEntity, HazKey};
 use jagua_rs::entities::{Item, Layout, PItemKey};
 use jagua_rs::geometry::geo_traits::TransformableFrom;
 use jagua_rs::geometry::primitives::SPolygon;
@@ -12,7 +13,7 @@ pub struct SeparationEvaluator<'a> {
     layout: &'a Layout,
     item: &'a Item,
     collector: BasicHazardCollector,
-    current_hazard: (HazKey, HazardEntity),
+    current_hazard: (HazKey, BasicHazardEntity),
     loss_evaluator: CollisionLossEvaluator<'a>,
     shape_buff: SPolygon,
     n_evals: usize,
@@ -25,16 +26,12 @@ impl<'a> SeparationEvaluator<'a> {
         current_pk: PItemKey,
         ct: &'a CollisionTracker,
     ) -> Self {
+        let current_entity = BasicHazardEntity::from((current_pk, &layout.placed_items()[current_pk]));
         let current_haz_key = layout
             .cde()
-            .haz_key_from_pi_key(current_pk)
+            .haz_key(&current_entity)
             .expect("placed item should be registered in the CDE");
-        let current_hazard = (
-            current_haz_key,
-            layout.cde().hazard(current_haz_key)
-                .expect("placed item should be registered in the CDE")
-                .entity,
-        );
+        let current_hazard = (current_haz_key, current_entity);
 
         Self {
             layout,
@@ -73,6 +70,7 @@ impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
         let mut should_stop = |hazard| self.loss_evaluator.add(hazard, shape);
         let stopped_during_surrogate_check = cde.collect_surrogate_collisions_until(
             shape,
+            &NoFilter,
             &mut self.collector,
             &mut should_stop,
         );
@@ -82,6 +80,7 @@ impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
             false => {
                 let stopped_during_precise_check = cde.collect_poly_collisions_until(
                     shape,
+                    &NoFilter,
                     &mut self.collector,
                     &mut should_stop,
                 );

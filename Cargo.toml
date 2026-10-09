@@ -15,7 +15,7 @@ name = "bench"
 path = "src/bench.rs"
 
 [dependencies]
-jagua-rs = { features = ["spp"], version = "=1.0.0" }
+jagua-rs = { features = ["spp"], version = "=1.1.0" }
 rand = "0.10"
 rand_distr = "0.6"
 svg = "0.18"
@@ -60,6 +60,7 @@ debug = true
 [profile.release]
 opt-level = 3
 lto = "fat"
+codegen-units = 1
 
 [profile.test]
 opt-level = 3
