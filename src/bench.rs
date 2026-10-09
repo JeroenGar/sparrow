@@ -113,7 +113,7 @@ fn main() -> Result<()> {
                     );
 
                     io::write_svg(
-                        &s_layout_to_svg(cmpr_sol.layout_snapshot(), DRAW_OPTIONS, &format!("final_bench_{}", bench_idx)),
+                        &s_layout_to_svg(cmpr_sol.layout_snapshot(), 0, DRAW_OPTIONS, &format!("final_bench_{}", bench_idx)),
                         Path::new(&format!("{OUTPUT_DIR}/final_bench_{}.svg", bench_idx)),
                         log::Level::Info,
                     ).unwrap_or_else(|_| panic!("could not write svg output of bench {}", bench_idx));
@@ -140,7 +140,7 @@ fn main() -> Result<()> {
     let best_final_solution = final_solutions.iter().max_by_key(|s| OrderedFloat(s.density())).unwrap();
 
     io::write_svg(
-        &s_layout_to_svg(best_final_solution.layout_snapshot(), DRAW_OPTIONS, "final_best"),
+        &s_layout_to_svg(best_final_solution.layout_snapshot(), 0, DRAW_OPTIONS, "final_best"),
         Path::new(format!("{OUTPUT_DIR}/final_best_{}.svg", ext_instance.name).as_str()),
         log::Level::Info,
     )?;

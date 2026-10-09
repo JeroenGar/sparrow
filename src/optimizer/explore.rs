@@ -7,7 +7,8 @@ use crate::FMT;
 use float_cmp::approx_eq;
 use itertools::Itertools;
 use jagua_rs::collision_detection::hazards::collector::BasicHazardCollector;
-use jagua_rs::collision_detection::hazards::HazardEntity;
+use jagua_rs::collision_detection::hazards::BasicHazardEntity;
+use jagua_rs::collision_detection::hazards::filter::NoFilter;
 use jagua_rs::entities::{Layout, PItemKey};
 use jagua_rs::geometry::geo_traits::CollidesWith;
 use jagua_rs::probs::spp::entities::SPSolution;
@@ -232,13 +233,13 @@ fn practically_contained_items(layout: &Layout, pk_c: PItemKey) -> Vec<PItemKey>
     let pi_c = &layout.placed_items()[pk_c];
     // Detect all collisions with the item pk_c's shape.
     let mut collector = BasicHazardCollector::new();
-    layout.cde().collect_poly_collisions(pi_c.shape(), &mut collector);
+    layout.cde().collect_poly_collisions(pi_c.shape(), &NoFilter, &mut collector);
 
     // Filter out the items that have their POI contained by pk_c's shape.
     collector.iter()
         .filter_map(|(_,he)| {
             match he {
-                HazardEntity::PlacedItem { pk, .. } => Some(*pk),
+                BasicHazardEntity::PlacedItem { pk, .. } => Some(*pk),
                 _ => None
             }
         })

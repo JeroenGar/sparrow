@@ -3,7 +3,8 @@ use crate::quantify::pair_matrix::PairMatrix;
 use crate::quantify::{quantify_collision_poly_container, quantify_collision_poly_poly};
 use crate::util::assertions::tracker_matches_layout;
 use jagua_rs::collision_detection::hazards::collector::{BasicHazardCollector, HazardCollector};
-use jagua_rs::collision_detection::hazards::HazardEntity;
+use jagua_rs::collision_detection::hazards::BasicHazardEntity;
+use jagua_rs::collision_detection::hazards::filter::NoFilter;
 use jagua_rs::entities::{Layout, PItemKey};
 use ordered_float::Float;
 use slotmap::SecondaryMap;
@@ -57,14 +58,14 @@ impl CollisionTracker {
 
         // Compute which hazards are currently colliding with the item
         let mut collector = BasicHazardCollector::with_capacity(l.placed_items().len() + 1);
-        l.cde().collect_poly_collisions(shape, &mut collector);
+        l.cde().collect_poly_collisions(shape, &NoFilter, &mut collector);
         // Remove the item itself from the detector
-        collector.remove_by_entity(&HazardEntity::from((pk, pi)));
+        collector.remove_by_entity(&BasicHazardEntity::from((pk, pi)));
 
         // For each colliding hazard, quantify the collision and store it in the tracker
         for (_, haz) in collector.iter() {
             match haz {
-                HazardEntity::PlacedItem { pk: other_pk, .. } => {
+                BasicHazardEntity::PlacedItem { pk: other_pk, .. } => {
                     let shape_other = l.placed_items()[*other_pk].shape();
                     let idx_other = self.pk_idx_map[*other_pk];
 
@@ -72,7 +73,7 @@ impl CollisionTracker {
                     assert!(loss > 0.0, "loss for a collision should be > 0.0");
                     self.pair_collisions[(idx, idx_other)].loss = loss;
                 }
-                HazardEntity::Exterior => {
+                BasicHazardEntity::Exterior => {
                     let loss = quantify_collision_poly_container(shape, l.container().outer_cd().bbox());
                     assert!(loss > 0.0, "loss for a collision should be > 0.0");
                     self.container_collisions[idx].loss = loss;
