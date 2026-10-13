@@ -5,7 +5,7 @@
 [![Unique views](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JeroenGar/sparrow/traffic/views.json)](https://github.com/JeroenGar/sparrow/tree/traffic)
 
 <p>
-    <img src="data/sparrow.jpeg" align="right" alt="logo" height=80>
+    <img src="data/sparrow-icon.svg" align="right" alt="logo" height=80>
 
 > Sparrows are master weavers, crafting nests with intricate patterns. They utilize geometry and symmetry to ensure structural integrity and stability. By incorporating precise angles,  lengths, and weaving patterns, these birds achieve a balance between strength and efficiency.
 [(read more)](https://www.mathnasium.com/math-centers/happyvalley/news/mathematical-marvels-bird-nest-construction-hv#)
