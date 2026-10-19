@@ -148,5 +148,15 @@
     "count": 522,
     "timestamp": "2026-10-16T00:00:00Z",
     "uniques": 231
+  },
+  {
+    "count": 297,
+    "timestamp": "2026-10-17T00:00:00Z",
+    "uniques": 152
+  },
+  {
+    "count": 383,
+    "timestamp": "2026-10-18T00:00:00Z",
+    "uniques": 234
   }
 ]
