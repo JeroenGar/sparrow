@@ -173,5 +173,15 @@
     "count": 18,
     "timestamp": "2026-10-21T00:00:00Z",
     "uniques": 13
+  },
+  {
+    "count": 17,
+    "timestamp": "2026-10-22T00:00:00Z",
+    "uniques": 11
+  },
+  {
+    "count": 70,
+    "timestamp": "2026-10-23T00:00:00Z",
+    "uniques": 25
   }
 ]
