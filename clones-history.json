@@ -183,5 +183,15 @@
     "count": 354,
     "timestamp": "2026-10-23T00:00:00Z",
     "uniques": 164
+  },
+  {
+    "count": 242,
+    "timestamp": "2026-10-24T00:00:00Z",
+    "uniques": 120
+  },
+  {
+    "count": 184,
+    "timestamp": "2026-10-25T00:00:00Z",
+    "uniques": 120
   }
 ]
