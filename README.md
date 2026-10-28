@@ -1,5 +1,5 @@
 <p>
-  <img src="data/sparrow-wordmark.svg" alt="sparrow" height="60" align="bottom">&emsp;
+  <img src="data/sparrow-wordmark.svg" alt="sparrow" width="263" align="bottom">&emsp;
   <a href="https://doi.org/10.48550/arXiv.2509.13329"><img src="https://zenodo.org/badge/DOI/10.48550/arXiv.2509.13329.svg" alt="DOI" align="bottom"></a>
   <a href="https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml"><img src="https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml/badge.svg?branch=main" alt="CI" align="bottom"></a>
   <a href="https://github.com/JeroenGar/sparrow/tree/traffic"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JeroenGar/sparrow/traffic/clones.json" alt="Unique clones" align="bottom"></a>
