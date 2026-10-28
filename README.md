@@ -1,18 +1,17 @@
-# sparrow 🪶 
-[![DOI](https://zenodo.org/badge/DOI/10.48550/arXiv.2509.13329.svg)](https://doi.org/10.48550/arXiv.2509.13329)
-[![CI](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml/badge.svg?branch=main)](https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml) 
-[![Unique clones](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JeroenGar/sparrow/traffic/clones.json)](https://github.com/JeroenGar/sparrow/tree/traffic)
-[![Unique views](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JeroenGar/sparrow/traffic/views.json)](https://github.com/JeroenGar/sparrow/tree/traffic)
-
 <p>
-    <img src="data/sparrow-icon.svg" align="right" alt="logo" height=80>
+  <img src="data/sparrow-wordmark.svg" alt="sparrow" width="263" align="middle">&emsp;
+  <a href="https://doi.org/10.48550/arXiv.2509.13329"><img src="https://zenodo.org/badge/DOI/10.48550/arXiv.2509.13329.svg" alt="DOI" align="middle"></a>
+  <a href="https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml"><img src="https://github.com/JeroenGar/sparrow/actions/workflows/rust_ci.yml/badge.svg?branch=main" alt="CI" align="middle"></a>
+  <a href="https://github.com/JeroenGar/sparrow/tree/traffic"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JeroenGar/sparrow/traffic/clones.json" alt="Unique clones" align="middle"></a>
+  <a href="https://github.com/JeroenGar/sparrow/tree/traffic"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JeroenGar/sparrow/traffic/views.json" alt="Unique views" align="middle"></a>
+</p>
+
+<br>
 
 > Sparrows are master weavers, crafting nests with intricate patterns. They utilize geometry and symmetry to ensure structural integrity and stability. By incorporating precise angles,  lengths, and weaving patterns, these birds achieve a balance between strength and efficiency.
 [(read more)](https://www.mathnasium.com/math-centers/happyvalley/news/mathematical-marvels-bird-nest-construction-hv#)
 
-</p>
-
-### The state-of-the-art nesting heuristic for 2D irregular strip packing
+## The state-of-the-art nesting heuristic for 2D irregular strip packing
 `sparrow` can be used to solve 2D irregular strip packing problems, also commonly referred to as nesting problems.
 This optimization algorithm builds on [`jagua-rs`](https://github.com/JeroenGar/jagua-rs): _a collision detection engine for 2D irregular cutting & packing problems_.
 
@@ -25,9 +24,9 @@ This repository accompanies the paper: ["_An open-source heuristic to reboot 2D 
 >
 > [<img width="500" alt="image" src="https://github.com/user-attachments/assets/4d84bb67-ff98-4310-82de-5350baa02427" />](https://sparrowstudio.app/)
 
-## `sparrow` in action
+## sparrow in action
 
-![The `sparrow` TUI dashboard running alongside the live solution viewer](data/demo.gif)
+![The sparrow TUI dashboard running alongside the live solution viewer](data/demo.gif)
 
 ## Nested by `sparrow`
 <p align="center">
