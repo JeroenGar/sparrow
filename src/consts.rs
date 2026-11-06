@@ -41,7 +41,6 @@ pub const LOG_LEVEL_FILTER_DEBUG: log::LevelFilter = log::LevelFilter::Debug;
 
 pub const DRAW_OPTIONS: SvgDrawOptions = SvgDrawOptions {
     theme: SvgLayoutTheme::GRAY,
-    quadtree: false,
     surrogate: false,
     highlight_collisions: true,
     draw_cd_shapes: false,
