@@ -1,0 +1,41 @@
+[package]
+name = "sparrow-cli"
+description = "Command-line interface and benchmark runner for sparrow"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+default-run = "sparrow"
+
+[[bin]]
+name = "sparrow"
+path = "src/main.rs"
+
+[[bin]]
+name = "bench"
+path = "src/bench.rs"
+
+[dependencies]
+sparrow = { path = ".." }
+jagua-rs.workspace = true
+rand.workspace = true
+log.workspace = true
+anyhow.workspace = true
+ordered-float.workspace = true
+rayon.workspace = true
+clap = { version = "4.6", features = ["derive"] }
+fern = "0.7"
+jiff = "0.2"
+num_cpus = "1.17"
+ctrlc = "3.5"
+numfmt = { workspace = true, optional = true }
+crossterm = { version = "0.29", optional = true }
+ratatui = { version = "0.30", optional = true }
+
+[features]
+live_svg = ["sparrow/live_svg"]
+only_final_svg = ["sparrow/only_final_svg"]
+simd = ["sparrow/simd"]
+tui = ["dep:crossterm", "dep:ratatui", "dep:numfmt"]

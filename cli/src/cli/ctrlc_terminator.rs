@@ -1,4 +1,4 @@
-use crate::util::terminator::Terminator;
+use sparrow::util::terminator::Terminator;
 use jagua_rs::Instant;
 use log::warn;
 use std::sync::atomic::{AtomicBool, Ordering};
