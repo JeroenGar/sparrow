@@ -19,7 +19,7 @@ use std::time::Duration;
 
 use anyhow::{bail, Result};
 use rand::rngs::Xoshiro256PlusPlus;
-use sparrow::consts::{DEFAULT_COMPRESS_TIME_RATIO, DEFAULT_EXPLORE_TIME_RATIO, DEFAULT_FAIL_DECAY_RATIO_CMPR, DEFAULT_MAX_CONSEQ_FAILS_EXPL, LOG_LEVEL_FILTER_DEBUG, LOG_LEVEL_FILTER_RELEASE};
+use sparrow::consts::{LOG_LEVEL_FILTER_DEBUG, LOG_LEVEL_FILTER_RELEASE};
 use ctrlc_terminator::CtrlCTerminator;
 use sparrow::util::svg_exporter::SvgExporter;
 
@@ -28,7 +28,7 @@ pub const OUTPUT_DIR: &str = "output";
 pub const LIVE_DIR: &str = "data/live";
 
 pub fn run() -> Result<()>{
-    let mut config = DEFAULT_SPARROW_CONFIG;
+    let mut config = SparrowConfig::default();
 
     fs::create_dir_all(OUTPUT_DIR)?;
     let log_file_path = format!("{}/log.txt", OUTPUT_DIR);
@@ -39,24 +39,22 @@ pub fn run() -> Result<()>{
 
     let args = MainCli::parse();
     let input_file_path = &args.input;
-    let (explore_dur, compress_dur) = match (args.global_time, args.exploration, args.compression) {
-        (Some(gt), None, None) => {
-            (Duration::from_secs(gt).mul_f32(DEFAULT_EXPLORE_TIME_RATIO), Duration::from_secs(gt).mul_f32(DEFAULT_COMPRESS_TIME_RATIO))
-        },
+    config = match (args.global_time, args.exploration, args.compression) {
+        (Some(gt), None, None) => config.with_time_limit(Duration::from_secs(gt)),
         (None, Some(et), Some(ct)) => {
-            (Duration::from_secs(et), Duration::from_secs(ct))
+            config.expl_cfg.time_limit = Duration::from_secs(et);
+            config.cmpr_cfg.time_limit = Duration::from_secs(ct);
+            config
         },
         (None, None, None) => {
             warn!("[MAIN] no time limit specified");
-            (Duration::from_secs(600).mul_f32(DEFAULT_EXPLORE_TIME_RATIO), Duration::from_secs(600).mul_f32(DEFAULT_COMPRESS_TIME_RATIO))
+            config.with_time_limit(Duration::from_secs(600))
         },
         _ => bail!("invalid cli pattern (clap should have caught this)"),
     };
-    config.expl_cfg.time_limit = explore_dur;
-    config.cmpr_cfg.time_limit = compress_dur;
+    let (explore_dur, compress_dur) = (config.expl_cfg.time_limit, config.cmpr_cfg.time_limit);
     if args.early_termination {
-        config.expl_cfg.max_conseq_failed_attempts = Some(DEFAULT_MAX_CONSEQ_FAILS_EXPL);
-        config.cmpr_cfg.shrink_decay = ShrinkDecayStrategy::FailureBased(DEFAULT_FAIL_DECAY_RATIO_CMPR);
+        config = config.with_early_termination();
         warn!("[MAIN] early termination enabled!");
     }
     args.apply_config_overrides(&mut config);

@@ -46,15 +46,20 @@ pub fn write_json(json: &impl Serialize, path: &Path, log_lvl: Level) -> Result<
 
 pub fn read_spp_input(path: &Path) -> Result<(ExtSPInstance, Option<ExtSPSolution>)> {
     let input_str = fs::read_to_string(path).context("could not read input file")?;
+    parse_spp_input(&input_str)
+}
+
+/// Parses JSON holding either an instance, or an instance together with a solution.
+pub fn parse_spp_input(json: &str) -> Result<(ExtSPInstance, Option<ExtSPSolution>)> {
     //try parsing a full output (instance + solution)
-    match serde_json::from_str::<ExtSPOutput>(&input_str) {
+    match serde_json::from_str::<ExtSPOutput>(json) {
         Ok(ext_output) => {
             Ok((ext_output.instance, Some(ext_output.solution)))
         }
         Err(_) => {
             //try parsing just the instance
-            let ext_instance = serde_json::from_str::<ExtSPInstance>(&input_str)
-                .context("could not parse instance from input file")?;
+            let ext_instance = serde_json::from_str::<ExtSPInstance>(json)
+                .context("could not parse instance")?;
             Ok((ext_instance, None))
         }
     }

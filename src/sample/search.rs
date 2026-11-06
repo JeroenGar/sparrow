@@ -9,14 +9,19 @@ use jagua_rs::geometry::DTransformation;
 use log::debug;
 use rand::Rng;
 
+/// How many placements are sampled when searching for a new position of an item
+/// (Algorithm 6 in the paper).
 #[derive(Debug, Clone, Copy)]
 pub struct SampleConfig {
+    /// Samples drawn uniformly over the whole container.
     pub n_container_samples: usize,
+    /// Samples drawn close to the item's current position.
     pub n_focussed_samples: usize,
+    /// Number of best samples refined further with coordinate descent.
     pub n_coord_descents: usize,
 }
 
-/// Algorithm 6 and Figure 7 from https://doi.org/10.48550/arXiv.2509.13329
+/// Algorithm 6 and Figure 7 from <https://doi.org/10.48550/arXiv.2509.13329>
 pub fn search_placement(l: &Layout, item: &Item, ref_pk: Option<PItemKey>, mut evaluator: impl SampleEvaluator, sample_config: SampleConfig, rng: &mut impl Rng) -> (Option<(DTransformation, SampleEval)>, usize) {
     let item_min_dim = f32::min(item.shape_cd().bbox().width(), item.shape_cd().bbox().height());
 

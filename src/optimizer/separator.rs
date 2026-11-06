@@ -18,12 +18,19 @@ use rayon::iter::IntoParallelRefMutIterator;
 use rayon::iter::ParallelIterator;
 use rayon::ThreadPool;
 
+/// Configuration of the separator (Algorithm 9 in the paper), which tries to resolve all
+/// overlap in a layout at a fixed strip width.
 #[derive(Debug, Clone, Copy)]
 pub struct SeparatorConfig {
+    /// Iterations without improvement after which the separator counts a strike.
     pub iter_no_imprv_limit: usize,
+    /// Strikes after which the separator gives up on the current width.
     pub strike_limit: usize,
+    /// Number of worker threads that move items in parallel.
     pub n_workers: usize,
+    /// Log level for the separator's progress messages.
     pub log_level: Level,
+    /// How many placement samples each item move evaluates.
     pub sample_config: SampleConfig,
 }
 
@@ -67,7 +74,7 @@ impl Separator {
         }
     }
 
-    /// Algorithm 9 from https://doi.org/10.48550/arXiv.2509.13329
+    /// Algorithm 9 from <https://doi.org/10.48550/arXiv.2509.13329>
     pub fn separate(&mut self, term: &impl Terminator, sol_listener: &mut impl SolutionListener) -> (SPSolution, CTSnapshot) {
         let mut min_loss_sol = (self.prob.save(), self.ct.save());
         let mut min_loss = self.ct.get_total_loss();
@@ -155,7 +162,7 @@ impl Separator {
         (min_loss_sol.0, min_loss_sol.1)
     }
 
-    /// Algorithm 10 from https://doi.org/10.48550/arXiv.2509.13329
+    /// Algorithm 10 from <https://doi.org/10.48550/arXiv.2509.13329>
     fn move_items_multi(&mut self) -> SepStats {
         let master_sol = self.prob.save();
 

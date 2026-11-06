@@ -178,57 +178,7 @@ The accompanying [README](data/experiments/README.md) details how to perform an 
 ## Using sparrow as a library
 
 The repository is a Cargo workspace: the root crate is the `sparrow` library, and [`cli`](cli) holds the command-line interface and benchmark runner.
-Depending on the library does not pull in any of the CLI's dependencies.
-
-```toml
-[dependencies]
-sparrow = { git = "https://github.com/JeroenGar/sparrow" }
-jagua-rs = { version = "=1.1.0", features = ["spp"] } # same version as sparrow
-rand = "0.10"
-anyhow = "1.0"
-```
-
-A minimal run, without any file output:
-
-```rust
-use jagua_rs::io::import::Importer;
-use jagua_rs::probs::spp::io::{export, import_instance};
-use rand::SeedableRng;
-use rand::rngs::Xoshiro256PlusPlus;
-use sparrow::config::DEFAULT_SPARROW_CONFIG;
-use sparrow::optimizer::optimize;
-use sparrow::util::io::read_spp_input;
-use sparrow::util::listener::DummySolListener;
-use sparrow::util::terminator::BasicTerminator;
-use std::path::Path;
-use std::time::Duration;
-
-fn main() -> anyhow::Result<()> {
-    let mut config = DEFAULT_SPARROW_CONFIG;
-    config.expl_cfg.time_limit = Duration::from_secs(48);
-    config.cmpr_cfg.time_limit = Duration::from_secs(12);
-
-    let (ext_instance, _) = read_spp_input(Path::new("data/input/swim.json"))?;
-    let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.narrow_concavity_cutoff_ratio);
-    let instance = import_instance(&importer, &ext_instance)?;
-
-    let solution = optimize(
-        instance,
-        Xoshiro256PlusPlus::seed_from_u64(0),
-        &mut DummySolListener,
-        &mut BasicTerminator::new(),
-        &config.expl_cfg,
-        &config.cmpr_cfg,
-        None,
-    )?;
-    let ext_solution = export(&solution, *sparrow::EPOCH);
-    println!("strip width: {}", ext_solution.strip_width);
-    Ok(())
-}
-```
-
-Implement [`SolutionListener`](src/util/listener.rs) to receive intermediate solutions, or use [`SvgExporter`](src/util/svg_exporter.rs) to write them as SVG.
-Implement [`Terminator`](src/util/terminator.rs) to stop the search early, for example from another thread.
+See the [library documentation](README.crates.md) for how to use it from Rust.
 
 ## Related Projects
 

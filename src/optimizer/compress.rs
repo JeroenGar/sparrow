@@ -7,7 +7,7 @@ use jagua_rs::Instant;
 use log::info;
 use rand::{Rng, RngExt};
 
-/// Algorithm 13 from https://doi.org/10.48550/arXiv.2509.13329
+/// Algorithm 13 from <https://doi.org/10.48550/arXiv.2509.13329>
 pub fn compression_phase(
     sep: &mut Separator,
     init_sol: &SPSolution,
