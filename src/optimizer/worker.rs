@@ -30,7 +30,7 @@ impl SeparatorWorker {
         self.ct = ct.clone();
     }
 
-    /// Algorithm 5 from https://doi.org/10.48550/arXiv.2509.13329
+    /// Algorithm 5 from <https://doi.org/10.48550/arXiv.2509.13329>
     pub fn move_items(&mut self) -> SepStats {
         // Collect all colliding items in a random order
         let candidates = self.prob.layout().placed_items().keys()
