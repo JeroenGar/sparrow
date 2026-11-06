@@ -1,5 +1,8 @@
 extern crate core;
 
+mod ctrlc_terminator;
+mod logger;
+
 use clap::Parser as Clap;
 use jagua_rs::io::import::Importer;
 use log::{info, warn, Level};
@@ -7,7 +10,8 @@ use rand::SeedableRng;
 use sparrow::config::*;
 use sparrow::optimizer::optimize;
 use sparrow::util::io;
-use sparrow::util::io::{ExtSPOutput, MainCli};
+use sparrow::util::io::ExtSPOutput;
+use crate::args::MainCli;
 use sparrow::EPOCH;
 use std::fs;
 use std::path::Path;
@@ -16,7 +20,7 @@ use std::time::Duration;
 use anyhow::{bail, Result};
 use rand::rngs::Xoshiro256PlusPlus;
 use sparrow::consts::{DEFAULT_COMPRESS_TIME_RATIO, DEFAULT_EXPLORE_TIME_RATIO, DEFAULT_FAIL_DECAY_RATIO_CMPR, DEFAULT_MAX_CONSEQ_FAILS_EXPL, LOG_LEVEL_FILTER_DEBUG, LOG_LEVEL_FILTER_RELEASE};
-use sparrow::util::ctrlc_terminator::CtrlCTerminator;
+use ctrlc_terminator::CtrlCTerminator;
 use sparrow::util::svg_exporter::SvgExporter;
 
 pub const OUTPUT_DIR: &str = "output";
@@ -29,8 +33,8 @@ pub fn run() -> Result<()>{
     fs::create_dir_all(OUTPUT_DIR)?;
     let log_file_path = format!("{}/log.txt", OUTPUT_DIR);
     match cfg!(debug_assertions) {
-        true => io::init_logger(LOG_LEVEL_FILTER_DEBUG, Path::new(&log_file_path))?,
-        false => io::init_logger(LOG_LEVEL_FILTER_RELEASE, Path::new(&log_file_path))?,
+        true => logger::init_logger(LOG_LEVEL_FILTER_DEBUG, Path::new(&log_file_path))?,
+        false => logger::init_logger(LOG_LEVEL_FILTER_RELEASE, Path::new(&log_file_path))?,
     }
 
     let args = MainCli::parse();

@@ -13,7 +13,8 @@ use sparrow::consts::{
     DEFAULT_COMPRESS_TIME_RATIO, DEFAULT_EXPLORE_TIME_RATIO, DEFAULT_FAIL_DECAY_RATIO_CMPR,
     DEFAULT_MAX_CONSEQ_FAILS_EXPL, LOG_LEVEL_FILTER_DEBUG, LOG_LEVEL_FILTER_RELEASE,
 };
-use sparrow::util::io::{self, MainCli};
+use crate::args::MainCli;
+use sparrow::util::io;
 use std::fs;
 use std::path::Path;
 use std::time::Duration;

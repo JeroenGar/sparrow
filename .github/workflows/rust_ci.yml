@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --all-targets
+      - run: cargo test --workspace --all-targets
 
   tests-simd:
     name: Run tests (SIMD)
@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
-      - run: cargo test --all-targets --features=simd
+      - run: cargo test --workspace --all-targets --features=simd
   wasm:
     name: Compile to WASM target
     runs-on: ubuntu-latest
@@ -41,5 +41,5 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           targets: wasm32-unknown-unknown
-      - run: cargo build --target wasm32-unknown-unknown --lib
+      - run: cargo build --target wasm32-unknown-unknown -p sparrow --lib
 
