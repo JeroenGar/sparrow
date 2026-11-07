@@ -10,7 +10,7 @@ license = "MIT"
 repository = "https://github.com/JeroenGar/sparrow"
 
 [workspace.dependencies]
-jagua-rs = { git = "https://github.com/JeroenGar/jagua-rs.git", branch = "main", features = ["spp"] }
+jagua-rs = { version = "=2.0.0", features = ["spp"] }
 rand = "0.10"
 log = "0.4"
 anyhow = "1.0"
