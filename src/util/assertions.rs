@@ -12,7 +12,7 @@ use log::warn;
 
 pub fn tracker_matches_layout(ct: &CollisionTracker, l: &Layout) -> bool {
     assert!(l.placed_items().keys().all(|k| ct.pk_idx_map.contains_key(k)));
-    assert!(assertions::layout_qt_matches_fresh_qt(l));
+    assert!(assertions::layout_cde_matches_fresh(l));
 
     for (pk1, pi1) in l.placed_items().iter() {
         let mut collector = BasicHazardCollector::new();
