@@ -11,7 +11,7 @@
 > Sparrows are master weavers, crafting nests with intricate patterns. They utilize geometry and symmetry to ensure structural integrity and stability. By incorporating precise angles,  lengths, and weaving patterns, these birds achieve a balance between strength and efficiency.
 [(read more)](https://www.mathnasium.com/math-centers/happyvalley/news/mathematical-marvels-bird-nest-construction-hv#)
 
-## The state-of-the-art nesting heuristic for 2D irregular strip packing
+## State-of-the-art nesting heuristic for 2D irregular strip packing
 `sparrow` can be used to solve 2D irregular strip packing problems, also commonly referred to as nesting problems.
 This optimization algorithm builds on [`jagua-rs`](https://github.com/JeroenGar/jagua-rs): _a collision detection engine for 2D irregular cutting & packing problems_.
 
