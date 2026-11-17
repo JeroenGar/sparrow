@@ -1,4 +1,4 @@
-use crate::consts::{GLS_WEIGHT_DECAY, GLS_WEIGHT_MAX_INC_RATIO, GLS_WEIGHT_MIN_INC_RATIO};
+use crate::consts::{GLS_WEIGHT_DECAY, GLS_WEIGHT_MAX, GLS_WEIGHT_MAX_INC_RATIO, GLS_WEIGHT_MIN_INC_RATIO};
 use crate::quantify::pair_matrix::PairMatrix;
 use crate::quantify::{quantify_collision_poly_container, quantify_collision_poly_poly};
 use crate::util::assertions::tracker_matches_layout;
@@ -131,7 +131,8 @@ impl CollisionTracker {
                     GLS_WEIGHT_MIN_INC_RATIO + (GLS_WEIGHT_MAX_INC_RATIO - GLS_WEIGHT_MIN_INC_RATIO) * (e.loss / max_loss)
                 },
             };
-            e.weight = (e.weight * multiplier).max(1.0);
+            e.weight = (e.weight * multiplier).clamp(1.0, GLS_WEIGHT_MAX);
+            debug_assert!(e.weight.is_finite());
         }
     }
 
