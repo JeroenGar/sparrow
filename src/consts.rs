@@ -4,6 +4,10 @@ use jagua_rs::io::svg::{SvgDrawOptions, SvgLayoutTheme};
 pub const GLS_WEIGHT_MAX_INC_RATIO: f32 = 2.0;
 pub const GLS_WEIGHT_MIN_INC_RATIO: f32 = 1.2;
 pub const GLS_WEIGHT_DECAY: f32 = 0.95;
+/// Upper bound on GLS weights. Without it, a pair that keeps colliding long enough overflows `f32` to `inf`,
+/// which turns its weighted loss into NaN (`inf * 0.0`) once the collision is resolved.
+/// Kept far below `f32::MAX` so that `weight * loss` and the sums over all pairs stay finite.
+pub const GLS_WEIGHT_MAX: f32 = 1e10;
 pub const OVERLAP_PROXY_EPSILON_DIAM_RATIO: f32 = 0.01;
 
 
