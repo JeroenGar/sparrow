@@ -47,7 +47,7 @@ impl<'a> SeparationEvaluator<'a> {
 
 impl<'a> SampleEvaluator for SeparationEvaluator<'a> {
     /// Evaluates a transformation. An upper bound can be provided to early terminate the process.
-    /// Algorithm 7 from https://doi.org/10.48550/arXiv.2509.13329
+    /// Algorithm 7 from <https://doi.org/10.48550/arXiv.2509.13329>
     fn evaluate_sample(&mut self, dt: DTransformation, upper_bound: Option<SampleEval>) -> SampleEval {
         self.n_evals += 1;
         let cde = self.layout.cde();

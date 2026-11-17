@@ -21,7 +21,7 @@ mod worker;
 pub mod explore;
 pub mod compress;
 
-/// Algorithm 11 from https://doi.org/10.48550/arXiv.2509.13329
+/// Algorithm 11 from <https://doi.org/10.48550/arXiv.2509.13329>
 ///
 /// Returns a construction error if no initial solution is supplied and the
 /// initial-placement heuristic cannot build one within its strip growth limit.
