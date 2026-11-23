@@ -27,7 +27,7 @@ ordered-float.workspace = true
 rayon.workspace = true
 clap = { version = "4.6", features = ["derive"] }
 fern = "0.7"
-jiff = "0.2"
+jiff = "1.0"
 num_cpus = "1.17"
 ctrlc = "3.5"
 numfmt = { workspace = true, optional = true }
