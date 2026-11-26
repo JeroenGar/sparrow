@@ -343,5 +343,10 @@
     "count": 345,
     "timestamp": "2026-11-24T00:00:00Z",
     "uniques": 245
+  },
+  {
+    "count": 318,
+    "timestamp": "2026-11-25T00:00:00Z",
+    "uniques": 226
   }
 ]
