@@ -251,3 +251,117 @@ fn practically_contained_items(layout: &Layout, pk_c: PItemKey) -> Vec<PItemKey>
         })
         .collect_vec()
 }
+
+#[cfg(test)]
+mod tests_reflection {
+    //! Reflection in the exploration phase.
+    //!
+    //! A reflected copy is the same `shape_cd` under an improper isometry, so its surrogate keeps
+    //! the item's convex hull area. `disrupt_solution` ranks items by that area to pick large
+    //! items; if a reflected copy reported a different area, a single-item instance could end with
+    //! an empty `large_items` filter and `choose().expect()` would panic.
+    use super::*;
+    use crate::config::DEFAULT_SPARROW_CONFIG;
+    use crate::consts::LBF_SAMPLE_CONFIG;
+    use crate::optimizer::lbf::LBFBuilder;
+    use crate::optimizer::separator::Separator;
+    use jagua_rs::io::ext_repr::{ExtItem, ExtOrientation, ExtRotation, ExtSPolygon, ExtShape};
+    use jagua_rs::io::import::Importer;
+    use jagua_rs::probs::spp::io::ext_repr::{ExtItem as ExtSPItem, ExtSPInstance};
+    use rand::SeedableRng;
+    use rand::rngs::Xoshiro256PlusPlus;
+
+    /// A chiral polygon: it is not congruent to its mirror image under any rotation.
+    fn chiral_shape() -> Vec<(f32, f32)> {
+        vec![
+            (0.0, 0.0), (37.3, 0.9), (74.1, 1.7), (110.0, 2.6), (112.4, 19.3), (95.7, 22.1),
+            (96.0, 41.9), (61.2, 43.0), (60.9, 28.7), (31.4, 29.9), (30.1, 51.3), (11.7, 52.0),
+            (3.2, 26.4),
+        ]
+    }
+
+    /// A separator over a single chiral item with rotations {0, 180} and the given reflection axes.
+    fn separator(reflection_axes: Vec<f32>, demand: u64) -> Separator {
+        let ext = ExtSPInstance {
+            name: "reflection".into(),
+            min_item_separation: 0.0,
+            strip_height: 200.0,
+            items: vec![ExtSPItem {
+                base: ExtItem {
+                    id: 0,
+                    orientation: ExtOrientation {
+                        rotation: ExtRotation::Discrete { angles: vec![0.0, 180.0] },
+                        reflection_axes,
+                    },
+                    shape: ExtShape::SimplePolygon(ExtSPolygon(chiral_shape())),
+                    min_quality: None,
+                },
+                demand,
+            }],
+        };
+        let cfg = DEFAULT_SPARROW_CONFIG;
+        let importer = Importer::new(cfg.cde_config, cfg.poly_simpl_tolerance, cfg.narrow_concavity_cutoff_ratio);
+        let instance = jagua_rs::probs::spp::io::import_instance(&importer, &ext).expect("import");
+        let rng = Xoshiro256PlusPlus::seed_from_u64(1);
+        let builder = LBFBuilder::new(instance, rng, LBF_SAMPLE_CONFIG).unwrap().construct().unwrap();
+        Separator::new(builder.prob, builder.rng, cfg.expl_cfg.separator_config)
+    }
+
+    #[test]
+    fn reflected_copies_keep_the_convex_hull_area_and_survive_disruption() {
+        let mut sep = separator(vec![0.0], 6);
+        let pks: Vec<_> = sep.prob.layout().placed_items().keys().collect();
+        for pk in pks {
+            let dt = sep.prob.layout().placed_items()[pk].d_transf();
+            sep.move_item(pk, dt.with_reflection(true));
+        }
+        let item_ch = sep.prob.instance().item(0).shape_cd().surrogate().convex_hull_area;
+        let mut n_reflected = 0;
+        for (_, pi) in sep.prob.layout().placed_items().iter() {
+            assert!(pi.d_transf().reflected, "copy should be reflected");
+            n_reflected += 1;
+            assert_eq!(pi.shape().surrogate().convex_hull_area.to_bits(), item_ch.to_bits(),
+                       "a reflected copy reports a different convex hull area than its item");
+        }
+        assert_eq!(n_reflected, 6);
+        for _ in 0..200 {
+            disrupt_solution(&mut sep, &DEFAULT_SPARROW_CONFIG.expl_cfg);
+        }
+        assert_eq!(sep.prob.layout().placed_items().len(), 6, "disruption must not lose items");
+    }
+
+    #[test]
+    fn disruption_keeps_the_reflection_bit_of_reflectable_items() {
+        // Swapping an upright copy with a reflected one swaps their reflections: both stay allowed,
+        // so `convert_sample_to_closest_feasible` must keep the bit.
+        let mut sep = separator(vec![0.0], 6);
+        let pks: Vec<_> = sep.prob.layout().placed_items().keys().collect();
+        for (i, pk) in pks.into_iter().enumerate() {
+            let dt = sep.prob.layout().placed_items()[pk].d_transf();
+            sep.move_item(pk, dt.with_reflection(i % 2 == 0));
+        }
+        for _ in 0..50 {
+            disrupt_solution(&mut sep, &DEFAULT_SPARROW_CONFIG.expl_cfg);
+        }
+        let n_reflected = sep.prob.layout().placed_items().iter().filter(|(_, pi)| pi.d_transf().reflected).count();
+        assert!(n_reflected > 0 && n_reflected < 6, "reflections lost by disruption: {n_reflected}/6 reflected");
+    }
+
+    #[test]
+    fn reflected_poses_are_sampled_only_when_a_reflection_axis_is_allowed() {
+        use crate::sample::uniform_sampler::UniformBBoxSampler;
+        let mut rng = Xoshiro256PlusPlus::seed_from_u64(7);
+        for (axes, expected) in [(vec![], false), (vec![0.0], true)] {
+            let sep = separator(axes, 2);
+            let item = sep.prob.instance().item(0);
+            let bbox = sep.prob.layout().container().outer_cd().bbox();
+            let sampler = UniformBBoxSampler::new(bbox, item, bbox).expect("sampler");
+            let n = (0..2000).filter(|_| sampler.sample(&mut rng).reflected).count();
+            assert_eq!(n > 0, expected, "reflection allowed: {expected}, reflected samples: {n}/2000");
+            for _ in 0..200 {
+                let dt = sampler.sample(&mut rng);
+                assert!(item.allowed_orientations().allows(&dt), "sampled pose is not allowed: {dt}");
+            }
+        }
+    }
+}
