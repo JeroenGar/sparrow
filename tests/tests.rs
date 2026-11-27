@@ -23,16 +23,20 @@ mod integration_tests {
     const INSTANCE_BASE_PATH: &str = "data/input";
     const RNG_SEED: Option<usize> = Some(0); // fix seed for reproducibility
 
-    #[test_case("swim.json"; "swim")]
-    #[test_case("shirts.json"; "shirts")]
-    #[test_case("trousers.json"; "trousers")]
-    fn simulate_optimization(path: &str) -> Result<()> {
+    #[test_case("swim.json", false; "swim")]
+    #[test_case("swim.json", true; "swim_reflections")]
+    #[test_case("shirts.json", false; "shirts")]
+    #[test_case("trousers.json", false; "trousers")]
+    fn simulate_optimization(path: &str, reflections: bool) -> Result<()> {
         let config = DEFAULT_SPARROW_CONFIG;
         let input_file_path = format!("{INSTANCE_BASE_PATH}/{path}");
         let (mut json_instance, _) = io::read_spp_input(Path::new(&input_file_path))?;
 
         for (idx, item) in json_instance.items.iter_mut().enumerate() {
             item.base.id = 100 + idx as u64 * 7;
+            if reflections {
+                item.base.orientation.reflection_axes = vec![0.0];
+            }
         }
         let importer = Importer::new(config.cde_config, config.poly_simpl_tolerance, config.narrow_concavity_cutoff_ratio);
         let instance = jagua_rs::probs::spp::io::import_instance(&importer, &json_instance)?;
@@ -66,7 +70,14 @@ mod integration_tests {
         let final_explore_sol = sols.last().expect("no solutions found during exploration");
 
         terminator.new_timeout(COMPRESS_TIMEOUT);
-        compression_phase(&mut separator, final_explore_sol, &mut sol_listener, &terminator, &config.cmpr_cfg);
+        let final_sol = compression_phase(&mut separator, final_explore_sol, &mut sol_listener, &terminator, &config.cmpr_cfg);
+
+        let placed_items = final_sol.layout_snapshot().placed_items();
+        for (_, pi) in placed_items.iter() {
+            assert!(pi.item().allowed_orientations().allows(&pi.d_transf()), "pose not allowed: {}", pi.d_transf());
+        }
+        let n_reflected = placed_items.iter().filter(|(_, pi)| pi.d_transf().reflected).count();
+        assert_eq!(n_reflected > 0, reflections, "{n_reflected} reflected items");
         Ok(())
     }
 }

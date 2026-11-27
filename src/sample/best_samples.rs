@@ -93,6 +93,10 @@ pub fn dtransfs_are_similar(
     x_threshold: f32,
     y_threshold: f32,
 ) -> bool {
+    // A reflected and an upright sample are never similar.
+    if dt1.reflected != dt2.reflected {
+        return false;
+    }
     let x_diff = f32::abs(dt1.translation().0 - dt2.translation().0);
     let y_diff = f32::abs(dt1.translation().1 - dt2.translation().1);
 

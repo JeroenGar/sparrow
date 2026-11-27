@@ -103,8 +103,10 @@ impl CoordinateDescent {
                 CDAxis::Wiggle => [(tx, ty, r + sr), (tx, ty, r - sr)]
             };
             
+            // Coordinate descent never changes the reflection: carry the bit.
+            let reflected = self.pos.reflected;
             let c = transformations.map(|(tx, ty, r)| {
-                DTransformation::new(r, (tx, ty))
+                DTransformation::new(r, (tx, ty)).with_reflection(reflected)
             });
             
             Some(c)
