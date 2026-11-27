@@ -19,7 +19,7 @@ use rand::prelude::{Distribution, IteratorRandom};
 use rand_distr::Normal;
 use std::cmp::Reverse;
 
-/// Algorithm 12 from https://doi.org/10.48550/arXiv.2509.13329
+/// Algorithm 12 from <https://doi.org/10.48550/arXiv.2509.13329>
 pub fn exploration_phase(sep: &mut Separator, sol_listener: &mut impl SolutionListener, term: &impl Terminator, config: &ExplorationConfig) -> Vec<SPSolution> {
     let start = Instant::now();
     let initial_eval_count = sep.total_evals;

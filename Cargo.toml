@@ -26,10 +26,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-readme = "README.md"
+readme = "README.crates.md"
 keywords = ["nesting", "packing", "strip-packing", "optimization", "heuristic"]
 categories = ["algorithms", "science", "mathematics"]
-include = ["/src", "/README.md", "/LICENSE", "/CITATION.cff"]
+include = ["/src", "/README.crates.md", "/LICENSE", "/CITATION.cff"]
 
 [dependencies]
 jagua-rs.workspace = true

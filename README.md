@@ -102,15 +102,15 @@ cargo run --release --features=live_svg -- \
 ## Input
 
 This repository uses the same JSON format as [`jagua-rs`](https://github.com/JeroenGar/jagua-rs) to represent instances.
+The benchmark instances in [data/input](data/input) are also available in Oscar Oliveira's [OR-Datasets repository](https://github.com/Oscar-Oliveira/OR-Datasets/tree/master/Cutting-and-Packing/2D-Irregular).
 
-sparrow 0.3.0 uses jagua-rs 1.0.0 from crates.io. This release changes the input
-format: every item requires `orientation.rotation`:
+sparrow follows the input format of the `jagua-rs` version it depends on (see [Cargo.toml](Cargo.toml)).
+Since `jagua-rs` 1.0.0, every item requires `orientation.rotation`:
 `{"mode":"discrete","angles":[0,180]}`, `{"mode":"stepped","step":90}`, or
 `{"mode":"continuous"}`. Item IDs may be non-consecutive and are preserved in output.
 Set `min_item_separation` on the input instance; omission means zero. The CLI and
-solver configuration no longer override it. Legacy orientation fields and item
+solver configuration do not override it. Legacy orientation fields and item
 holes are rejected. See the [1.0.0 release notes](https://github.com/JeroenGar/jagua-rs/blob/v1.0.0/docs/releases/1.0.0.md).
-These are also available in Oscar Oliveira's [OR-Datasets repository](https://github.com/Oscar-Oliveira/OR-Datasets/tree/master/Cutting-and-Packing/2D-Irregular).
 
 See [`jagua-rs` README](https://github.com/JeroenGar/jagua-rs?tab=readme-ov-file#input) for details on the input format.
 
@@ -174,6 +174,11 @@ cargo run --profile debug-release -- \
 All solutions from the comparative experiments in the paper can be found at
 [data/experiments](data/experiments).
 The accompanying [README](data/experiments/README.md) details how to perform an exact reproduction of any benchmark run.
+
+## Using sparrow as a library
+
+The repository is a Cargo workspace: the root crate is the `sparrow` library, and [`cli`](cli) holds the command-line interface and benchmark runner.
+See the [library documentation](README.crates.md) for how to use it from Rust.
 
 ## Related Projects
 

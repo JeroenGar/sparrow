@@ -8,11 +8,8 @@ use dashboard::SearchBudget;
 use jagua_rs::io::import::Importer;
 use rand::SeedableRng;
 use rand::rngs::Xoshiro256PlusPlus;
-use sparrow::config::{DEFAULT_SPARROW_CONFIG, ShrinkDecayStrategy, SparrowConfig};
-use sparrow::consts::{
-    DEFAULT_COMPRESS_TIME_RATIO, DEFAULT_EXPLORE_TIME_RATIO, DEFAULT_FAIL_DECAY_RATIO_CMPR,
-    DEFAULT_MAX_CONSEQ_FAILS_EXPL, LOG_LEVEL_FILTER_DEBUG, LOG_LEVEL_FILTER_RELEASE,
-};
+use sparrow::config::SparrowConfig;
+use sparrow::consts::{LOG_LEVEL_FILTER_DEBUG, LOG_LEVEL_FILTER_RELEASE};
 use crate::args::MainCli;
 use sparrow::util::io;
 use std::fs;
@@ -69,28 +66,19 @@ pub fn run() -> Result<()> {
 }
 
 fn configure(args: &MainCli) -> Result<SparrowConfig> {
-    let mut config = DEFAULT_SPARROW_CONFIG;
-    let (exploration, compression) = match (args.global_time, args.exploration, args.compression) {
-        (Some(total), None, None) => (
-            Duration::from_secs(total).mul_f32(DEFAULT_EXPLORE_TIME_RATIO),
-            Duration::from_secs(total).mul_f32(DEFAULT_COMPRESS_TIME_RATIO),
-        ),
-        (None, Some(exploration), Some(compression)) => (
-            Duration::from_secs(exploration),
-            Duration::from_secs(compression),
-        ),
-        (None, None, None) => (
-            Duration::from_secs(600).mul_f32(DEFAULT_EXPLORE_TIME_RATIO),
-            Duration::from_secs(600).mul_f32(DEFAULT_COMPRESS_TIME_RATIO),
-        ),
+    let mut config = match (args.global_time, args.exploration, args.compression) {
+        (Some(total), None, None) => SparrowConfig::default().with_time_limit(Duration::from_secs(total)),
+        (None, Some(exploration), Some(compression)) => {
+            let mut config = SparrowConfig::default();
+            config.expl_cfg.time_limit = Duration::from_secs(exploration);
+            config.cmpr_cfg.time_limit = Duration::from_secs(compression);
+            config
+        }
+        (None, None, None) => SparrowConfig::default().with_time_limit(Duration::from_secs(600)),
         _ => bail!("invalid time limit arguments"),
     };
-    config.expl_cfg.time_limit = exploration;
-    config.cmpr_cfg.time_limit = compression;
     if args.early_termination {
-        config.expl_cfg.max_conseq_failed_attempts = Some(DEFAULT_MAX_CONSEQ_FAILS_EXPL);
-        config.cmpr_cfg.shrink_decay =
-            ShrinkDecayStrategy::FailureBased(DEFAULT_FAIL_DECAY_RATIO_CMPR);
+        config = config.with_early_termination();
     }
     args.apply_config_overrides(&mut config);
     Ok(config)
