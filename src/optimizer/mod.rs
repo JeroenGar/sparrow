@@ -4,6 +4,7 @@ use crate::optimizer::compress::compression_phase;
 use crate::optimizer::explore::exploration_phase;
 use crate::optimizer::lbf::LBFBuilder;
 use crate::optimizer::separator::Separator;
+use crate::sample::uniform_sampler::allowed_poses;
 use crate::util::listener::{OptimizationPhase, ReportType, SolutionListener};
 use crate::util::terminator::Terminator;
 use jagua_rs::geometry::geo_enums::RotationRange;
@@ -92,29 +93,18 @@ fn strip_width_lower_bound(prob: &SPProblem) -> f32 {
     let mut width_lower_bound = (area / f64::from(container.height())) as f32 * (1.0 - REL_TOL);
 
     for (item, _) in &prob.instance().items {
-        // A lower bound must take the minimum over every allowed pose, reflected ones included:
-        // leaving them out could only raise it and make it invalid.
-        let mut poses: Vec<(f32, bool)> = Vec::new();
-        let mut continuous = false;
-        for (range, reflected) in [(Some(item.allowed_orientations().rotations()), false),
-                                   (item.allowed_orientations().rotations_after_reflection(), true)] {
-            match range {
-                None => {}
-                Some(RotationRange::None) => poses.push((0.0, reflected)),
-                Some(RotationRange::Discrete(rotations)) => poses.extend(rotations.iter().map(|&r| (r, reflected))),
-                // ponytail: continuous rotations use only the area bound; add exact rotational bounds if this is too weak.
-                Some(RotationRange::Continuous) => continuous = true,
-            }
-        }
-        if continuous {
+        // ponytail: continuous rotations use only the area bound; add exact rotational bounds if this is too weak.
+        // Reflected rotations are continuous exactly when unreflected ones are.
+        if item.allowed_orientations().rotations() == &RotationRange::Continuous {
             continue;
         }
         let tolerance = item.shape_cd().diameter() * REL_TOL;
         let mut shape = item.shape_cd().as_ref().clone();
-        let item_width = poses.iter()
-            .filter_map(|&(rotation, reflected)| {
-                let pose = DTransformation::new(rotation, (0.0, 0.0)).with_reflection(reflected).compose();
-                let bbox = shape.transform_from(item.shape_cd().as_ref(), &pose).bbox();
+        // Reflected poses count too: one can be narrower than every unreflected pose.
+        let item_width = allowed_poses(item)
+            .filter_map(|(reflected, rotation)| {
+                let pose = DTransformation::new(rotation, (0.0, 0.0)).with_reflection(reflected);
+                let bbox = shape.transform_from(item.shape_cd().as_ref(), &pose.compose()).bbox();
                 (bbox.height() <= container.height() + tolerance)
                     .then_some((bbox.width() - tolerance).max(0.0))
             })
